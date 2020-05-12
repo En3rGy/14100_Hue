@@ -1,0 +1,241 @@
+<body>
+<h1>Hue Group</h1>
+<p>Der Baustein steuert Hue Gruppen und liest den Status der Gruppe oder einzelner Lampen aus.
+Um die Netzwerklast zu verringern können mehrere Bausteine als Kaskade geschaltet werden, um die Statusmeldung der Hue-Bridge für mehrere
+Lampen bzw. Gruppen auszulesen.</p>
+
+<table>
+ <tr>
+  <td>Baustein Id:</td>
+  <td>14100</td>
+ </tr>
+ <tr>
+  <td>Kategorie:</td>
+  <td>Datenaustausch</td>
+ </tr>
+  <tr>
+  <td>Gültigkeit der Hilfe:</td>
+  <td>Bausteinversion 0.7</td>
+ </tr>
+</table>
+
+
+<h2 >Eingänge</h2>
+
+<table border=1>
+ <tr>
+  <td><b>Eingang</b></td>
+  <td><b>Initwert</b></td>
+  <td><b>Beschreibung</b></td>
+ </tr>
+ <tr>
+  <td>Groups Json</td>
+  <td></td>
+  <td>Für Baustein-Kaskade: Verknüpfung des gleichnamigen Ausgangs eines anderen Bausteins.</td>
+ </tr>
+ <tr>
+  <td>Lights Json</td>
+  <td></td>
+  <td>Für Baustein-Kaskade: Verknüpfung des gleichnamigen Ausgangs eines anderen Bausteins.</td>
+ </tr>
+ <tr>
+  <td>Get Status</td>
+  <td></td>
+  <td>Ein Wert =1 triggert den Status-Abruf über die Hue-Bridge. Hier ist es z.B. Sinnvoll einen Telegrammgenerator anzuschließen.
+  Damit kann detektiert werden, wenn eine Lampe auf einem anderen Weg, als über den Baustein geschaltet wird.</td>
+ </tr>
+ <tr>
+  <td>Hue Bridge IP</td>
+  <td></td>
+  <td>IP der Hue Bridge</td>
+ </tr>
+ <tr>
+  <td>Hue Bridge Port</td>
+  <td>80</td>
+  <td>Port der Hue Bridge</td>
+ </tr>
+ <tr>
+  <td>User</td>
+  <td></td>
+  <td><a href="https://developers.meethue.com/develop/get-started-2/">Hue Bridge User</a></td>
+ </tr>
+ <tr>
+  <td>Group Id</td>
+  <td>0</td>
+  <td>Id der zu schaltenden Hue Gruppe, vgl. http://hue-ip/api/hue-user/groups</td>
+ </tr>
+ <tr>
+  <td>Light Id</td>
+  <td>0</td>
+  <td>Id der auszuwertenden Hue Lampe, vgl. http://hue-ip/api/hue-user/lights</td>
+ </tr>
+ <tr>
+  <td>Grp On/Off</td>
+  <td>0</td>
+  <td>Schaltet die Lampengruppe ein/aus.</td>
+ </tr>
+ <tr>
+  <td>Grp Brightness</td>
+  <td>0</td>
+  <td>Helligkeit für die Hue Gruppe in Prozent.<br>
+      Wird der Wert gesetzt, wird die Gruppe eingeschaltet.</td>
+ </tr>
+ <tr>
+  <td>Grp Hue Color</td>
+  <td>0</td>
+  <td>Hue Color:<br>
+      0 - 65.535; mit <i>182,04 * Hue Color Wert</i><br>
+      Wird der Wert gesetzt, wird die Gruppe eingeschaltet.</td>
+ </tr>
+ <tr>
+  <td>Grp Saturation</td>
+  <td>0</td>
+  <td>Sättigung der Hue Gruppe in Prozent.<br>
+      Wird der Wert gesetzt, wird die Gruppe eingeschaltet.</td>
+ </tr>
+ <tr>
+  <td>Grp Color Temp</td>
+  <td>0</td>
+  <td>Farbtemperatur der Gruppe (nur Weißwert):<br>
+      154 - 500; mit <i>1.000.000 / CT-Wert</i>, z.B. 6500K = 154 (kalt) und 2000K = 500 (warm)<br>
+      Wird der Wert gesetzt, wird die Gruppe eingeschaltet.</td>
+ </tr>
+ <tr>
+  <td>r</td>
+  <td>0</td>
+  <td>RGB Rotwert 0-255</td>
+ </tr>
+ <tr>
+  <td>g</td>
+  <td>0</td>
+  <td>RGB Grünwert 0-255</td>
+ </tr>
+ <tr>
+  <td>b</td>
+  <td>0</td>
+  <td>RGB Blauwert 0-255</td>
+ </tr>
+ <tr>
+  <td>Grp Hue Scene</td>
+  <td></td>
+  <td>Hue Scene für die Hue Gruppe, vgl. http://hue-bridge-ip/user/scenes</td>
+ </tr>
+</table>
+
+<h2>Ausgänge</h2>
+
+<table border=1>
+ <tr>
+  <td><b>Ausgang</b></td>
+  <td><b>Initwert</b></td>
+  <td><b>Beschreibung</b></td>
+ </tr>
+ <tr>
+ <tr>
+  <td>Grp On/Off</td>
+  <td>0</td>
+  <td>Ein/Aus Status</td>
+ </tr>
+  <tr>
+  <td>Grp Brightness</td>
+  <td>0</td>
+  <td>Aktuelle Helligkeit in Prozent</td>
+ </tr>
+  <tr>
+  <td>Grp Hue Color</td>
+  <td>0</td>
+  <td>Aktuelle Hue Color</td>
+ </tr>
+  <tr>
+  <td>Grp Saturation</td>
+  <td>0</td>
+  <td>Aktuelle Sättigung in Prozent</td>
+ </tr>
+ <tr>
+  <td>Grp Color Temp</td>
+  <td>0</td>
+  <td>Farbtemperatur der Gruppe (nur Weißwert)</td>
+ </tr>
+ <tr>
+  <td>r</td>
+  <td>0</td>
+  <td>RGB Rotwert 0-255</td>
+ </tr>
+ <tr>
+  <td>g</td>
+  <td>0</td>
+  <td>RGB Grünwert 0-255</td>
+ </tr>
+ <tr>
+  <td>b</td>
+  <td>0</td>
+  <td>RGB Blauwert 0-255</td>
+ </tr> 
+  <tr>
+  <td>Lght Reachable</td>
+  <td>0</td>
+  <td>Erreichbarkeit der Lampe (nicht Gruppe!)</td>
+ </tr>
+  <tr>
+  <td>Groups Json</td>
+  <td></td>
+  <td>Json Struktur für den Status der Gruppe für Kaskaden von Bausteinen (für den Eingang des Folgebausteins).</td>
+ </tr>
+  <tr>
+  <td>Lights Json</td>
+  <td></td>
+  <td>Json Struktur für den Status der Leuchten für Kaskaden von Bausteinen (für den Eingang des Folgebausteins).</td>
+ </tr>
+</table>
+
+<h2>Sonstiges</h2>
+
+<table>
+ <tr>
+  <td>Neuberechnung beim Start</td>
+  <td>Nein</td>
+ </tr>
+ <tr>
+  <td>Baustein ist remanent</td>
+  <td>Nein</td>
+ </tr>
+</table>
+
+<h3>Change Log</h3>
+<ul>
+  <li>v0.7
+    <ul>
+	  <li>Rückmeldung / Ausgänge für RGB hinzugefügt</li>
+	</ul>
+  </li>
+  <li>v0.6
+    <ul>
+	  <li>Bugfix: Saturation Ausgang wurde nicht als Prozentwert, sondern 0-254 ausgegeben. Wird nun auch 0-100% skaliert.</li>
+	  <li>RGB Steuerung hinzugefügt (noch ohne RGB Rückmeldung)</li>
+	</ul>
+  </li>
+  <li>v0.5
+    <ul>
+	  <li>Brightness als Prozentwert für Ein- und Ausgang (statt Absolutwert 0-254).</li>
+	  <li>Saturation als Prozentwert für Ein- und Ausgang (statt Absolutwert 0-254).</li>
+	  <li>Color Temp. als Parameter eingeführt.</li>
+	</ul>
+  </li>
+</ul>
+
+<h3>Open Issues / Known Bugs</h3>
+<ul>
+<li>-</li>
+</ul>
+
+<h3>Code</h3>
+
+Der Python-Code des Bausteins befindet sich in der hslz Datei oder auf <a href="https://github.com/En3rGy/hs_logic">github</a>.
+
+<h3>Lizenz</h3>
+
+<p>Copyright 2020 T. Paul</p>
+<p>Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:</p>
+<p>The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.</p>
+<p>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p>
+</body>
