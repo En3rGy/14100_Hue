@@ -1,8 +1,19 @@
 <body>
 <h1>Hue Group</h1>
-<p>Der Baustein steuert Hue Gruppen und liest den Status der Gruppe oder einzelner Lampen aus.
-Um die Netzwerklast zu verringern können mehrere Bausteine als Kaskade geschaltet werden, um die Statusmeldung der Hue-Bridge für mehrere
-Lampen bzw. Gruppen auszulesen.</p>
+
+<p>Der Baustein steuert Hue Gruppen und liest den Status der Gruppe oder 
+einzelner Lampen aus. Um die Netzwerklast zu verringern können mehrere 
+Bausteine als Kaskade geschaltet werden, um die Statusmeldung der Hue-Bridge 
+für mehrere Lampen bzw. Gruppen auszulesen.</p> 
+<p>Die ersten 3 Eingänge sind ausschließlich für den Status. Ein Baustein muss 
+regelmäßig via Get (E3) getriggered werden. Dann generiert er über die letzten 
+beiden Ausgänge die Infos für alle anderen Bausteile, die die Daten via deren 
+E1 und E2 bekommen sollten. E3 sollte bei diesen anderen Bausteinen nicht 
+getriggert werden, sonst würden sie zusätzlich den Status abfragen.
+</p>
+<p>Sollen die Bausteine zum Schalten, etc. verwendet werden, brauchen Sie IP, 
+Port und Benutzer und Group Id. Die Light Id wird nur für den Status genutzt 
+(Reachable wird nur pro Light, nicht für Gruppen ausgegeben).</p>
 
 <table>
  <tr>
@@ -15,8 +26,12 @@ Lampen bzw. Gruppen auszulesen.</p>
  </tr>
   <tr>
   <td>Gültigkeit der Hilfe:</td>
-  <td>Bausteinversion 0.7</td>
+  <td>Bausteinversion 0.8</td>
  </tr>
+   <tr>
+  <td>min. HS FW:</td>
+  <td>4.10</td>
+ </tr> 
 </table>
 
 
@@ -62,12 +77,12 @@ Lampen bzw. Gruppen auszulesen.</p>
  <tr>
   <td>Group Id</td>
   <td>0</td>
-  <td>Id der zu schaltenden Hue Gruppe, vgl. http://hue-ip/api/hue-user/groups</td>
+  <td>Id der zu <b>schaltenden</b> Hue Gruppe, vgl. http://hue-ip/api/hue-user/groups</td>
  </tr>
  <tr>
   <td>Light Id</td>
   <td>0</td>
-  <td>Id der auszuwertenden Hue Lampe, vgl. http://hue-ip/api/hue-user/lights</td>
+  <td>Id der <b>auszuwertenden</b> Hue Lampe, vgl. http://hue-ip/api/hue-user/lights</td>
  </tr>
  <tr>
   <td>Grp On/Off</td>
@@ -203,6 +218,13 @@ Lampen bzw. Gruppen auszulesen.</p>
 
 <h3>Change Log</h3>
 <ul>
+  <li>v0.8
+    <ul>
+	  <li>Update Hilfe</li>
+	  <li>Fix: Brightness und Saturation werden nach Schreiben falsch als Status ausgegeben.</li>
+	  <li>Fix: Reachable liefert immer false</li>	  
+	</ul>
+  </li>
   <li>v0.7
     <ul>
 	  <li>Rückmeldung / Ausgänge für RGB hinzugefügt</li>

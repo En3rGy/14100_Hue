@@ -76,7 +76,7 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
 
             if str(light) in jsonState:
                 if 'state' in jsonState[str(light)]:
-                    if 'reachable' in jsonState[str(light)]['action']:
+                    if 'reachable' in jsonState[str(light)]['state']:
                         bReachable = jsonState[str(light)]['state']['reachable']
                         self._set_output_value(self.PIN_O_NREACHABLE, bReachable)
         except:
@@ -223,9 +223,9 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
         light = int(self._get_input_value(self.PIN_I_NLIGHT))
         hueGroupState = {"data" : str(self._get_input_value(self.PIN_I_SGROUPSTATJSON)), "status" : 200}
         hueLightState = {"data" : str(self._get_input_value(self.PIN_I_SLIGHTSSTATJSON)), "status"  :200}
-        nBri = int(self._get_input_value(self.PIN_I_NBRI) / 100.0 * 254)
+        nBri = int(self._get_input_value(self.PIN_I_NBRI) / 100.0 * 255)
         nHueCol = int(self._get_input_value(self.PIN_I_NHUE))
-        nSat = int(self._get_input_value(self.PIN_I_NSAT) / 100.0 * 254)
+        nSat = int(self._get_input_value(self.PIN_I_NSAT) / 100.0 * 255)
         nCt = int(self._get_input_value(self.PIN_I_NCT))
 
         #### If trigger == 1, get data via web request
@@ -268,7 +268,7 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
             res = self.setBri(sApi_url, nApi_port, sApi_user, group, nBri)
             print(res)
             if (res):
-                self._set_output_value(self.PIN_O_NBRI, nBri)
+                self._set_output_value(self.PIN_O_NBRI, nBri / 255 * 100)
 
         if self.PIN_I_NHUE == index :
             self.hueOnOff(sApi_url, nApi_port, sApi_user, group, True)
@@ -278,7 +278,7 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
 
         if self.PIN_I_NSAT == index :
             self.hueOnOff(sApi_url, nApi_port, sApi_user, group, True)
-            res = self.setSat(sApi_url, nApi_port, sApi_user, group, nSat)
+            res = self.setSat(sApi_url, nApi_port, sApi_user, group, nSat / 255 * 100)
             if (res):
                 self._set_output_value(self.PIN_O_NSAT, nSat)
 

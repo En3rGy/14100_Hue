@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <config>
     <modules>
-        <module category="Datenaustausch" context="hsl20_3_Hue" id="14100" name="Hue Group (14100)" version="0.7">
+        <module category="Datenaustausch" context="hsl20_3_Hue" id="14100" name="Hue Group (14100)" version="0.8">
             <inputs>
                 <input type="string" const_name="sGroupStatJson" init_value="">Groups Json</input>
                 <input type="string" const_name="sLightsStatJson" init_value="">Lights Json</input>
