@@ -26,10 +26,10 @@ Port und Benutzer und Group Id. Die Light Id wird nur für den Status genutzt
  </tr>
   <tr>
   <td>Gültigkeit der Hilfe:</td>
-  <td>Bausteinversion 0.8</td>
+  <td>Bausteinversion 0.9</td>
  </tr>
    <tr>
-  <td>min. HS FW:</td>
+  <td>Getestet mit HS FW:</td>
   <td>4.10</td>
  </tr> 
 </table>
@@ -92,7 +92,7 @@ Port und Benutzer und Group Id. Die Light Id wird nur für den Status genutzt
  <tr>
   <td>Grp Brightness</td>
   <td>0</td>
-  <td>Helligkeit für die Hue Gruppe in Prozent.<br>
+  <td>Helligkeit für die Hue Gruppe in 0-100%<br>
       Wird der Wert gesetzt, wird die Gruppe eingeschaltet.</td>
  </tr>
  <tr>
@@ -105,7 +105,7 @@ Port und Benutzer und Group Id. Die Light Id wird nur für den Status genutzt
  <tr>
   <td>Grp Saturation</td>
   <td>0</td>
-  <td>Sättigung der Hue Gruppe in Prozent.<br>
+  <td>Sättigung der Hue Gruppe in 0-100%<br>
       Wird der Wert gesetzt, wird die Gruppe eingeschaltet.</td>
  </tr>
  <tr>
@@ -149,27 +149,27 @@ Port und Benutzer und Group Id. Die Light Id wird nur für den Status genutzt
  <tr>
   <td>Grp On/Off</td>
   <td>0</td>
-  <td>Ein/Aus Status</td>
+  <td>Ein/Aus Status (1/0)</td>
  </tr>
   <tr>
   <td>Grp Brightness</td>
   <td>0</td>
-  <td>Aktuelle Helligkeit in Prozent</td>
+  <td>Aktuelle Helligkeit 0-100%</td>
  </tr>
   <tr>
   <td>Grp Hue Color</td>
   <td>0</td>
-  <td>Aktuelle Hue Color</td>
+  <td>Aktuelle Hue Color 0-65534.4</td>
  </tr>
   <tr>
   <td>Grp Saturation</td>
   <td>0</td>
-  <td>Aktuelle Sättigung in Prozent</td>
+  <td>Aktuelle Sättigung in 0-100%</td>
  </tr>
  <tr>
   <td>Grp Color Temp</td>
   <td>0</td>
-  <td>Farbtemperatur der Gruppe (nur Weißwert)</td>
+  <td>Farbtemperatur der Gruppe (nur Weißwert) 154 - 500 (vgl. Eingang)</td>
  </tr>
  <tr>
   <td>r</td>
@@ -189,7 +189,7 @@ Port und Benutzer und Group Id. Die Light Id wird nur für den Status genutzt
   <tr>
   <td>Lght Reachable</td>
   <td>0</td>
-  <td>Erreichbarkeit der Lampe (nicht Gruppe!)</td>
+  <td>Erreichbarkeit der Lampe (nicht Gruppe!); 0=nicht erreichbar, 1=erreichbar</td>
  </tr>
   <tr>
   <td>Groups Json</td>
@@ -218,6 +218,13 @@ Port und Benutzer und Group Id. Die Light Id wird nur für den Status genutzt
 
 <h3>Change Log</h3>
 <ul>
+  <li>v0.9
+    <ul>
+	  <li>Fix: Bri und Sat in %</li>
+	  <li>Fix: Brightness und Saturation werden nach Schreiben falsch als Status ausgegeben.</li>
+	  <li>Fix: Reachable liefert immer false</li>	  
+	</ul>
+  </li>
   <li>v0.8
     <ul>
 	  <li>Update Hilfe</li>

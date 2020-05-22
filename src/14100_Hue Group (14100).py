@@ -59,9 +59,9 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
             response = httpClient.getresponse()
             status = response.status
             data = {'data' : response.read(), 'status' : status}
-            self.DEBUG.set_value("Response code", status)
+            self.DEBUG.add_message("14100: Hue bridge response code: " + str(status))
         except Exception as e:
-            print(e)
+            self.DEBUG.add_message(e)
             return
         finally:
             if httpClient:
@@ -95,14 +95,14 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
                     self._set_output_value(self.PIN_O_BSTATUSONOFF, bOnOff)
 
                     if 'bri' in actionSub:
-                        nBri = int(actionSub['bri'] / 254.0 * 100)
-                        self._set_output_value(self.PIN_O_NBRI, nBri)
+                        nBri = int(actionSub['bri'])
+                        self._set_output_value(self.PIN_O_NBRI, nBri / 255.0 * 100.0)
                     if 'hue' in actionSub:
                         nHue = actionSub['hue']
                         self._set_output_value(self.PIN_O_NHUE, nHue)
                     if 'sat' in actionSub:
-                        nSat = actionSub['sat'] / 254.0 * 100
-                        self._set_output_value(self.PIN_O_NSAT, nSat)
+                        nSat = actionSub['sat']
+                        self._set_output_value(self.PIN_O_NSAT, nSat / 255.0 * 100)
                     if 'ct' in actionSub:
                         nCt = actionSub['ct']
                         self._set_output_value(self.PIN_O_NCT, nCt)
@@ -179,39 +179,14 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
         ret = self.httpPut(api_url, api_port, api_user, group, payload)
         return ("success" in ret["data"])
 
-    #Hue HSB (heu, sat, bri) = HSV
-    #def rgb2hsv(self, r, g, b):
-    #    r, g, b = r / 255.0, g / 255.0, b / 255.0
-    #    mx = max(r, g, b)
-    #    mn = min(r, g, b)
-    #    df = mx - mn
-
-    #    if mx == mn:
-    #        h = 0
-    #    elif mx == r:
-    #        h = (60 * ((g-b)/df) + 360) % 360
-    #    elif mx == g:
-    #        h = (60 * ((b-r)/df) + 120) % 360
-    #    elif mx == b:
-    #        h = (60 * ((r-g)/df) + 240) % 360
-
-    #    if mx == 0:
-    #        s = 0
-    #    else:
-    #        s = df/mx
-
-    #    v = mx
-
-    #    h = int(182.04 * h)
-    #    s = int(s * 255)
-    #    v = int(v * 255)
-
         return h, s, v
 
 
     def on_init(self):
         self.DEBUG = self.FRAMEWORK.create_debug_section()
-    
+        #self.DEBUG.add_message("14100: Hue bridge response code: " + str(status)) #list
+        #self.DEBUG.set_value("14100: Hue bridge response code", status)
+
     def on_input_value(self, index, value):
         res = False
 
@@ -223,17 +198,15 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
         light = int(self._get_input_value(self.PIN_I_NLIGHT))
         hueGroupState = {"data" : str(self._get_input_value(self.PIN_I_SGROUPSTATJSON)), "status" : 200}
         hueLightState = {"data" : str(self._get_input_value(self.PIN_I_SLIGHTSSTATJSON)), "status"  :200}
-        nBri = int(self._get_input_value(self.PIN_I_NBRI) / 100.0 * 255)
+        nBri = int(self._get_input_value(self.PIN_I_NBRI) / 100.0 * 255.0)
         nHueCol = int(self._get_input_value(self.PIN_I_NHUE))
-        nSat = int(self._get_input_value(self.PIN_I_NSAT) / 100.0 * 255)
+        nSat = int(self._get_input_value(self.PIN_I_NSAT) / 100.0 * 255.0)
         nCt = int(self._get_input_value(self.PIN_I_NCT))
 
         #### If trigger == 1, get data via web request
         if (self.PIN_I_BTRIGGER == index) and (bool(value)):
             hueGroupState = self.getData(sApi_url, nApi_port, sApi_user, "groups")
             hueLightState = self.getData(sApi_url, nApi_port, sApi_user, "lights")
-            #self.DEBUG.set_value("grp json", hueGroupState)
-            #self.DEBUG.set_value("lght json", hueLightState)
 
         if ((self.PIN_I_BTRIGGER == index) or
             (self.PIN_I_SGROUPSTATJSON == index)):
@@ -268,7 +241,7 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
             res = self.setBri(sApi_url, nApi_port, sApi_user, group, nBri)
             print(res)
             if (res):
-                self._set_output_value(self.PIN_O_NBRI, nBri / 255 * 100)
+                self._set_output_value(self.PIN_O_NBRI, nBri / 255.0 * 100.0)
 
         if self.PIN_I_NHUE == index :
             self.hueOnOff(sApi_url, nApi_port, sApi_user, group, True)
@@ -278,9 +251,9 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
 
         if self.PIN_I_NSAT == index :
             self.hueOnOff(sApi_url, nApi_port, sApi_user, group, True)
-            res = self.setSat(sApi_url, nApi_port, sApi_user, group, nSat / 255 * 100)
+            res = self.setSat(sApi_url, nApi_port, sApi_user, group, nSat)
             if (res):
-                self._set_output_value(self.PIN_O_NSAT, nSat)
+                self._set_output_value(self.PIN_O_NSAT, nSat / 255.0 * 100)
 
         if self.PIN_I_NCT == index :
             self.hueOnOff(sApi_url, nApi_port, sApi_user, group, True)
@@ -293,11 +266,11 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
             (self.PIN_I_NB == index)):
             self.hueOnOff(sApi_url, nApi_port, sApi_user, group, True)
 
-            r = int(self._get_input_value(self.PIN_I_NR))
-            g = int(self._get_input_value(self.PIN_I_NG))
-            b = int(self._get_input_value(self.PIN_I_NB))
+            nR = int(self._get_input_value(self.PIN_I_NR))
+            nG = int(self._get_input_value(self.PIN_I_NG))
+            nB = int(self._get_input_value(self.PIN_I_NB))
             #h, s, v = self.rgb2hsv(r, g, b)
-            h, s, v = colorsys.rgb_to_hsv(r / 255.0, g / 255.0, b / 255.0)
+            h, s, v = colorsys.rgb_to_hsv(r = (nR / 255.0), g = (nG / 255.0), b = (nB / 255.0))
             h = int(360.0 * 182.04 * h)
             s = int(s * 255)
             v = int(v * 255)
@@ -308,6 +281,6 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
 
             if(ret1 and ret2 and ret3):
                 #set rgb as output
-                self._set_output_value(self.PIN_O_NR, r)
-                self._set_output_value(self.PIN_O_NG, g)
-                self._set_output_value(self.PIN_O_NB, b)
+                self._set_output_value(self.PIN_O_NR, nR)
+                self._set_output_value(self.PIN_O_NG, nG)
+                self._set_output_value(self.PIN_O_NB, nB)
