@@ -135,6 +135,22 @@ Port und Benutzer und Group Id. Die Light Id wird nur für den Status genutzt
   <td></td>
   <td>Hue Scene für die Hue Gruppe, vgl. http://hue-bridge-ip/user/scenes</td>
  </tr>
+ <tr>
+  <td>Transition Time</td>
+  <td>0</td>
+  <td>Zeit zum Einnehmen des neuen Zustandes in x * 10ms, 
+  10 führt z.B. zu einem Übergangszeit von 1 sek.</td>
+ </tr>
+ <tr>
+  <td>Alert Effect</td>
+  <td>0</td>
+  <td>1 startet den Alarm, 0 stoppt den Alarm wieder</td>
+ </tr>
+ <tr>
+  <td>Color Loop</td>
+  <td>0</td>
+  <td>Schaltet einen endlos-Farbdurchlauf ein oder aus.</td>
+ </tr> 
 </table>
 
 <h2>Ausgänge</h2>
@@ -218,6 +234,13 @@ Port und Benutzer und Group Id. Die Light Id wird nur für den Status genutzt
 
 <h3>Change Log</h3>
 <ul>
+  <li>v1.0
+    <ul>
+	  <li>Transition Time ermöglicht</li>
+	  <li>Color Loop ergänzt</li>
+	  <li>Alarm Modus ergänzt</li>	  
+	</ul>
+  </li>
   <li>v0.9
     <ul>
 	  <li>Fix: Bri und Sat in %</li>

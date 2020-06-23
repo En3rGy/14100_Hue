@@ -31,6 +31,9 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
         self.PIN_I_NG=15
         self.PIN_I_NB=16
         self.PIN_I_SSCENE=17
+        self.PIN_I_NTRANSTIME=18
+        self.PIN_I_BALERT=19
+        self.PIN_I_NEFFECT=20
         self.PIN_O_BSTATUSONOFF=1
         self.PIN_O_NBRI=2
         self.PIN_O_NHUE=3
@@ -61,7 +64,7 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
             data = {'data' : response.read(), 'status' : status}
             self.DEBUG.add_message("14100: Hue bridge response code: " + str(status))
         except Exception as e:
-            self.DEBUG.add_message(e)
+            self.DEBUG.add_message(str(e))
             return
         finally:
             if httpClient:
@@ -125,15 +128,20 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
         httpClient = None
         data = {'data' : "", 'status' : -1}
         try:
+            nTransTime = int(self._get_input_value(self.PIN_I_NTRANSTIME))
+            if (nTransTime > 0):
+                payload = payload[:-1]
+                payload = payload + ',"transitiontime":' + str(nTransTime) + '}'
+
             api_path = '/api/' + api_user + '/groups/' + str(group) + '/action'
             headers = { "HOST": str(api_url + ":" + str(api_port)), "CONTENT-LENGTH": str(len(payload)), "Content-type": 'application/json' }
-            #headers = { "Content-type": 'application/json' }            
+            #headers = { "Content-type": 'application/json' }
             httpClient = httplib.HTTPConnection(api_url, int(api_port), timeout=5)
+
             httpClient.request("PUT", api_path, payload, headers) 
             response = httpClient.getresponse()
             status = response.status
             data = {'data' : response.read(), 'status' : status}
-            #print data
             return data
         #except Exception as e:
         except:
@@ -154,6 +162,28 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
 
     def setScene(self, api_url, api_port, api_user, group, sScene):
         payload = '{"scene":"' + sScene + '"}'
+        ret = self.httpPut(api_url, api_port, api_user, group, payload)
+        return ("success" in ret["data"])
+
+    def setEffect(self, api_url, api_port, api_user, group, nEffect):
+        payload = '{"effect":"'
+
+        if (nEffect == True):
+            payload = payload + 'colorloop"}'
+        else:
+            payload = payload + 'none"}'
+
+        ret = self.httpPut(api_url, api_port, api_user, group, payload)
+        return ("success" in ret["data"])
+
+
+    def setAlert(self, api_url, api_port, api_user, group, bAlert):
+        payload = ""
+        if (bAlert == True):
+            payload = '{"alert":"lselect"}'
+        else:
+            payload = '{"alert":"none"}'
+
         ret = self.httpPut(api_url, api_port, api_user, group, payload)
         return ("success" in ret["data"])
 
@@ -178,8 +208,6 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
         payload = '{"ct":' + str(nCt) + '}'
         ret = self.httpPut(api_url, api_port, api_user, group, payload)
         return ("success" in ret["data"])
-
-        return h, s, v
 
 
     def on_init(self):
@@ -284,3 +312,12 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
                 self._set_output_value(self.PIN_O_NR, nR)
                 self._set_output_value(self.PIN_O_NG, nG)
                 self._set_output_value(self.PIN_O_NB, nB)
+
+        if (self.PIN_I_BALERT == index):
+            bAlert = int(self._get_input_value(self.PIN_I_BALERT))
+            self.setAlert(sApi_url, nApi_port, sApi_user, group, bAlert)
+            ###
+
+        if (self.PIN_I_NEFFECT == index):
+            nEffect = int(self._get_input_value(self.PIN_I_NEFFECT))
+            self.setEffect(sApi_url, nApi_port, sApi_user, group, nEffect)

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <config>
     <modules>
-        <module category="Datenaustausch" context="hsl20_3_Hue" id="14100" name="Hue Group (14100)" version="0.9">
+        <module category="Datenaustausch" context="hsl20_3_Hue" id="14100" name="Hue Group (14100)" version="1.0">
             <inputs>
                 <input type="string" const_name="sGroupStatJson" init_value="">Groups Json</input>
                 <input type="string" const_name="sLightsStatJson" init_value="">Lights Json</input>
@@ -20,6 +20,9 @@
 				<input type="number" const_name="nG" init_value="0">g</input>
 				<input type="number" const_name="nB" init_value="0">b</input>				
 				<input type="string" const_name="sScene" init_value="">Grp Hue Scene</input>
+				<input type="number" const_name="nTranstime" init_value="0">Transition Time</input>
+				<input type="number" const_name="bAlert" init_value="0">Alert Effect</input>
+				<input type="number" const_name="nEffect" init_value="0">Color Loop</input>
             </inputs>
             <outputs>
 				<output type="number" const_name="bStatusOnOff" init_value="0">Grp On/Off</output>
