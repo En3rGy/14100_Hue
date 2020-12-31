@@ -112,9 +112,9 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
                         
                     r, g, b = colorsys.hsv_to_rgb(nHue / 360.0 / 182.04, nSat / 255.0, nBri / 255.0)
 
-                    r = int(r * 255.0)
-                    g = int(g * 255.0)
-                    b = int(b * 255.0)
+                    r = int(r * 100.0)
+                    g = int(g * 100.0)
+                    b = int(b * 100.0)
 
                     self._set_output_value(self.PIN_O_NR, r)
                     self._set_output_value(self.PIN_O_NG, g)
@@ -294,9 +294,9 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
             (self.PIN_I_NB == index)):
             self.hueOnOff(sApi_url, nApi_port, sApi_user, group, True)
 
-            nR = int(self._get_input_value(self.PIN_I_NR))
-            nG = int(self._get_input_value(self.PIN_I_NG))
-            nB = int(self._get_input_value(self.PIN_I_NB))
+            nR = int(int(self._get_input_value(self.PIN_I_NR)) * 2.55)
+            nG = int(int(self._get_input_value(self.PIN_I_NG)) * 2.55)
+            nB = int(int(self._get_input_value(self.PIN_I_NB)) * 2.55)
             #h, s, v = self.rgb2hsv(r, g, b)
             h, s, v = colorsys.rgb_to_hsv(r = (nR / 255.0), g = (nG / 255.0), b = (nB / 255.0))
             h = int(360.0 * 182.04 * h)
