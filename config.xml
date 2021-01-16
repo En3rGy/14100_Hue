@@ -23,6 +23,8 @@
 				<input type="number" const_name="nTranstime" init_value="0">Transition Time</input>
 				<input type="number" const_name="bAlert" init_value="0">Alert Effect</input>
 				<input type="number" const_name="nEffect" init_value="0">Color Loop</input>
+				<input type="number" const_name="nRelDim" init_value="0">KNX rel. Dimm</input>
+				<input type="number" const_name="nDimRamp" init_value="0">KNX Dimm Rampe [s]</input>
             </inputs>
             <outputs>
 				<output type="number" const_name="bStatusOnOff" init_value="0">Grp On/Off</output>

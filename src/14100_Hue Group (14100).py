@@ -2,6 +2,7 @@
 import httplib
 import json
 import colorsys
+import threading
 
 ##!!!!##################################################################################################
 #### Own written code can be placed above this commentblock . Do not change or delete commentblock! ####
@@ -34,6 +35,8 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
         self.PIN_I_NTRANSTIME=18
         self.PIN_I_BALERT=19
         self.PIN_I_NEFFECT=20
+        self.PIN_I_NRELDIM=21
+        self.PIN_I_NDIMRAMP=22
         self.PIN_O_BSTATUSONOFF=1
         self.PIN_O_NBRI=2
         self.PIN_O_NHUE=3
@@ -51,6 +54,11 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
 #### Own written code can be placed after this commentblock . Do not change or delete commentblock! ####
 ###################################################################################################!!!##
 
+    g_debug = False
+    g_currBri = 0
+    g_intervall = 0
+    g_timer = threading.Timer(1000, None)
+
     # get general web request
     def getData(self, api_url, api_port, api_user, api_cmd):
         api_path = '/api/' + api_user + '/' + api_cmd
@@ -58,10 +66,13 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
 
         try:
             httpClient = httplib.HTTPConnection(api_url, int(api_port), timeout=5)
-            httpClient.request("GET", api_path)
-            response = httpClient.getresponse()
-            status = response.status
-            data = {'data' : response.read(), 'status' : status}
+            if (self.g_debug == False):
+                httpClient.request("GET", api_path)
+                response = httpClient.getresponse()
+                status = response.status
+                data = {'data' : response.read(), 'status' : status}
+            else:
+                data = {'data' : "debug", 'status' : 200}
             self.DEBUG.add_message("14100: Hue bridge response code: " + str(status))
         except Exception as e:
             self.DEBUG.add_message(str(e))
@@ -99,6 +110,7 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
 
                     if 'bri' in actionSub:
                         nBri = int(actionSub['bri'])
+                        self.g_currBri = nBri
                         self._set_output_value(self.PIN_O_NBRI, nBri / 255.0 * 100.0)
                     if 'hue' in actionSub:
                         nHue = actionSub['hue']
@@ -136,12 +148,16 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
             api_path = '/api/' + api_user + '/groups/' + str(group) + '/action'
             headers = { "HOST": str(api_url + ":" + str(api_port)), "CONTENT-LENGTH": str(len(payload)), "Content-type": 'application/json' }
             #headers = { "Content-type": 'application/json' }
-            httpClient = httplib.HTTPConnection(api_url, int(api_port), timeout=5)
 
-            httpClient.request("PUT", api_path, payload, headers) 
-            response = httpClient.getresponse()
-            status = response.status
-            data = {'data' : response.read(), 'status' : status}
+            if (self.g_debug == False):
+                httpClient = httplib.HTTPConnection(api_url, int(api_port), timeout=5)
+    
+                httpClient.request("PUT", api_path, payload, headers) 
+                response = httpClient.getresponse()
+                status = response.status
+                data = {'data' : response.read(), 'status' : status}
+            else:
+                data = {'data' : '{"success" : True}', 'status' : 200}
             return data
         #except Exception as e:
         except:
@@ -192,6 +208,8 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
             self.hueOnOff(api_url, api_port, api_user, group, True)
         payload = '{"bri":' + str(nBri) + '}'
         ret = self.httpPut(api_url, api_port, api_user, group, payload)
+        if "success" in ret["data"]:
+            self.g_currBri = nBri
         return ("success" in ret["data"])
 
     def setHueColor(self, api_url, api_port, api_user, group, nHueCol):
@@ -209,11 +227,52 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
         ret = self.httpPut(api_url, api_port, api_user, group, payload)
         return ("success" in ret["data"])
 
+    def prepDim(self, val):
+        if (val == "\x00"):
+            self.g_timer.cancel()
+            self.g_timer = threading.Timer(1000, None)
+            return
+
+        bte = bytearray(val)
+        sgn_bte = int((bte[-1] & 0x08) >> 3)
+        val = int(bte[-1] & 0x07)
+
+        self.g_intervall = round(255.0 / pow(2, val - 1), 0)
+        print(self.g_intervall)
+
+
+        if(sgn_bte == 1):
+            pass
+        else:
+            self.g_intervall = int(-1 * self.g_intervall)
+
+        self.doDim()
+
+
+    def doDim(self):
+        api_url = str(self._get_input_value(self.PIN_I_SHUEIP))
+        api_port = int(self._get_input_value(self.PIN_I_NHUEPORT))
+        api_user = str(self._get_input_value(self.PIN_I_SUSER))
+        group = int(self._get_input_value(self.PIN_I_NGROUP))
+
+        newBri = int(self.g_currBri + self.g_intervall)
+        if (newBri > 255):
+            newBri = 255
+        elif(newBri < 1):
+            newBri = 1
+
+        self.setBri(api_url, api_port, api_user, group, newBri)
+
+        duration = float(self._get_input_value(self.PIN_I_NDIMRAMP))
+        step = float(round(duration / (abs(self.g_intervall) * 255), 4))
+
+        self.g_timer = threading.Timer(step, self.doDim)
+        if (self.g_debug == False):
+            self.g_timer.start()
+
 
     def on_init(self):
         self.DEBUG = self.FRAMEWORK.create_debug_section()
-        #self.DEBUG.add_message("14100: Hue bridge response code: " + str(status)) #list
-        #self.DEBUG.set_value("14100: Hue bridge response code", status)
 
     def on_input_value(self, index, value):
         res = False
@@ -259,39 +318,39 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
             if (res):
                 self._set_output_value(self.PIN_O_BSTATUSONOFF, value)
 
-        if self.PIN_I_SSCENE == index:
+        elif self.PIN_I_SSCENE == index:
             res = self.setScene(sApi_url, nApi_port, sApi_user, group, value)
             if (res):
                 self._set_output_value(self.PIN_O_BSTATUSONOFF, True)
 
-        if self.PIN_I_NBRI == index :
+        elif self.PIN_I_NBRI == index :
             self.hueOnOff(sApi_url, nApi_port, sApi_user, group, True)
             res = self.setBri(sApi_url, nApi_port, sApi_user, group, nBri)
             print(res)
             if (res):
                 self._set_output_value(self.PIN_O_NBRI, nBri / 255.0 * 100.0)
 
-        if self.PIN_I_NHUE == index :
+        elif self.PIN_I_NHUE == index :
             self.hueOnOff(sApi_url, nApi_port, sApi_user, group, True)
             res = self.setHueColor(sApi_url, nApi_port, sApi_user, group, nHueCol)
             if (res):
                 self._set_output_value(self.PIN_O_NHUE, nHueCol)
 
-        if self.PIN_I_NSAT == index :
+        elif self.PIN_I_NSAT == index :
             self.hueOnOff(sApi_url, nApi_port, sApi_user, group, True)
             res = self.setSat(sApi_url, nApi_port, sApi_user, group, nSat)
             if (res):
                 self._set_output_value(self.PIN_O_NSAT, nSat / 255.0 * 100)
 
-        if self.PIN_I_NCT == index :
+        elif self.PIN_I_NCT == index :
             self.hueOnOff(sApi_url, nApi_port, sApi_user, group, True)
             res = self.setCt(sApi_url, nApi_port, sApi_user, group, nCt)
             if (res):
                 self._set_output_value(self.PIN_O_NCT, nCt)
 
-        if ((self.PIN_I_NR == index) or
-            (self.PIN_I_NG == index) or
-            (self.PIN_I_NB == index)):
+        elif ((self.PIN_I_NR == index) or
+             (self.PIN_I_NG == index) or
+             (self.PIN_I_NB == index)):
             self.hueOnOff(sApi_url, nApi_port, sApi_user, group, True)
 
             nR = int(int(self._get_input_value(self.PIN_I_NR)) * 2.55)
@@ -313,11 +372,14 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
                 self._set_output_value(self.PIN_O_NG, nG)
                 self._set_output_value(self.PIN_O_NB, nB)
 
-        if (self.PIN_I_BALERT == index):
+        elif (self.PIN_I_BALERT == index):
             bAlert = int(self._get_input_value(self.PIN_I_BALERT))
             self.setAlert(sApi_url, nApi_port, sApi_user, group, bAlert)
             ###
 
-        if (self.PIN_I_NEFFECT == index):
+        elif (self.PIN_I_NEFFECT == index):
             nEffect = int(self._get_input_value(self.PIN_I_NEFFECT))
             self.setEffect(sApi_url, nApi_port, sApi_user, group, nEffect)
+
+        elif (self.PIN_I_NRELDIM == index):
+            self.prepDim(value)
