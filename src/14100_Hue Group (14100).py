@@ -58,6 +58,7 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
     g_currBri = 0
     g_intervall = 0
     g_timer = threading.Timer(1000, None)
+    g_stopp = False
 
     # get general web request
     def getData(self, api_url, api_port, api_user, api_cmd):
@@ -228,28 +229,37 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
         return ("success" in ret["data"])
 
     def prepDim(self, val):
-        if (val == "\x00"):
-            self.g_timer.cancel()
+        self.DEBUG.set_value("Dim cmd", str(val) + " " + str(type(val)))
+
+        if (type(val) is float) or (type(val) is int):
+            val = int(val)
+            val = chr(val)
+            val = bytearray(val)
+
+        if (val[-1] == 0x00):
+            self.g_stopp = True
             self.g_timer = threading.Timer(1000, None)
+            print("abort")
             return
 
-        bte = bytearray(val)
-        sgn_bte = int((bte[-1] & 0x08) >> 3)
-        val = int(bte[-1] & 0x07)
+        sgn_bte = int((val[-1] & 0x08) >> 3)
+        val = int(val[-1] & 0x07)
 
         self.g_intervall = round(255.0 / pow(2, val - 1), 0)
-        print(self.g_intervall)
-
 
         if(sgn_bte == 1):
             pass
         else:
             self.g_intervall = int(-1 * self.g_intervall)
 
+        self.g_stopp = False
         self.doDim()
 
 
     def doDim(self):
+        if (self.g_stopp == True):
+            return
+
         api_url = str(self._get_input_value(self.PIN_I_SHUEIP))
         api_port = int(self._get_input_value(self.PIN_I_NHUEPORT))
         api_user = str(self._get_input_value(self.PIN_I_SUSER))
@@ -264,11 +274,12 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
         self.setBri(api_url, api_port, api_user, group, newBri)
 
         duration = float(self._get_input_value(self.PIN_I_NDIMRAMP))
-        step = float(round(duration / (abs(self.g_intervall) * 255), 4))
+        steps = 255 / abs(self.g_intervall)
+        step = float(round(duration / steps, 4))
 
         self.g_timer = threading.Timer(step, self.doDim)
-        if (self.g_debug == False):
-            self.g_timer.start()
+        self.g_timer.start()
+
 
 
     def on_init(self):
