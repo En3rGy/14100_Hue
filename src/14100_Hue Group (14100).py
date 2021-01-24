@@ -56,24 +56,24 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
 
     g_debug = False
     g_currBri = 0
-    g_intervall = 0
+    g_interval = 0
     g_timer = threading.Timer(1000, None)
-    g_stopp = False
+    g_stop = False
 
     # get general web request
-    def getData(self, api_url, api_port, api_user, api_cmd):
+    def get_data(self, api_url, api_port, api_user, api_cmd):
         api_path = '/api/' + api_user + '/' + api_cmd
         data = ""
 
         try:
             httpClient = httplib.HTTPConnection(api_url, int(api_port), timeout=5)
-            if (self.g_debug == False):
+            if not self.g_debug:
                 httpClient.request("GET", api_path)
                 response = httpClient.getresponse()
                 status = response.status
-                data = {'data' : response.read(), 'status' : status}
+                data = {'data': response.read(), 'status': status}
             else:
-                data = {'data' : "debug", 'status' : 200}
+                data = {'data': "debug", 'status': 200}
             self.DEBUG.add_message("14100: Hue bridge response code: " + str(status))
         except Exception as e:
             self.DEBUG.add_message(str(e))
@@ -102,7 +102,7 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
     def readGroupsJson(self, jsonState, group):
         try:
             jsonState = json.loads(jsonState)
-            
+
             if str(group) in jsonState:
                 if 'action' in jsonState[str(group)]:
                     actionSub = jsonState[str(group)]["action"]
@@ -122,7 +122,7 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
                     if 'ct' in actionSub:
                         nCt = actionSub['ct']
                         self._set_output_value(self.PIN_O_NCT, nCt)
-                        
+
                     r, g, b = colorsys.hsv_to_rgb(nHue / 360.0 / 182.04, nSat / 255.0, nBri / 255.0)
 
                     r = int(r * 100.0)
@@ -139,7 +139,7 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
 
     def httpPut(self, api_url, api_port, api_user, group, payload):
         httpClient = None
-        data = {'data' : "", 'status' : -1}
+        data = {'data': "", 'status': -1}
         try:
             nTransTime = int(self._get_input_value(self.PIN_I_NTRANSTIME))
             if (nTransTime > 0):
@@ -147,20 +147,21 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
                 payload = payload + ',"transitiontime":' + str(nTransTime) + '}'
 
             api_path = '/api/' + api_user + '/groups/' + str(group) + '/action'
-            headers = { "HOST": str(api_url + ":" + str(api_port)), "CONTENT-LENGTH": str(len(payload)), "Content-type": 'application/json' }
-            #headers = { "Content-type": 'application/json' }
+            headers = {"HOST": str(api_url + ":" + str(api_port)), "CONTENT-LENGTH": str(len(payload)),
+                       "Content-type": 'application/json'}
+            # headers = { "Content-type": 'application/json' }
 
-            if (self.g_debug == False):
+            if not self.g_debug:
                 httpClient = httplib.HTTPConnection(api_url, int(api_port), timeout=5)
-    
-                httpClient.request("PUT", api_path, payload, headers) 
+
+                httpClient.request("PUT", api_path, payload, headers)
                 response = httpClient.getresponse()
                 status = response.status
-                data = {'data' : response.read(), 'status' : status}
+                data = {'data': response.read(), 'status': status}
             else:
-                data = {'data' : '{"success" : True}', 'status' : 200}
+                data = {'data': '{"success" : True}', 'status': 200}
             return data
-        #except Exception as e:
+        # except Exception as e:
         except:
             return data
         finally:
@@ -169,7 +170,7 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
 
     def hueOnOff(self, api_url, api_port, api_user, group, bSetOn):
         payload = ""
-        if bSetOn == True:
+        if bSetOn:
             payload = '{"on":true}'
         else:
             payload = '{"on":false}'
@@ -193,7 +194,6 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
         ret = self.httpPut(api_url, api_port, api_user, group, payload)
         return ("success" in ret["data"])
 
-
     def setAlert(self, api_url, api_port, api_user, group, bAlert):
         payload = ""
         if (bAlert == True):
@@ -202,33 +202,33 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
             payload = '{"alert":"none"}'
 
         ret = self.httpPut(api_url, api_port, api_user, group, payload)
-        return ("success" in ret["data"])
+        return "success" in ret["data"]
 
     def setBri(self, api_url, api_port, api_user, group, nBri):
-        if (nBri > 0):
+        if nBri > 0:
             self.hueOnOff(api_url, api_port, api_user, group, True)
         payload = '{"bri":' + str(nBri) + '}'
         ret = self.httpPut(api_url, api_port, api_user, group, payload)
         if "success" in ret["data"]:
             self.g_currBri = nBri
-        return ("success" in ret["data"])
+        return "success" in ret["data"]
 
-    def setHueColor(self, api_url, api_port, api_user, group, nHueCol):
-        payload = '{"hue":' + str(nHueCol) + '}'
+    def set_hue_color(self, api_url, api_port, api_user, group, hue_col):
+        payload = '{"hue":' + str(hue_col) + '}'
         ret = self.httpPut(api_url, api_port, api_user, group, payload)
-        return ("success" in ret["data"])
+        return "success" in ret["data"]
 
-    def setSat(self, api_url, api_port, api_user, group, nSat):
-        payload = '{"sat":' + str(nSat) + '}'
+    def set_sat(self, api_url, api_port, api_user, group, sat):
+        payload = '{"sat":' + str(sat) + '}'
         ret = self.httpPut(api_url, api_port, api_user, group, payload)
-        return ("success" in ret["data"])
+        return "success" in ret["data"]
 
-    def setCt(self, api_url, api_port, api_user, group, nCt):
+    def set_ct(self, api_url, api_port, api_user, group, nCt):
         payload = '{"ct":' + str(nCt) + '}'
         ret = self.httpPut(api_url, api_port, api_user, group, payload)
-        return ("success" in ret["data"])
+        return "success" in ret["data"]
 
-    def prepDim(self, val):
+    def prep_dim(self, val):
         self.DEBUG.set_value("Dim cmd", str(val) + " " + str(type(val)))
 
         if (type(val) is float) or (type(val) is int):
@@ -236,28 +236,28 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
             val = chr(val)
             val = bytearray(val)
 
-        if (val[-1] == 0x00):
-            self.g_stopp = True
-            self.g_timer = threading.Timer(1000, None)
+        if val[-1] == 0x00:
+            self.g_stop = True
+            if self.g_timer.isAlive():
+                self.g_timer.cancel()
             print("abort")
             return
 
         sgn_bte = int((val[-1] & 0x08) >> 3)
         val = int(val[-1] & 0x07)
 
-        self.g_intervall = round(255.0 / pow(2, val - 1), 0)
+        self.g_interval = round(255.0 / pow(2, val - 1), 0)
 
-        if(sgn_bte == 1):
+        if sgn_bte == 1:
             pass
         else:
-            self.g_intervall = int(-1 * self.g_intervall)
+            self.g_interval = int(-1 * self.g_interval)
 
-        self.g_stopp = False
-        self.doDim()
+        self.g_stop = False
+        self.do_dim()
 
-
-    def doDim(self):
-        if (self.g_stopp == True):
+    def do_dim(self):
+        if self.g_stop:
             return
 
         api_url = str(self._get_input_value(self.PIN_I_SHUEIP))
@@ -265,22 +265,18 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
         api_user = str(self._get_input_value(self.PIN_I_SUSER))
         group = int(self._get_input_value(self.PIN_I_NGROUP))
 
-        newBri = int(self.g_currBri + self.g_intervall)
-        if (newBri > 255):
-            newBri = 255
-        elif(newBri < 1):
-            newBri = 1
+        new_bri = int(self.g_currBri + self.g_interval)
+        if new_bri > 255:
+            new_bri = 255
+        elif new_bri < 1:
+            new_bri = 1
 
-        self.setBri(api_url, api_port, api_user, group, newBri)
+        self.setBri(api_url, api_port, api_user, group, new_bri)
 
         duration = float(self._get_input_value(self.PIN_I_NDIMRAMP))
-        steps = 255 / abs(self.g_intervall)
-        step = float(round(duration / steps, 4))
 
-        self.g_timer = threading.Timer(step, self.doDim)
+        self.g_timer = threading.Timer(duration, self.do_dim)
         self.g_timer.start()
-
-
 
     def on_init(self):
         self.DEBUG = self.FRAMEWORK.create_debug_section()
@@ -294,8 +290,8 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
         sApi_user = str(self._get_input_value(self.PIN_I_SUSER))
         group = int(self._get_input_value(self.PIN_I_NGROUP))
         light = int(self._get_input_value(self.PIN_I_NLIGHT))
-        hueGroupState = {"data" : str(self._get_input_value(self.PIN_I_SGROUPSTATJSON)), "status" : 200}
-        hueLightState = {"data" : str(self._get_input_value(self.PIN_I_SLIGHTSSTATJSON)), "status"  :200}
+        hueGroupState = {"data": str(self._get_input_value(self.PIN_I_SGROUPSTATJSON)), "status": 200}
+        hueLightState = {"data": str(self._get_input_value(self.PIN_I_SLIGHTSSTATJSON)), "status": 200}
         nBri = int(self._get_input_value(self.PIN_I_NBRI) / 100.0 * 255.0)
         nHueCol = int(self._get_input_value(self.PIN_I_NHUE))
         nSat = int(self._get_input_value(self.PIN_I_NSAT) / 100.0 * 255.0)
@@ -303,18 +299,18 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
 
         #### If trigger == 1, get data via web request
         if (self.PIN_I_BTRIGGER == index) and (bool(value)):
-            hueGroupState = self.getData(sApi_url, nApi_port, sApi_user, "groups")
-            hueLightState = self.getData(sApi_url, nApi_port, sApi_user, "lights")
+            hueGroupState = self.get_data(sApi_url, nApi_port, sApi_user, "groups")
+            hueLightState = self.get_data(sApi_url, nApi_port, sApi_user, "lights")
 
         if ((self.PIN_I_BTRIGGER == index) or
-            (self.PIN_I_SGROUPSTATJSON == index)):
+                (self.PIN_I_SGROUPSTATJSON == index)):
             if (hueGroupState["data"]):
                 if (group > 0):
                     self.readGroupsJson(hueGroupState["data"], group)
                     self._set_output_value(self.PIN_O_NGRPJSON, hueGroupState["data"])
 
         if ((self.PIN_I_BTRIGGER == index) or
-            (self.PIN_I_SLIGHTSSTATJSON == index)):
+                (self.PIN_I_SLIGHTSSTATJSON == index)):
             if (hueLightState["data"]):
                 if (light > 0):
                     self.readLightsJson(hueLightState["data"], light)
@@ -334,51 +330,51 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
             if (res):
                 self._set_output_value(self.PIN_O_BSTATUSONOFF, True)
 
-        elif self.PIN_I_NBRI == index :
+        elif self.PIN_I_NBRI == index:
             self.hueOnOff(sApi_url, nApi_port, sApi_user, group, True)
             res = self.setBri(sApi_url, nApi_port, sApi_user, group, nBri)
             print(res)
             if (res):
                 self._set_output_value(self.PIN_O_NBRI, nBri / 255.0 * 100.0)
 
-        elif self.PIN_I_NHUE == index :
+        elif self.PIN_I_NHUE == index:
             self.hueOnOff(sApi_url, nApi_port, sApi_user, group, True)
-            res = self.setHueColor(sApi_url, nApi_port, sApi_user, group, nHueCol)
+            res = self.set_hue_color(sApi_url, nApi_port, sApi_user, group, nHueCol)
             if (res):
                 self._set_output_value(self.PIN_O_NHUE, nHueCol)
 
-        elif self.PIN_I_NSAT == index :
+        elif self.PIN_I_NSAT == index:
             self.hueOnOff(sApi_url, nApi_port, sApi_user, group, True)
-            res = self.setSat(sApi_url, nApi_port, sApi_user, group, nSat)
+            res = self.set_sat(sApi_url, nApi_port, sApi_user, group, nSat)
             if (res):
                 self._set_output_value(self.PIN_O_NSAT, nSat / 255.0 * 100)
 
-        elif self.PIN_I_NCT == index :
+        elif self.PIN_I_NCT == index:
             self.hueOnOff(sApi_url, nApi_port, sApi_user, group, True)
-            res = self.setCt(sApi_url, nApi_port, sApi_user, group, nCt)
+            res = self.set_ct(sApi_url, nApi_port, sApi_user, group, nCt)
             if (res):
                 self._set_output_value(self.PIN_O_NCT, nCt)
 
         elif ((self.PIN_I_NR == index) or
-             (self.PIN_I_NG == index) or
-             (self.PIN_I_NB == index)):
+              (self.PIN_I_NG == index) or
+              (self.PIN_I_NB == index)):
             self.hueOnOff(sApi_url, nApi_port, sApi_user, group, True)
 
             nR = int(int(self._get_input_value(self.PIN_I_NR)) * 2.55)
             nG = int(int(self._get_input_value(self.PIN_I_NG)) * 2.55)
             nB = int(int(self._get_input_value(self.PIN_I_NB)) * 2.55)
-            #h, s, v = self.rgb2hsv(r, g, b)
-            h, s, v = colorsys.rgb_to_hsv(r = (nR / 255.0), g = (nG / 255.0), b = (nB / 255.0))
+            # h, s, v = self.rgb2hsv(r, g, b)
+            h, s, v = colorsys.rgb_to_hsv(r=(nR / 255.0), g=(nG / 255.0), b=(nB / 255.0))
             h = int(360.0 * 182.04 * h)
             s = int(s * 255)
             v = int(v * 255)
 
             ret1 = self.setBri(sApi_url, nApi_port, sApi_user, group, v)
-            ret2 = self.setHueColor(sApi_url, nApi_port, sApi_user, group, h)
-            ret3 = self.setSat(sApi_url, nApi_port, sApi_user, group, s)
+            ret2 = self.set_hue_color(sApi_url, nApi_port, sApi_user, group, h)
+            ret3 = self.set_sat(sApi_url, nApi_port, sApi_user, group, s)
 
-            if(ret1 and ret2 and ret3):
-                #set rgb as output
+            if (ret1 and ret2 and ret3):
+                # set rgb as output
                 self._set_output_value(self.PIN_O_NR, nR)
                 self._set_output_value(self.PIN_O_NG, nG)
                 self._set_output_value(self.PIN_O_NB, nB)
@@ -393,4 +389,4 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
             self.setEffect(sApi_url, nApi_port, sApi_user, group, nEffect)
 
         elif (self.PIN_I_NRELDIM == index):
-            self.prepDim(value)
+            self.prep_dim(value)
