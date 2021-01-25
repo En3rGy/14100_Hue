@@ -111,9 +111,18 @@ class HueGroup_14100_14100():
 
     g_debug = False
     g_currBri = 0
+    g_curr_on = False
     g_interval = 0
     g_timer = threading.Timer(1000, None)
     g_stop = False
+    g_sbc = {}
+
+    def set_output_value_sbc(self, pin, value):
+        if pin in self.g_sbc.keys():
+            if self.g_sbc[pin] != value:
+                self._set_output_value(pin, value)
+
+        self.g_sbc.update({pin: value})
 
     # get general web request
     def get_data(self, api_url, api_port, api_user, api_cmd):
@@ -121,10 +130,10 @@ class HueGroup_14100_14100():
         data = ""
 
         try:
-            httpClient = httplib.HTTPConnection(api_url, int(api_port), timeout=5)
+            httpclient = httplib.HTTPConnection(api_url, int(api_port), timeout=5)
             if not self.g_debug:
-                httpClient.request("GET", api_path)
-                response = httpClient.getresponse()
+                httpclient.request("GET", api_path)
+                response = httpclient.getresponse()
                 status = response.status
                 data = {'data': response.read(), 'status': status}
             else:
@@ -134,25 +143,25 @@ class HueGroup_14100_14100():
             self.DEBUG.add_message(str(e))
             return
         finally:
-            if httpClient:
-                httpClient.close()
+            if httpclient:
+                httpclient.close()
 
         return data
 
     # read light data from json
-    def readLightsJson(self, jsonState, light):
+    def read_lights_json(self, json_state, light):
         try:
-            jsonState = json.loads(jsonState)
+            json_state = json.loads(json_state)
 
-            if str(light) in jsonState:
-                if 'state' in jsonState[str(light)]:
-                    if 'reachable' in jsonState[str(light)]['state']:
-                        bReachable = jsonState[str(light)]['state']['reachable']
+            if str(light) in json_state:
+                if 'state' in json_state[str(light)]:
+                    if 'reachable' in json_state[str(light)]['state']:
+                        bReachable = json_state[str(light)]['state']['reachable']
                         self._set_output_value(self.PIN_O_NREACHABLE, bReachable)
         except:
-            jsonState = []
+            json_state = []
 
-        return json.dumps(jsonState)
+        return json.dumps(json_state)
 
     def readGroupsJson(self, jsonState, group):
         try:
@@ -162,6 +171,7 @@ class HueGroup_14100_14100():
                 if 'action' in jsonState[str(group)]:
                     actionSub = jsonState[str(group)]["action"]
                     bOnOff = actionSub['on']
+                    self.g_curr_on = bOnOff
                     self._set_output_value(self.PIN_O_BSTATUSONOFF, bOnOff)
 
                     if 'bri' in actionSub:
@@ -259,13 +269,20 @@ class HueGroup_14100_14100():
         ret = self.httpPut(api_url, api_port, api_user, group, payload)
         return "success" in ret["data"]
 
-    def setBri(self, api_url, api_port, api_user, group, nBri):
-        if nBri > 0:
+    # @brief Sets the brightness of the hue group
+    # @return True if successful
+    # @param api_url
+    # @param api_port
+    # @param api_user
+    # @param group
+    # @param bri Brightness to be set [0-255]
+    def set_bri(self, api_url, api_port, api_user, group, bri):
+        if bri > 0 and not self.g_curr_on:
             self.hueOnOff(api_url, api_port, api_user, group, True)
-        payload = '{"bri":' + str(nBri) + '}'
+        payload = '{"bri":' + str(bri) + '}'
         ret = self.httpPut(api_url, api_port, api_user, group, payload)
         if "success" in ret["data"]:
-            self.g_currBri = nBri
+            self.g_currBri = bri
         return "success" in ret["data"]
 
     def set_hue_color(self, api_url, api_port, api_user, group, hue_col):
@@ -326,7 +343,7 @@ class HueGroup_14100_14100():
         elif new_bri < 1:
             new_bri = 1
 
-        self.setBri(api_url, api_port, api_user, group, new_bri)
+        self.set_bri(api_url, api_port, api_user, group, new_bri)
 
         duration = float(self._get_input_value(self.PIN_I_NDIMRAMP))
 
@@ -352,7 +369,7 @@ class HueGroup_14100_14100():
         nSat = int(self._get_input_value(self.PIN_I_NSAT) / 100.0 * 255.0)
         nCt = int(self._get_input_value(self.PIN_I_NCT))
 
-        #### If trigger == 1, get data via web request
+        # If trigger == 1, get data via web request
         if (self.PIN_I_BTRIGGER == index) and (bool(value)):
             hueGroupState = self.get_data(sApi_url, nApi_port, sApi_user, "groups")
             hueLightState = self.get_data(sApi_url, nApi_port, sApi_user, "lights")
@@ -368,7 +385,7 @@ class HueGroup_14100_14100():
                 (self.PIN_I_SLIGHTSSTATJSON == index)):
             if (hueLightState["data"]):
                 if (light > 0):
-                    self.readLightsJson(hueLightState["data"], light)
+                    self.read_lights_json(hueLightState["data"], light)
                     self._set_output_value(self.PIN_O_NLGHTSJSON, hueLightState["data"])
 
         #### Process set commands
@@ -387,7 +404,7 @@ class HueGroup_14100_14100():
 
         elif self.PIN_I_NBRI == index:
             self.hueOnOff(sApi_url, nApi_port, sApi_user, group, True)
-            res = self.setBri(sApi_url, nApi_port, sApi_user, group, nBri)
+            res = self.set_bri(sApi_url, nApi_port, sApi_user, group, nBri)
             print(res)
             if (res):
                 self._set_output_value(self.PIN_O_NBRI, nBri / 255.0 * 100.0)
@@ -424,26 +441,26 @@ class HueGroup_14100_14100():
             s = int(s * 255)
             v = int(v * 255)
 
-            ret1 = self.setBri(sApi_url, nApi_port, sApi_user, group, v)
+            ret1 = self.set_bri(sApi_url, nApi_port, sApi_user, group, v)
             ret2 = self.set_hue_color(sApi_url, nApi_port, sApi_user, group, h)
             ret3 = self.set_sat(sApi_url, nApi_port, sApi_user, group, s)
 
-            if (ret1 and ret2 and ret3):
+            if ret1 and ret2 and ret3:
                 # set rgb as output
                 self._set_output_value(self.PIN_O_NR, nR)
                 self._set_output_value(self.PIN_O_NG, nG)
                 self._set_output_value(self.PIN_O_NB, nB)
 
-        elif (self.PIN_I_BALERT == index):
+        elif self.PIN_I_BALERT == index:
             bAlert = int(self._get_input_value(self.PIN_I_BALERT))
             self.setAlert(sApi_url, nApi_port, sApi_user, group, bAlert)
             ###
 
-        elif (self.PIN_I_NEFFECT == index):
+        elif self.PIN_I_NEFFECT == index:
             nEffect = int(self._get_input_value(self.PIN_I_NEFFECT))
             self.setEffect(sApi_url, nApi_port, sApi_user, group, nEffect)
 
-        elif (self.PIN_I_NRELDIM == index):
+        elif self.PIN_I_NRELDIM == index:
             self.prep_dim(value)
 
 
@@ -465,7 +482,7 @@ class UnitTests(unittest.TestCase):
         group = "1"
         light = 3
 
-        ret = dummy.setBri(api_url, api_port, api_user, group, 100)
+        ret = dummy.set_bri(api_url, api_port, api_user, group, 100)
         self.assertTrue(ret)
         self.assertEqual(dummy.g_currBri, 100)
 
