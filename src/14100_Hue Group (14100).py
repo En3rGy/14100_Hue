@@ -9,12 +9,12 @@ import threading
 ########################################################################################################
 ##** Code created by generator - DO NOT CHANGE! **##
 
-class HueGroup_14100_14100(hsl20_3.BaseModule):
+class HueGroup_14100_14100(hsl20_4.BaseModule):
 
     def __init__(self, homeserver_context):
-        hsl20_3.BaseModule.__init__(self, homeserver_context, "hsl20_3_Hue")
+        hsl20_4.BaseModule.__init__(self, homeserver_context, "hsl20_3_Hue")
         self.FRAMEWORK = self._get_framework()
-        self.LOGGER = self._get_logger(hsl20_3.LOGGING_NONE,())
+        self.LOGGER = self._get_logger(hsl20_4.LOGGING_NONE,())
         self.PIN_I_SGROUPSTATJSON=1
         self.PIN_I_SLIGHTSSTATJSON=2
         self.PIN_I_BTRIGGER=3
@@ -48,7 +48,6 @@ class HueGroup_14100_14100(hsl20_3.BaseModule):
         self.PIN_O_NREACHABLE=9
         self.PIN_O_NGRPJSON=10
         self.PIN_O_NLGHTSJSON=11
-        self.FRAMEWORK._run_in_context_thread(self.on_init)
 
 ########################################################################################################
 #### Own written code can be placed after this commentblock . Do not change or delete commentblock! ####
