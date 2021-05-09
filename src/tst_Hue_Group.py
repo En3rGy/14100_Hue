@@ -1,4 +1,9 @@
-# coding: UTF-8
+# coding: utf8
+
+
+import unittest
+import time
+
 import httplib
 import json
 import colorsys
@@ -10,49 +15,99 @@ import threading
 ########################################################################################################
 ##** Code created by generator - DO NOT CHANGE! **##
 
-class HueGroup_14100_14100(hsl20_4.BaseModule):
+class HueGroup_14100_14100():
 
-    def __init__(self, homeserver_context):
-        hsl20_4.BaseModule.__init__(self, homeserver_context, "hsl20_3_Hue")
-        self.FRAMEWORK = self._get_framework()
-        self.LOGGER = self._get_logger(hsl20_4.LOGGING_NONE,())
-        self.PIN_I_SGROUPSTATJSON=1
-        self.PIN_I_SLIGHTSSTATJSON=2
-        self.PIN_I_BTRIGGER=3
-        self.PIN_I_SHUEIP=4
-        self.PIN_I_NHUEPORT=5
-        self.PIN_I_SUSER=6
-        self.PIN_I_NGROUP=7
-        self.PIN_I_NLIGHT=8
-        self.PIN_I_BONOFF=9
-        self.PIN_I_NBRI=10
-        self.PIN_I_NHUE=11
-        self.PIN_I_NSAT=12
-        self.PIN_I_NCT=13
-        self.PIN_I_NR=14
-        self.PIN_I_NG=15
-        self.PIN_I_NB=16
-        self.PIN_I_SSCENE=17
-        self.PIN_I_NTRANSTIME=18
-        self.PIN_I_BALERT=19
-        self.PIN_I_NEFFECT=20
-        self.PIN_I_NRELDIM=21
-        self.PIN_I_NDIMRAMP=22
-        self.PIN_O_BSTATUSONOFF=1
-        self.PIN_O_NBRI=2
-        self.PIN_O_NHUE=3
-        self.PIN_O_NSAT=4
-        self.PIN_O_NCT=5
-        self.PIN_O_NR=6
-        self.PIN_O_NG=7
-        self.PIN_O_NB=8
-        self.PIN_O_NREACHABLE=9
-        self.PIN_O_NGRPJSON=10
-        self.PIN_O_NLGHTSJSON=11
+    def _set_output_value(self, pin, value):
+        print("### Out \tPin " + str(pin) + ", Value: " + str(value))
 
-########################################################################################################
-#### Own written code can be placed after this commentblock . Do not change or delete commentblock! ####
-###################################################################################################!!!##
+        if (pin == self.PIN_O_NBRI):
+            self.g_currBri = value
+
+        return ("### Out \tPin " + str(pin) + ", Value: " + str(value))
+
+    def _get_input_value(self, pin):
+        if (pin == self.PIN_I_NTRANSTIME):
+            return 0
+        elif (pin == self.PIN_I_NDIMRAMP):
+            return 10
+        elif (pin == self.PIN_I_SHUEIP):
+            return "192.168.143.16"
+        elif (pin == self.PIN_I_NHUEPORT):
+            return "80"
+        elif (pin == self.PIN_I_SUSER):
+            return "yzOkvX6Of2JjUeZCRXDCqAJXYJzmofgilCi1d5Ti"
+        elif (pin == self.PIN_I_NGROUP):
+            return "1"
+        elif (pin == self.PIN_I_NLIGHT):
+            return 3
+        elif (pin == self.PIN_I_NBRI):
+            return 250
+        else:
+            return "0"
+
+    ################################################
+    class DebugHelper():
+        def set_value(self, p_sCap, p_sText):
+            print ("DEBUG value\t" + str(p_sCap) + ": " + str(p_sText))
+
+        def add_message(self, p_sMsg):
+            print ("Debug Msg\t" + str(p_sMsg))
+
+    DEBUG = DebugHelper()
+
+    class FrameworkHelper():
+        def get_homeserver_private_ip(self):
+            return "192.168.143.30"
+
+        def create_debug_section(self):
+            pass
+
+    FRAMEWORK = FrameworkHelper()
+
+    ############################################
+
+    # def __init__(self, homeserver_context):
+    # hsl20_3.BaseModule.__init__(self, homeserver_context, "hsl20_3_Hue")
+    # self.FRAMEWORK = self._get_framework()
+    # self.LOGGER = self._get_logger(hsl20_3.LOGGING_NONE,())
+    PIN_I_SGROUPSTATJSON = 1
+    PIN_I_SLIGHTSSTATJSON = 2
+    PIN_I_BTRIGGER = 3
+    PIN_I_SHUEIP = 4
+    PIN_I_NHUEPORT = 5
+    PIN_I_SUSER = 6
+    PIN_I_NGROUP = 7
+    PIN_I_NLIGHT = 8
+    PIN_I_BONOFF = 9
+    PIN_I_NBRI = 10
+    PIN_I_NHUE = 11
+    PIN_I_NSAT = 12
+    PIN_I_NCT = 13
+    PIN_I_NR = 14
+    PIN_I_NG = 15
+    PIN_I_NB = 16
+    PIN_I_SSCENE = 17
+    PIN_I_NTRANSTIME = 18
+    PIN_I_BALERT = 19
+    PIN_I_NEFFECT = 20
+    PIN_I_NRELDIM = 21
+    PIN_I_NDIMRAMP = 22
+    PIN_O_BSTATUSONOFF = 1
+    PIN_O_NBRI = 2
+    PIN_O_NHUE = 3
+    PIN_O_NSAT = 4
+    PIN_O_NCT = 5
+    PIN_O_NR = 6
+    PIN_O_NG = 7
+    PIN_O_NB = 8
+    PIN_O_NREACHABLE = 9
+    PIN_O_NGRPJSON = 10
+    PIN_O_NLGHTSJSON = 11
+    # FRAMEWORK._run_in_context_thread(on_init)
+
+    ########################################################################################################
+    #### Own written code can be placed after this commentblock . Do not change or delete commentblock! ####
+    ###################################################################################################!!!##
 
     g_debug = False
     g_currBri = 0
@@ -407,3 +462,80 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         elif self.PIN_I_NRELDIM == index:
             self.prep_dim(value)
+
+
+############################################
+
+
+class UnitTests(unittest.TestCase):
+
+    def setUp(self):
+        pass
+
+    def test_setBri(self):
+        dummy = HueGroup_14100_14100()
+        dummy.g_debug = True
+
+        api_url = "192.168.0.10"
+        api_port = "80"
+        api_user = "debug"
+        group = "1"
+        light = 3
+
+        ret = dummy.set_bri(api_url, api_port, api_user, group, 100)
+        self.assertTrue(ret)
+        self.assertEqual(dummy.g_currBri, 100)
+
+    def test_readGroupsJson(self):
+        dummy = HueGroup_14100_14100()
+        dummy.g_debug = True
+        dummy.g_currBri = 204
+
+        api_url = "192.168.0.10"
+        api_port = "80"
+        api_user = "debug"
+        group = "1"
+        light = 3
+
+        retGroups = {
+            "data": '{"1": {"name": "Wohnzimmer", "lights": ["3", "5"], "state": {"any_on": true, "all_on": true}, "action": {"on": true, "hue": 5226, "colormode": "hs", "effect": "none", "alert": "none", "xy": [0.4779, 0.3823], "bri": 204, "ct": 399, "sat": 121}, "recycle": false, "sensors": [], "type": "Room", "class": "Living room"}, "3": {"name": "Thilo", "lights": [], "state": {"any_on": false, "all_on": false}, "action": {"on": false, "alert": "none"}, "recycle": false, "sensors": [], "type": "Room", "class": "Kids bedroom"}, "2": {"name": "Bad OG", "lights": ["4"], "state": {"any_on": false, "all_on": false}, "action": {"on": false, "hue": 8402, "colormode": "xy", "effect": "none", "alert": "select", "xy": [0.4575, 0.4099], "bri": 254, "ct": 366, "sat": 140}, "recycle": false, "sensors": [], "type": "Room", "class": "Bathroom"}, "5": {"name": "Nora", "lights": ["7", "8"], "state": {"any_on": false, "all_on": false}, "action": {"on": false, "bri": 1, "alert": "select"}, "recycle": false, "sensors": [], "type": "Room", "class": "Kids bedroom"}, "4": {"name": "Flur DG", "lights": ["6"], "state": {"any_on": false, "all_on": false}, "action": {"on": false, "bri": 254, "alert": "select"}, "recycle": false, "sensors": [], "type": "Room", "class": "Hallway"}, "7": {"name": "TV", "lights": ["3"], "state": {"any_on": true, "all_on": true}, "action": {"on": true, "hue": 5226, "colormode": "hs", "effect": "none", "alert": "select", "xy": [0.4779, 0.3823], "bri": 204, "ct": 399, "sat": 121}, "recycle": false, "sensors": [], "type": "Zone", "class": "Downstairs"}, "6": {"name": "Garage", "lights": ["9"], "state": {"any_on": true, "all_on": true}, "action": {"on": true, "hue": 0, "colormode": "ct", "effect": "none", "alert": "select", "xy": [0.3805, 0.3769], "bri": 254, "ct": 370, "sat": 0}, "recycle": false, "sensors": [], "type": "Room", "class": "Carport"}}'}
+        # retLights = dummy.getData(api_url, api_port, api_user, "lights")
+        ret = dummy.readGroupsJson(retGroups["data"], 1)
+        res = '{"1": {"name": "Wohnzimmer", "lights": ["3", "5"], "state": {"any_on": true, "all_on": true}, "recycle": false, "action": {"on": true, "hue": 5226, "colormode": "hs", "effect": "none", "alert": "none", "xy": [0.4779, 0.3823], "bri": 204, "sat": 121, "ct": 399}, "sensors": [], "type": "Room", "class": "Living room"}, "3": {"name": "Thilo", "lights": [], "state": {"any_on": false, "all_on": false}, "recycle": false, "action": {"on": false, "alert": "none"}, "sensors": [], "type": "Room", "class": "Kids bedroom"}, "2": {"name": "Bad OG", "lights": ["4"], "state": {"any_on": false, "all_on": false}, "recycle": false, "action": {"on": false, "hue": 8402, "colormode": "xy", "effect": "none", "alert": "select", "xy": [0.4575, 0.4099], "bri": 254, "sat": 140, "ct": 366}, "sensors": [], "type": "Room", "class": "Bathroom"}, "5": {"name": "Nora", "lights": ["7", "8"], "state": {"any_on": false, "all_on": false}, "recycle": false, "action": {"on": false, "bri": 1, "alert": "select"}, "sensors": [], "type": "Room", "class": "Kids bedroom"}, "4": {"name": "Flur DG", "lights": ["6"], "state": {"any_on": false, "all_on": false}, "recycle": false, "action": {"on": false, "bri": 254, "alert": "select"}, "sensors": [], "type": "Room", "class": "Hallway"}, "7": {"name": "TV", "lights": ["3"], "state": {"any_on": true, "all_on": true}, "recycle": false, "action": {"on": true, "hue": 5226, "colormode": "hs", "effect": "none", "alert": "select", "xy": [0.4779, 0.3823], "bri": 204, "sat": 121, "ct": 399}, "sensors": [], "type": "Zone", "class": "Downstairs"}, "6": {"name": "Garage", "lights": ["9"], "state": {"any_on": true, "all_on": true}, "recycle": false, "action": {"on": true, "hue": 0, "colormode": "ct", "effect": "none", "alert": "select", "xy": [0.3805, 0.3769], "bri": 254, "sat": 0, "ct": 370}, "sensors": [], "type": "Room", "class": "Carport"}}'
+        self.assertEqual(ret, res)
+        # ret = dummy.readLightsJson(retLights["data"], light)
+
+        # sScene = "mYJ1jB9LmBAG6yN"
+        # sScene = "qhfcIHIJ9JuYK19"
+        # nHueCol = 24381
+
+    def test_dim(self):
+        dummy = HueGroup_14100_14100()
+        dummy.g_debug = True
+        dummy.g_currBri = 255
+
+        api_url = "192.168.0.10"
+        api_port = "80"
+        api_user = "debug"
+        group = "1"
+        light = 3
+
+        ret = dummy.prep_dim(0x85)
+        self.assertEqual(-16, dummy.g_interval)
+        self.assertEqual(10, dummy.g_timer.interval)
+        time.sleep(3)
+        ret = dummy.prep_dim(0.0)
+        # self.assertEqual(dummy.g_timer.interval, 1000)
+        # self.assertFalse(dummy.g_timer.is_alive())
+
+        ret = dummy.prep_dim(0x8d)
+        self.assertEqual(16, dummy.g_interval)
+        self.assertEqual(10, dummy.g_timer.interval)
+        time.sleep(3)
+        ret = dummy.prep_dim(0.0)
+        # self.assertEqual(dummy.g_timer.interval, 1000)
+        # self.assertFalse(dummy.g_timer.is_alive())
+
+
+if __name__ == '__main__':
+    unittest.main()

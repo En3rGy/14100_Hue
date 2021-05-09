@@ -26,7 +26,7 @@ Port und Benutzer und Group Id. Die Light Id wird nur für den Status genutzt
  </tr>
   <tr>
   <td>Gültigkeit der Hilfe:</td>
-  <td>Bausteinversion 1.1</td>
+  <td>Bausteinversion ab 1.4</td>
  </tr>
    <tr>
   <td>Getestet mit HS FW:</td>
@@ -151,6 +151,18 @@ Port und Benutzer und Group Id. Die Light Id wird nur für den Status genutzt
   <td>0</td>
   <td>Schaltet einen endlos-Farbdurchlauf ein oder aus.</td>
  </tr> 
+ <tr>
+   <td>KNX rel. Dimm</td>
+   <td>0</td>
+   <td>Eingang für das Dimm-Signal. Der zugh. Taster muss wie folgt parametrisiert werden:<br>
+       Relatives dimmen mit Stopp-Signal, ohne Telegrammwiederholung
+	   </td>
+  </tr>
+  <tr>
+    <td>KNX Dimm Rampe [s]</td>
+	<td>0.5</td>
+	<td>Zeit in Sekunden, in der der Dimmschritt wiederholt wird, bis ein Stopp-Signal empfangen wird.</td>
+  </tr>
 </table>
 
 <h2>Ausgänge</h2>
@@ -234,10 +246,22 @@ Port und Benutzer und Group Id. Die Light Id wird nur für den Status genutzt
 
 <h3>Change Log</h3>
 <ul>
+  <li>v1.4
+    <ul>
+	  <li>Fix: Relatives Dimmen</li>
+	</ul>
+  </li>
+
+  <li>v1.2
+    <ul>
+	  <li>Relatives Dimmen möglich</li>
+	</ul>
+  </li>
   <li>v1.1
     <ul>
 	  <li>r,g,b in %</li>
 	</ul>
+  </li>
   <li>v1.0
     <ul>
 	  <li>Transition Time ermöglicht</li>
