@@ -4,7 +4,7 @@
 import unittest
 import time
 
-# import httplib
+import httplib
 import json
 import colorsys
 import threading
@@ -80,50 +80,42 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
     def __init__(self, homeserver_context):
         hsl20_4.BaseModule.__init__(self, homeserver_context, "hsl20_3_Hue")
         self.FRAMEWORK = self._get_framework()
-        self.LOGGER = self._get_logger(hsl20_4.LOGGING_NONE, ())
-        self.PIN_I_SGROUPSTATJSON = 1
-        self.PIN_I_SLIGHTSSTATJSON = 2
-        self.PIN_I_BTRIGGER = 3
-        self.PIN_I_SHUEIP = 4
-        self.PIN_I_NHUEPORT = 5
-        self.PIN_I_SUSER = 6
-        self.PIN_I_NGROUP = 7
-        self.PIN_I_NLIGHT = 8
-        self.PIN_I_BONOFF = 9
-        self.PIN_I_NBRI = 10
-        self.PIN_I_NHUE = 11
-        self.PIN_I_NSAT = 12
-        self.PIN_I_NCT = 13
-        self.PIN_I_NR = 14
-        self.PIN_I_NG = 15
-        self.PIN_I_NB = 16
-        self.PIN_I_SSCENE = 17
-        self.PIN_I_NTRANSTIME = 18
-        self.PIN_I_BALERT = 19
-        self.PIN_I_NEFFECT = 20
-        self.PIN_I_NRELDIM = 21
-        self.PIN_I_NDIMRAMP = 22
-        self.PIN_O_BSTATUSONOFF = 1
-        self.PIN_O_NBRI = 2
-        self.PIN_O_NHUE = 3
-        self.PIN_O_NSAT = 4
-        self.PIN_O_NCT = 5
-        self.PIN_O_NR = 6
-        self.PIN_O_NG = 7
-        self.PIN_O_NB = 8
-        self.PIN_O_NREACHABLE = 9
-        self.PIN_O_NGRPJSON = 10
-        self.PIN_O_NLGHTSJSON = 11
+        self.LOGGER = self._get_logger(hsl20_4.LOGGING_NONE,())
+        self.PIN_I_STAT_JSON=1
+        self.PIN_I_BTRIGGER=2
+        self.PIN_I_SHUEIP=3
+        self.PIN_I_NHUEPORT=4
+        self.PIN_I_SUSER=5
+        self.PIN_I_CTRL_GRP=6
+        self.PIN_I_ITM_IDX=7
+        self.PIN_I_BONOFF=8
+        self.PIN_I_NBRI=9
+        self.PIN_I_NHUE=10
+        self.PIN_I_NSAT=11
+        self.PIN_I_NCT=12
+        self.PIN_I_NR=13
+        self.PIN_I_NG=14
+        self.PIN_I_NB=15
+        self.PIN_I_SSCENE=16
+        self.PIN_I_NTRANSTIME=17
+        self.PIN_I_BALERT=18
+        self.PIN_I_NEFFECT=19
+        self.PIN_I_NRELDIM=20
+        self.PIN_I_NDIMRAMP=21
+        self.PIN_O_BSTATUSONOFF=1
+        self.PIN_O_NBRI=2
+        self.PIN_O_NHUE=3
+        self.PIN_O_NSAT=4
+        self.PIN_O_NCT=5
+        self.PIN_O_NR=6
+        self.PIN_O_NG=7
+        self.PIN_O_NB=8
+        self.PIN_O_NREACHABLE=9
+        self.PIN_O_JSON=10
 
     ########################################################################################################
     #### Own written code can be placed after this commentblock . Do not change or delete commentblock! ####
     ###################################################################################################!!!##
-
-    g_debug = False
-    g_currBri = 0
-    g_intervall = 0
-    g_timer = threading.Timer(1000, None)
-    g_stopp = False
 
     # get general web request
     def get_data(self, api_url, api_port, api_user, api_cmd):
@@ -132,7 +124,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         try:
             http_client = httplib.HTTPConnection(api_url, int(api_port), timeout=5)
-            if not self.g_debug:
+            if not self.debug:
                 http_client.request("GET", api_path)
                 response = http_client.getresponse()
                 status = response.status
@@ -143,60 +135,58 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         except Exception as e:
             self.DEBUG.add_message(str(e))
             return
-        finally:
-            if http_client:
-                http_client.close()
+
+        if http_client:
+            http_client.close()
 
         return data
 
-    # read light data from json
-    def read_lights_json(self, json_state, light):
+    def read_json(self, json_state, idx):
         try:
             json_state = json.loads(json_state)
+            ctrl_grp = bool(self._get_input_value(self.PIN_I_CTRL_GRP))
+            mode = 'state'
 
-            if str(light) in json_state:
-                if 'state' in json_state[str(light)]:
-                    if 'reachable' in json_state[str(light)]['state']:
-                        reachable = json_state[str(light)]['state']['reachable']
-                        self._set_output_value(self.PIN_O_NREACHABLE, reachable)
-        except:
-            json_state = []
+            if ctrl_grp:
+                mode = 'action'
 
-        return json.dumps(json_state)
+            if str(idx) in json_state:
+                json_device = json_state[str(idx)]
+            else:
+                print("Device not found in json in  read_groups_json")
+                return ""
 
-    def read_groups_json(self, json_state, group):
-        try:
-            json_state = json.loads(json_state)
+            if mode in json_device:
+                action_sub = json_device[mode]
+                on_off = action_sub['on']
+                self._set_output_value(self.PIN_O_BSTATUSONOFF, on_off)
 
-            if str(group) in json_state:
-                if 'action' in json_state[str(group)]:
-                    action_sub = json_state[str(group)]["action"]
-                    on_off = action_sub['on']
-                    self._set_output_value(self.PIN_O_BSTATUSONOFF, on_off)
+                if 'reachable' in action_sub:
+                    reachable = int(action_sub['reachable'])
+                    self._set_output_value(self.PIN_O_NREACHABLE, reachable)
+                if 'bri' in action_sub:
+                    bri = int(action_sub['bri'])
+                    self.curr_bri = bri
+                    self._set_output_value(self.PIN_O_NBRI, bri / 255.0 * 100.0)
+                if 'hue' in action_sub:
+                    hue = action_sub['hue']
+                    self._set_output_value(self.PIN_O_NHUE, hue)
+                if 'sat' in action_sub:
+                    sat = action_sub['sat']
+                    self._set_output_value(self.PIN_O_NSAT, sat / 255.0 * 100)
+                if 'ct' in action_sub:
+                    ct = action_sub['ct']
+                    self._set_output_value(self.PIN_O_NCT, ct)
 
-                    if 'bri' in action_sub:
-                        bri = int(action_sub['bri'])
-                        self.g_currBri = bri
-                        self._set_output_value(self.PIN_O_NBRI, bri / 255.0 * 100.0)
-                    if 'hue' in action_sub:
-                        hue = action_sub['hue']
-                        self._set_output_value(self.PIN_O_NHUE, hue)
-                    if 'sat' in action_sub:
-                        sat = action_sub['sat']
-                        self._set_output_value(self.PIN_O_NSAT, sat / 255.0 * 100)
-                    if 'ct' in action_sub:
-                        ct = action_sub['ct']
-                        self._set_output_value(self.PIN_O_NCT, ct)
+                r, g, b = colorsys.hsv_to_rgb(hue / 360.0 / 182.04, sat / 255.0, bri / 255.0)
 
-                    r, g, b = colorsys.hsv_to_rgb(hue / 360.0 / 182.04, sat / 255.0, bri / 255.0)
+                r = int(r * 100.0)
+                g = int(g * 100.0)
+                b = int(b * 100.0)
 
-                    r = int(r * 100.0)
-                    g = int(g * 100.0)
-                    b = int(b * 100.0)
-
-                    self._set_output_value(self.PIN_O_NR, r)
-                    self._set_output_value(self.PIN_O_NG, g)
-                    self._set_output_value(self.PIN_O_NB, b)
+                self._set_output_value(self.PIN_O_NR, r)
+                self._set_output_value(self.PIN_O_NG, g)
+                self._set_output_value(self.PIN_O_NB, b)
         except:
             json_state = []
 
@@ -207,16 +197,21 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         data = {'data': "", 'status': -1}
         try:
             trans_time = int(self._get_input_value(self.PIN_I_NTRANSTIME))
-            if (trans_time > 0):
+            if trans_time > 0:
                 payload = payload[:-1]
                 payload = payload + ',"transitiontime":' + str(trans_time) + '}'
 
-            api_path = '/api/' + api_user + '/groups/' + str(group) + '/action'
+            ctrl_grp = bool(self._get_input_value(self.PIN_I_CTRL_GRP))
+            api_path = ""
+            if ctrl_grp:
+                api_path = '/api/' + api_user + '/groups/' + str(group) + '/action'
+            else:
+                api_path = '/api/' + api_user + '/lights/' + str(group) + '/state'
             headers = {"HOST": str(api_url + ":" + str(api_port)), "CONTENT-LENGTH": str(len(payload)),
                        "Content-type": 'application/json'}
             # headers = { "Content-type": 'application/json' }
 
-            if not self.g_debug:
+            if not self.debug:
                 http_client = httplib.HTTPConnection(api_url, int(api_port), timeout=5)
 
                 http_client.request("PUT", api_path, payload, headers)
@@ -233,9 +228,9 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             if http_client:
                 http_client.close()
 
-    def hue_on_off(self, api_url, api_port, api_user, group, bSetOn):
+    def hue_on_off(self, api_url, api_port, api_user, group, set_on):
         payload = ""
-        if bSetOn:
+        if set_on:
             payload = '{"on":true}'
         else:
             payload = '{"on":false}'
@@ -243,15 +238,15 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         ret = self.http_put(api_url, api_port, api_user, group, payload)
         return "success" in ret["data"]
 
-    def set_scene(self, api_url, api_port, api_user, group, sScene):
-        payload = '{"scene":"' + sScene + '"}'
+    def set_scene(self, api_url, api_port, api_user, group, scene):
+        payload = '{"scene":"' + scene + '"}'
         ret = self.http_put(api_url, api_port, api_user, group, payload)
         return "success" in ret["data"]
 
-    def set_effect(self, api_url, api_port, api_user, group, nEffect):
+    def set_effect(self, api_url, api_port, api_user, group, effect):
         payload = '{"effect":"'
 
-        if nEffect:
+        if effect:
             payload = payload + 'colorloop"}'
         else:
             payload = payload + 'none"}'
@@ -259,9 +254,9 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         ret = self.http_put(api_url, api_port, api_user, group, payload)
         return "success" in ret["data"]
 
-    def set_alert(self, api_url, api_port, api_user, group, bAlert):
+    def set_alert(self, api_url, api_port, api_user, group, alert):
         payload = ""
-        if bAlert:
+        if alert:
             payload = '{"alert":"lselect"}'
         else:
             payload = '{"alert":"none"}'
@@ -269,27 +264,27 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         ret = self.http_put(api_url, api_port, api_user, group, payload)
         return "success" in ret["data"]
 
-    def set_bri(self, api_url, api_port, api_user, group, nBri):
-        if nBri > 0:
+    def set_bri(self, api_url, api_port, api_user, group, bri):
+        if bri > 0:
             self.hue_on_off(api_url, api_port, api_user, group, True)
-        payload = '{"bri":' + str(nBri) + '}'
+        payload = '{"bri":' + str(bri) + '}'
         ret = self.http_put(api_url, api_port, api_user, group, payload)
         if "success" in ret["data"]:
-            self.g_currBri = nBri
+            self.curr_bri = bri
         return "success" in ret["data"]
 
-    def set_hue_color(self, api_url, api_port, api_user, group, nHueCol):
-        payload = '{"hue":' + str(nHueCol) + '}'
+    def set_hue_color(self, api_url, api_port, api_user, group, hue_col):
+        payload = '{"hue":' + str(hue_col) + '}'
         ret = self.http_put(api_url, api_port, api_user, group, payload)
         return "success" in ret["data"]
 
-    def set_sat(self, api_url, api_port, api_user, group, nSat):
-        payload = '{"sat":' + str(nSat) + '}'
+    def set_sat(self, api_url, api_port, api_user, group, sat):
+        payload = '{"sat":' + str(sat) + '}'
         ret = self.http_put(api_url, api_port, api_user, group, payload)
         return "success" in ret["data"]
 
-    def set_ct(self, api_url, api_port, api_user, group, nCt):
-        payload = '{"ct":' + str(nCt) + '}'
+    def set_ct(self, api_url, api_port, api_user, group, ct):
+        payload = '{"ct":' + str(ct) + '}'
         ret = self.http_put(api_url, api_port, api_user, group, payload)
         return "success" in ret["data"]
 
@@ -302,50 +297,55 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             val = bytearray(val)
 
         if val[-1] == 0x00:
-            self.g_stopp = True
-            self.g_timer = threading.Timer(1000, None)
+            self.stop = True
+            self.timer = threading.Timer(1000, None)
             print("abort")
             return
 
         sgn_bte = int((val[-1] & 0x08) >> 3)
         val = int(val[-1] & 0x07)
 
-        self.g_intervall = round(255.0 / pow(2, val - 1), 0)
+        self.interval = round(255.0 / pow(2, val - 1), 0)
 
         if sgn_bte == 1:
             pass
         else:
-            self.g_intervall = int(-1 * self.g_intervall)
+            self.interval = int(-1 * self.interval)
 
-        self.g_stopp = False
+        self.stop = False
         self.do_dim()
 
     def do_dim(self):
-        if (self.g_stopp == True):
+        if self.stop:
             return
 
         api_url = str(self._get_input_value(self.PIN_I_SHUEIP))
         api_port = int(self._get_input_value(self.PIN_I_NHUEPORT))
         api_user = str(self._get_input_value(self.PIN_I_SUSER))
-        group = int(self._get_input_value(self.PIN_I_NGROUP))
+        itm_idx = int(self._get_input_value(self.PIN_I_ITM_IDX))
 
-        new_bri = int(self.g_currBri + self.g_intervall)
+        new_bri = int(self.curr_bri + self.interval)
         if new_bri > 255:
             new_bri = 255
         elif new_bri < 1:
             new_bri = 1
 
-        self.set_bri(api_url, api_port, api_user, group, new_bri)
+        self.set_bri(api_url, api_port, api_user, itm_idx, new_bri)
 
         duration = float(self._get_input_value(self.PIN_I_NDIMRAMP))
-        steps = 255 / abs(self.g_intervall)
+        steps = 255 / abs(self.interval)
         step = float(round(duration / steps, 4))
 
-        self.g_timer = threading.Timer(step, self.do_dim)
-        self.g_timer.start()
+        self.timer = threading.Timer(step, self.do_dim)
+        self.timer.start()
 
     def on_init(self):
         self.DEBUG = self.FRAMEWORK.create_debug_section()
+        self.debug = False
+        self.curr_bri = 0
+        self.interval = 0
+        self.timer = threading.Timer(1000, None)
+        self.stop = False
 
     def on_input_value(self, index, value):
         res = False
@@ -354,77 +354,71 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         api_url = str(self._get_input_value(self.PIN_I_SHUEIP))
         api_port = int(self._get_input_value(self.PIN_I_NHUEPORT))
         api_user = str(self._get_input_value(self.PIN_I_SUSER))
-        group = int(self._get_input_value(self.PIN_I_NGROUP))
-        light = int(self._get_input_value(self.PIN_I_NLIGHT))
-        hue_group_state = {"data": str(self._get_input_value(self.PIN_I_SGROUPSTATJSON)), "status": 200}
-        hue_light_state = {"data": str(self._get_input_value(self.PIN_I_SLIGHTSSTATJSON)), "status": 200}
+        itm_idx = int(self._get_input_value(self.PIN_I_ITM_IDX))
+        hue_state = {"data": str(self._get_input_value(self.PIN_I_STAT_JSON)), "status": 200}
         bri = int(self._get_input_value(self.PIN_I_NBRI) / 100.0 * 255.0)
         hue_ol = int(self._get_input_value(self.PIN_I_NHUE))
         sat = int(self._get_input_value(self.PIN_I_NSAT) / 100.0 * 255.0)
         ct = int(self._get_input_value(self.PIN_I_NCT))
+        ctrl_group = self._get_input_value(self.PIN_I_CTRL_GRP)
 
         # If trigger == 1, get data via web request
         if (self.PIN_I_BTRIGGER == index) and (bool(value)):
-            hue_group_state = self.get_data(api_url, api_port, api_user, "groups")
-            hue_light_state = self.get_data(api_url, api_port, api_user, "lights")
+            if ctrl_group:
+                hue_state = self.get_data(api_url, api_port, api_user, "groups")
+            else:
+                hue_state = self.get_data(api_url, api_port, api_user, "lights")
 
         if ((self.PIN_I_BTRIGGER == index) or
-                (self.PIN_I_SGROUPSTATJSON == index)):
-            if hue_group_state["data"]:
-                if group > 0:
-                    self.read_groups_json(hue_group_state["data"], group)
-                    self._set_output_value(self.PIN_O_NGRPJSON, hue_group_state["data"])
-
-        if ((self.PIN_I_BTRIGGER == index) or
-                (self.PIN_I_SLIGHTSSTATJSON == index)):
-            if hue_light_state["data"]:
-                if light > 0:
-                    self.read_lights_json(hue_light_state["data"], light)
-                    self._set_output_value(self.PIN_O_NLGHTSJSON, hue_light_state["data"])
+                (self.PIN_I_STAT_JSON == index)):
+            if hue_state["data"]:
+                if itm_idx > 0:
+                    self.read_json(hue_state["data"], itm_idx)
+                    self._set_output_value(self.PIN_O_JSON, hue_state["data"])
 
         # Process set commands
         if (self._get_input_value(self.PIN_I_SUSER) == "") or (self._get_input_value(self.PIN_I_SHUEIP) == ""):
             return
 
         if self.PIN_I_BONOFF == index:
-            res = self.hue_on_off(api_url, api_port, api_user, group, value)
+            res = self.hue_on_off(api_url, api_port, api_user, itm_idx, value)
             if res:
                 self._set_output_value(self.PIN_O_BSTATUSONOFF, value)
 
         elif self.PIN_I_SSCENE == index:
-            res = self.set_scene(api_url, api_port, api_user, group, value)
+            res = self.set_scene(api_url, api_port, api_user, itm_idx, value)
             if res:
                 self._set_output_value(self.PIN_O_BSTATUSONOFF, True)
 
         elif self.PIN_I_NBRI == index:
-            self.hue_on_off(api_url, api_port, api_user, group, True)
-            res = self.set_bri(api_url, api_port, api_user, group, bri)
+            self.hue_on_off(api_url, api_port, api_user, itm_idx, True)
+            res = self.set_bri(api_url, api_port, api_user, itm_idx, bri)
             print(res)
             if res:
                 self._set_output_value(self.PIN_O_NBRI, bri / 255.0 * 100.0)
 
         elif self.PIN_I_NHUE == index:
-            self.hue_on_off(api_url, api_port, api_user, group, True)
-            res = self.set_hue_color(api_url, api_port, api_user, group, hue_ol)
+            self.hue_on_off(api_url, api_port, api_user, itm_idx, True)
+            res = self.set_hue_color(api_url, api_port, api_user, itm_idx, hue_ol)
             if res:
                 self._set_output_value(self.PIN_O_NHUE, hue_ol)
 
         elif self.PIN_I_NSAT == index:
-            self.hue_on_off(api_url, api_port, api_user, group, True)
-            res = self.set_sat(api_url, api_port, api_user, group, sat)
+            self.hue_on_off(api_url, api_port, api_user, itm_idx, True)
+            res = self.set_sat(api_url, api_port, api_user, itm_idx, sat)
             if res:
                 self._set_output_value(self.PIN_O_NSAT, sat / 255.0 * 100)
 
         elif self.PIN_I_NCT == index:
-            self.hue_on_off(api_url, api_port, api_user, group, True)
-            res = self.set_ct(api_url, api_port, api_user, group, ct)
+            self.hue_on_off(api_url, api_port, api_user, itm_idx, True)
+            res = self.set_ct(api_url, api_port, api_user, itm_idx, ct)
             if res:
                 self._set_output_value(self.PIN_O_NCT, ct)
 
         elif ((self.PIN_I_NR == index) or
               (self.PIN_I_NG == index) or
               (self.PIN_I_NB == index)):
-            self.hue_on_off(api_url, api_port, api_user, group, True)
+            self.hue_on_off(api_url, api_port, api_user, itm_idx, True)
 
             red = int(int(self._get_input_value(self.PIN_I_NR)) * 2.55)
             green = int(int(self._get_input_value(self.PIN_I_NG)) * 2.55)
@@ -435,9 +429,9 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             s = int(s * 255)
             v = int(v * 255)
 
-            ret1 = self.set_bri(api_url, api_port, api_user, group, v)
-            ret2 = self.set_hue_color(api_url, api_port, api_user, group, h)
-            ret3 = self.set_sat(api_url, api_port, api_user, group, s)
+            ret1 = self.set_bri(api_url, api_port, api_user, itm_idx, v)
+            ret2 = self.set_hue_color(api_url, api_port, api_user, itm_idx, h)
+            ret3 = self.set_sat(api_url, api_port, api_user, itm_idx, s)
 
             if ret1 and ret2 and ret3:
                 # set rgb as output
@@ -447,12 +441,12 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         elif self.PIN_I_BALERT == index:
             alert = int(self._get_input_value(self.PIN_I_BALERT))
-            self.set_alert(api_url, api_port, api_user, group, alert)
+            self.set_alert(api_url, api_port, api_user, itm_idx, alert)
             ###
 
         elif self.PIN_I_NEFFECT == index:
             effect = int(self._get_input_value(self.PIN_I_NEFFECT))
-            self.set_effect(api_url, api_port, api_user, group, effect)
+            self.set_effect(api_url, api_port, api_user, itm_idx, effect)
 
         elif self.PIN_I_NRELDIM == index:
             self.prep_dim(value)
@@ -464,14 +458,25 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 class UnitTests(unittest.TestCase):
 
     def setUp(self):
+        print("\n###setUp")
+        with open("credentials.txt") as f:
+            self.cred = json.load(f)
+
         self.dummy = HueGroup_14100_14100(0)
         self.dummy.on_init()
+
+        self.dummy.debug_input_value[self.dummy.PIN_I_SHUEIP] = self.cred["PIN_I_SHUEIP"]
+        self.dummy.debug_input_value[self.dummy.PIN_I_SUSER] = self.cred["PIN_I_SUSER"]
+        self.dummy.debug_input_value[self.dummy.PIN_I_NHUEPORT] = self.cred["PIN_I_NHUEPORT"]
+
+        self.dummy.debug_input_value[self.dummy.PIN_I_CTRL_GRP] = 0
+        self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = 3
 
     def tearDown(selfself):
         pass
 
     def test_setBri(self):
-        self.dummy.g_debug = True
+        self.dummy.debug = True
 
         api_url = "192.168.0.10"
         api_port = "80"
@@ -481,11 +486,23 @@ class UnitTests(unittest.TestCase):
 
         ret = self.dummy.set_bri(api_url, api_port, api_user, group, 100)
         self.assertTrue(ret)
-        self.assertEqual(self.dummy.g_currBri, 100)
+        self.assertEqual(self.dummy.curr_bri, 100)
 
-    def test_readGroupsJson(self):
-        self.dummy.g_debug = True
-        self.dummy.g_currBri = 204
+    def test_trigger(self):
+        self.dummy.on_input_value(self.dummy.PIN_I_BTRIGGER, 1)
+        self.assertNotEqual("", self.dummy.debug_output_value[self.dummy.PIN_O_JSON])
+
+    def test_on_off(self):
+        print("###test_on_off")
+        self.dummy.on_input_value(self.dummy.PIN_I_BONOFF, 0)
+        self.assertEqual(0, self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF])
+        time.sleep(3)
+        self.dummy.on_input_value(self.dummy.PIN_I_BONOFF, 1)
+        self.assertEqual(1, self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF])
+
+    def test_read_json(self):
+        self.dummy.debug = True
+        self.dummy.curr_bri = 204
 
         api_url = "192.168.0.10"
         api_port = "80"
@@ -496,9 +513,9 @@ class UnitTests(unittest.TestCase):
         retGroups = {
             "data": '{"1": {"name": "Wohnzimmer", "lights": ["3", "5"], "state": {"any_on": true, "all_on": true}, "action": {"on": true, "hue": 5226, "colormode": "hs", "effect": "none", "alert": "none", "xy": [0.4779, 0.3823], "bri": 204, "ct": 399, "sat": 121}, "recycle": false, "sensors": [], "type": "Room", "class": "Living room"}, "3": {"name": "Thilo", "lights": [], "state": {"any_on": false, "all_on": false}, "action": {"on": false, "alert": "none"}, "recycle": false, "sensors": [], "type": "Room", "class": "Kids bedroom"}, "2": {"name": "Bad OG", "lights": ["4"], "state": {"any_on": false, "all_on": false}, "action": {"on": false, "hue": 8402, "colormode": "xy", "effect": "none", "alert": "select", "xy": [0.4575, 0.4099], "bri": 254, "ct": 366, "sat": 140}, "recycle": false, "sensors": [], "type": "Room", "class": "Bathroom"}, "5": {"name": "Nora", "lights": ["7", "8"], "state": {"any_on": false, "all_on": false}, "action": {"on": false, "bri": 1, "alert": "select"}, "recycle": false, "sensors": [], "type": "Room", "class": "Kids bedroom"}, "4": {"name": "Flur DG", "lights": ["6"], "state": {"any_on": false, "all_on": false}, "action": {"on": false, "bri": 254, "alert": "select"}, "recycle": false, "sensors": [], "type": "Room", "class": "Hallway"}, "7": {"name": "TV", "lights": ["3"], "state": {"any_on": true, "all_on": true}, "action": {"on": true, "hue": 5226, "colormode": "hs", "effect": "none", "alert": "select", "xy": [0.4779, 0.3823], "bri": 204, "ct": 399, "sat": 121}, "recycle": false, "sensors": [], "type": "Zone", "class": "Downstairs"}, "6": {"name": "Garage", "lights": ["9"], "state": {"any_on": true, "all_on": true}, "action": {"on": true, "hue": 0, "colormode": "ct", "effect": "none", "alert": "select", "xy": [0.3805, 0.3769], "bri": 254, "ct": 370, "sat": 0}, "recycle": false, "sensors": [], "type": "Room", "class": "Carport"}}'}
         # retLights = dummy.getData(api_url, api_port, api_user, "lights")
-        ret = self.dummy.read_groups_json(retGroups["data"], 1)
+        ret = self.dummy.read_json(retGroups["data"], 1)
         res = '{"1": {"name": "Wohnzimmer", "lights": ["3", "5"], "state": {"any_on": true, "all_on": true}, "recycle": false, "action": {"on": true, "hue": 5226, "colormode": "hs", "effect": "none", "alert": "none", "xy": [0.4779, 0.3823], "bri": 204, "sat": 121, "ct": 399}, "sensors": [], "type": "Room", "class": "Living room"}, "3": {"name": "Thilo", "lights": [], "state": {"any_on": false, "all_on": false}, "recycle": false, "action": {"on": false, "alert": "none"}, "sensors": [], "type": "Room", "class": "Kids bedroom"}, "2": {"name": "Bad OG", "lights": ["4"], "state": {"any_on": false, "all_on": false}, "recycle": false, "action": {"on": false, "hue": 8402, "colormode": "xy", "effect": "none", "alert": "select", "xy": [0.4575, 0.4099], "bri": 254, "sat": 140, "ct": 366}, "sensors": [], "type": "Room", "class": "Bathroom"}, "5": {"name": "Nora", "lights": ["7", "8"], "state": {"any_on": false, "all_on": false}, "recycle": false, "action": {"on": false, "bri": 1, "alert": "select"}, "sensors": [], "type": "Room", "class": "Kids bedroom"}, "4": {"name": "Flur DG", "lights": ["6"], "state": {"any_on": false, "all_on": false}, "recycle": false, "action": {"on": false, "bri": 254, "alert": "select"}, "sensors": [], "type": "Room", "class": "Hallway"}, "7": {"name": "TV", "lights": ["3"], "state": {"any_on": true, "all_on": true}, "recycle": false, "action": {"on": true, "hue": 5226, "colormode": "hs", "effect": "none", "alert": "select", "xy": [0.4779, 0.3823], "bri": 204, "sat": 121, "ct": 399}, "sensors": [], "type": "Zone", "class": "Downstairs"}, "6": {"name": "Garage", "lights": ["9"], "state": {"any_on": true, "all_on": true}, "recycle": false, "action": {"on": true, "hue": 0, "colormode": "ct", "effect": "none", "alert": "select", "xy": [0.3805, 0.3769], "bri": 254, "sat": 0, "ct": 370}, "sensors": [], "type": "Room", "class": "Carport"}}'
-        self.assertEqual(ret, res)
+        self.assertEqual(res, ret)
         # ret = dummy.readLightsJson(retLights["data"], light)
 
         # sScene = "mYJ1jB9LmBAG6yN"
@@ -506,8 +523,8 @@ class UnitTests(unittest.TestCase):
         # nHueCol = 24381
 
     def test_dim(self):
-        self.dummy.g_debug = True
-        self.dummy.g_currBri = 255
+        self.dummy.debug = True
+        self.dummy.curr_bri = 255
 
         api_url = "192.168.0.10"
         api_port = "80"
@@ -516,16 +533,16 @@ class UnitTests(unittest.TestCase):
         light = 3
 
         self.dummy.prep_dim(0x85)
-        self.assertEqual(-16, self.dummy.g_intervall)
-        self.assertEqual(10, self.dummy.g_timer.interval)
+        self.assertEqual(-16, self.dummy.interval)
+#        self.assertEqual(10, self.dummy.timer.interval)
         time.sleep(3)
         self.dummy.prep_dim(0.0)
         # self.assertEqual(dummy.g_timer.interval, 1000)
         # self.assertFalse(dummy.g_timer.is_alive())
 
         self.dummy.prep_dim(0x8d)
-        self.assertEqual(16, self.dummy.g_intervall)
-        self.assertEqual(10, self.dummy.g_timer.interval)
+        self.assertEqual(16, self.dummy.interval)
+#        self.assertEqual(10, self.dummy.timer.interval)
         time.sleep(3)
         self.dummy.prep_dim(0.0)
         # self.assertEqual(dummy.g_timer.interval, 1000)

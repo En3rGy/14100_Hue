@@ -16,28 +16,27 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         hsl20_4.BaseModule.__init__(self, homeserver_context, "hsl20_3_Hue")
         self.FRAMEWORK = self._get_framework()
         self.LOGGER = self._get_logger(hsl20_4.LOGGING_NONE,())
-        self.PIN_I_SGROUPSTATJSON=1
-        self.PIN_I_SLIGHTSSTATJSON=2
-        self.PIN_I_BTRIGGER=3
-        self.PIN_I_SHUEIP=4
-        self.PIN_I_NHUEPORT=5
-        self.PIN_I_SUSER=6
-        self.PIN_I_NGROUP=7
-        self.PIN_I_NLIGHT=8
-        self.PIN_I_BONOFF=9
-        self.PIN_I_NBRI=10
-        self.PIN_I_NHUE=11
-        self.PIN_I_NSAT=12
-        self.PIN_I_NCT=13
-        self.PIN_I_NR=14
-        self.PIN_I_NG=15
-        self.PIN_I_NB=16
-        self.PIN_I_SSCENE=17
-        self.PIN_I_NTRANSTIME=18
-        self.PIN_I_BALERT=19
-        self.PIN_I_NEFFECT=20
-        self.PIN_I_NRELDIM=21
-        self.PIN_I_NDIMRAMP=22
+        self.PIN_I_STAT_JSON=1
+        self.PIN_I_BTRIGGER=2
+        self.PIN_I_SHUEIP=3
+        self.PIN_I_NHUEPORT=4
+        self.PIN_I_SUSER=5
+        self.PIN_I_CTRL_GRP=6
+        self.PIN_I_ITM_IDX=7
+        self.PIN_I_BONOFF=8
+        self.PIN_I_NBRI=9
+        self.PIN_I_NHUE=10
+        self.PIN_I_NSAT=11
+        self.PIN_I_NCT=12
+        self.PIN_I_NR=13
+        self.PIN_I_NG=14
+        self.PIN_I_NB=15
+        self.PIN_I_SSCENE=16
+        self.PIN_I_NTRANSTIME=17
+        self.PIN_I_BALERT=18
+        self.PIN_I_NEFFECT=19
+        self.PIN_I_NRELDIM=20
+        self.PIN_I_NDIMRAMP=21
         self.PIN_O_BSTATUSONOFF=1
         self.PIN_O_NBRI=2
         self.PIN_O_NHUE=3
@@ -47,8 +46,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.PIN_O_NG=7
         self.PIN_O_NB=8
         self.PIN_O_NREACHABLE=9
-        self.PIN_O_NGRPJSON=10
-        self.PIN_O_NLGHTSJSON=11
+        self.PIN_O_JSON=10
 
 ########################################################################################################
 #### Own written code can be placed after this commentblock . Do not change or delete commentblock! ####

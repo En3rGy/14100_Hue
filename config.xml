@@ -3,14 +3,13 @@
     <modules>
         <module category="Datenaustausch" context="hsl20_3_Hue" id="14100" name="Hue Group (14100)" version="1.4">
             <inputs>
-                <input type="string" const_name="sGroupStatJson" init_value="">Groups Json</input>
-                <input type="string" const_name="sLightsStatJson" init_value="">Lights Json</input>
+                <input type="string" const_name="stat_json" init_value="">Json</input>
 				<input type="number" const_name="bTrigger" init_value="0">Get Status</input>				
                 <input type="string" const_name="sHueIp" init_value="">Hue Bridge IP</input>
                 <input type="number" const_name="nHuePort" init_value="80">Hue Bridge Port</input>
-                <input type="string" const_name="sUser" init_value="">User</input>				
-				<input type="number" const_name="nGroup" init_value="0">Group Id</input>
-				<input type="number" const_name="nLight" init_value="0">Light Id</input>				
+                <input type="string" const_name="sUser" init_value="">User</input>		
+				<input type="number" const_name="ctrl_grp" init_value="0">Control Group (1/0)</input>				
+				<input type="number" const_name="itm_idx" init_value="0">Item Id</input>
 				<input type="number" const_name="bOnOff" init_value="0">Grp On/Off</input>
                 <input type="number" const_name="nBri" init_value="0">Grp Brightness</input>
                 <input type="number" const_name="nHue" init_value="0">Grp Hue Color</input>
@@ -36,8 +35,7 @@
 				<output type="number" const_name="nG" init_value="0">g</output>
 				<output type="number" const_name="nB" init_value="0">b</output>				
 				<output type="number" const_name="nReachable" init_value="0">Lght Reachable</output>
-				<output type="string" const_name="nGrpJson" init_value="">Groups Json</output>
-				<output type="string" const_name="nLghtsJson" init_value="">Lights Json</output>					
+				<output type="string" const_name="json" init_value="">Json</output>
             </outputs>               
 			<remanent_variables>
             </remanent_variables>
