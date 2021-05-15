@@ -18,7 +18,7 @@ type .\README.md | C:\Python27\python -m markdown -x tables >> .\release\log1410
 cd ..\..
 C:\Python27\python generator.pyc "14100_Hue" UTF-8
 
-xcopy .\projects\14100_Hue\src .\projects\14100_Hue\release
+xcopy .\projects\14100_Hue\src .\projects\14100_Hue\release /exclude:.\projects\14100_Hue\src\exclude.txt
 
 @echo Fertig.
 

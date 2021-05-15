@@ -10,15 +10,15 @@
                 <input type="string" const_name="sUser" init_value="">User</input>		
 				<input type="number" const_name="ctrl_grp" init_value="0">Control Group (1/0)</input>				
 				<input type="number" const_name="itm_idx" init_value="0">Item Id</input>
-				<input type="number" const_name="bOnOff" init_value="0">Grp On/Off</input>
-                <input type="number" const_name="nBri" init_value="0">Grp Brightness</input>
-                <input type="number" const_name="nHue" init_value="0">Grp Hue Color</input>
-                <input type="number" const_name="nSat" init_value="0">Grp Saturation</input>
-				<input type="number" const_name="nCt" init_value="0">Grp Color Temp</input>	
+				<input type="number" const_name="bOnOff" init_value="0">On/Off</input>
+                <input type="number" const_name="nBri" init_value="0">Brightness</input>
+                <input type="number" const_name="nHue" init_value="0">Hue Color</input>
+                <input type="number" const_name="nSat" init_value="0">Saturation</input>
+				<input type="number" const_name="nCt" init_value="0">Color Temp</input>	
 				<input type="number" const_name="nR" init_value="0">r</input>
 				<input type="number" const_name="nG" init_value="0">g</input>
 				<input type="number" const_name="nB" init_value="0">b</input>				
-				<input type="string" const_name="sScene" init_value="">Grp Hue Scene</input>
+				<input type="string" const_name="sScene" init_value="">Hue Scene</input>
 				<input type="number" const_name="nTranstime" init_value="0">Transition Time</input>
 				<input type="number" const_name="bAlert" init_value="0">Alert Effect</input>
 				<input type="number" const_name="nEffect" init_value="0">Color Loop</input>
@@ -26,11 +26,11 @@
 				<input type="number" const_name="nDimRamp" init_value="0.5">KNX Dimm Rampe [s]</input>
             </inputs>
             <outputs>
-				<output type="number" const_name="bStatusOnOff" init_value="0">Grp On/Off</output>
-				<output type="number" const_name="nBri" init_value="0">Grp Brightness</output>
-				<output type="number" const_name="nHue" init_value="0">Grp Hue Color</output>
-				<output type="number" const_name="nSat" init_value="0">Grp Saturation</output>
-				<output type="number" const_name="nCt" init_value="0">Grp Color Temp</output>				
+				<output type="number" const_name="bStatusOnOff" init_value="0">RM On/Off</output>
+				<output type="number" const_name="nBri" init_value="0">RM Brightness</output>
+				<output type="number" const_name="nHue" init_value="0">RM Hue Color</output>
+				<output type="number" const_name="nSat" init_value="0">RM Saturation</output>
+				<output type="number" const_name="nCt" init_value="0">RM Color Temp</output>				
 				<output type="number" const_name="nR" init_value="0">r</output>
 				<output type="number" const_name="nG" init_value="0">g</output>
 				<output type="number" const_name="nB" init_value="0">b</output>				

@@ -20,14 +20,43 @@ Port und Benutzer und Group Id. Die Light Id wird nur für den Status genutzt
 ## Eingänge
 
 | Nr. | Name | Initialisierung | Beschreibung |
-| --- | --- | --- | --- |
-| 1 |  | |  |
+| --- | ---  | --- | --- |
+| 1   | Json |     | Für Baustein-Kaskade: Verknüpfung des gleichnamigen Ausgangs eines anderen Bausteins.<br/>Die Einstellung für die Steuerung einer Gruppe oder Leuchte muss in der ganzen Kaskade identisch konfiguriert sein (E6 bei allen 1 oder 0) |
+| 2 | Get Status | | Ein Wert =1 triggert den Status-Abruf über die Hue-Bridge. Hier ist es z.B. Sinnvoll einen Telegrammgenerator anzuschließen. Damit kann detektiert werden, wenn eine Lampe auf einem anderen Weg, als über den Baustein geschaltet wird. |
+| 3 | Hue Bridge IP | | IP der Hue Bridge |
+| 4 | Hue Bridge Port | 80 | Port der Hue Bridge |
+| 5 | User | | Hue Bridge User |
+| 6 | Control Group | 0 | 1, wenn eine Lampengruppe gesteuert werden soll,<br/> 0 wenn eine einzelne Lampe gesteuert werden soll |
+| 7 | Item Id | 0 | Abh. von Eingang 6, die Id der auszuwertenden Hue Gruppe oder Lampe, vgl. http://hue-ip/api/hue-user/lights |
+| 8 | Grp On/Off | 0 | Schaltet die Lampe / Gruppe ein (1) / aus (0). |
+| 9 | Brightness | 0 | Helligkeit für die Hue Lampe / Gruppe in 0-100% <br/> Wird der Wert gesetzt, wird die Gruppe eingeschaltet. |
+| 10 | Grp Hue Color | 0 | Hue Color:<br/>0 - 65.535; mit 182,04 * Hue Color Wert<br/>Wird der Wert gesetzt, wird die Gruppe eingeschaltet. |
+| 11 | Grp Saturation | 0 | Sättigung der Hue Gruppe in 0-100%<br/>Wird der Wert gesetzt, wird die Gruppe eingeschaltet. |
+| 12 | Grp Color Temp | 0 | Farbtemperatur der Gruppe (nur Weißwert):<br/>154 - 500; mit 1.000.000 / CT-Wert, z.B. 6500K = 154 (kalt) und 2000K = 500 (warm)<br/>Wird der Wert gesetzt, wird die Gruppe eingeschaltet. |
+| 13 | r | 0 | RGB Rotwert 0-100% |
+| 14 | g | 0 | RGB Grünwert 0-100% |
+| 15 | b | 0 | RGB Blauwert 0-100% |
+| 16 | Grp Hue Scene | | Hue Scene für die Hue Gruppe, vgl. http://hue-bridge-ip/user/scenes |
+| 17 | Transition Time | 0 | Zeit zum Einnehmen des neuen Zustandes in x * 10ms, 10 führt z.B. zu einem Übergangszeit von 1 sek. |
+| 18 | Alert Effect | 0 | 1 startet den Alarm, 0 stoppt den Alarm wieder |
+| 19 | Color Loop | 0 | Schaltet einen endlos-Farbdurchlauf ein oder aus. |
+| 20 | KNX rel. Dimm | 0 | Eingang für das Dimm-Signal. Der zugh. Taster muss wie folgt parametrisiert werden:<br/>Relatives dimmen mit Stopp-Signal, ohne Telegrammwiederholung<br/>KNX Dimm Rampe [s] 	0.5 	Zeit in Sekunden, in der der Dimmschritt wiederholt wird, bis ein Stopp-Signal empfangen wird. |
+
 
 ## Ausgänge
 
 | Nr. | Name | Initialisierung | Beschreibung |
 | --- | --- | --- | --- |
-| 1 |  |  |  |
+| 1   | RM On/Off | 0 | Ein/Aus Status (1/0) |
+| 2 | RM Brightness | 0 | Aktuelle Helligkeit 0-100% | 
+| 3 | RM Hue Color 	| 0 | Aktuelle Hue Color 0-65534.4 | 
+| 4 | RM Saturation | 0 | Aktuelle Sättigung in 0-100% | 
+| 5 | RM Color Temp  | 0 | Farbtemperatur der Gruppe / Leuchte (nur Weißwert) 154 - 500 (vgl. Eingang) |
+| 6 | r | 0 | RGB Rotwert 0-100% |
+| 7 | g | 0 | RGB Grünwert 0-100% |
+| 8 | b | 0 | RGB Blauwert 0-100% |
+| 9 | Lght Reachable | 0 | Erreichbarkeit der Lampe (*nicht aktiv bei Gruppen-Steuerung!*); 0=nicht erreichbar, 1=erreichbar |
+| 10 | Json | | Json Struktur für den Status der Gruppe für Kaskaden von Bausteinen (für den Eingang des Folgebausteins).<br/>Die Einstellung für die Steuerung einer Gruppe oder Leuchte muss in der ganzen Kaskade identisch konfiguriert sein (E6 bei allen 1 oder 0) | 
 
 ## Beispielwerte
 

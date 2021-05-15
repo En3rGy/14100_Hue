@@ -1,0 +1,5 @@
+.txt
+tst_Hue_Group.py
+.project
+.pydevproject
+.pyc

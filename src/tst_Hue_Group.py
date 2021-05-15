@@ -492,13 +492,30 @@ class UnitTests(unittest.TestCase):
         self.dummy.on_input_value(self.dummy.PIN_I_BTRIGGER, 1)
         self.assertNotEqual("", self.dummy.debug_output_value[self.dummy.PIN_O_JSON])
 
-    def test_on_off(self):
-        print("###test_on_off")
+    def test_on_off_light(self):
+        print("###test_on_off_light")
         self.dummy.on_input_value(self.dummy.PIN_I_BONOFF, 0)
         self.assertEqual(0, self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF])
         time.sleep(3)
         self.dummy.on_input_value(self.dummy.PIN_I_BONOFF, 1)
         self.assertEqual(1, self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF])
+        time.sleep(3)
+        self.dummy.on_input_value(self.dummy.PIN_I_BONOFF, 0)
+        self.assertEqual(0, self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF])
+
+    def test_on_off_group(self):
+        print("###test_on_off_group")
+        self.dummy.debug_input_value[self.dummy.PIN_I_CTRL_GRP] = 1
+        self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = 1
+
+        self.dummy.on_input_value(self.dummy.PIN_I_BONOFF, 0)
+        self.assertEqual(0, self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF])
+        time.sleep(3)
+        self.dummy.on_input_value(self.dummy.PIN_I_BONOFF, 1)
+        self.assertEqual(1, self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF])
+        time.sleep(3)
+        self.dummy.on_input_value(self.dummy.PIN_I_BONOFF, 0)
+        self.assertEqual(0, self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF])
 
     def test_read_json(self):
         self.dummy.debug = True
