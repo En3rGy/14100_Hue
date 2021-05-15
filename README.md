@@ -7,15 +7,14 @@ einzelner Lampen aus. Um die Netzwerklast zu verringern können mehrere
 Bausteine als Kaskade geschaltet werden, um die Statusmeldung der Hue-Bridge 
 für mehrere Lampen bzw. Gruppen auszulesen.
 
-Die ersten 3 Eingänge sind ausschließlich für den Status. Ein Baustein muss 
-regelmäßig via Get (E3) getriggered werden. Dann generiert er über die letzten 
+Die ersten beiden Eingänge sind ausschließlich für den Status. Ein Baustein muss 
+regelmäßig via Get (E2) getriggered werden. Dann generiert er über die letzten 
 beiden Ausgänge die Infos für alle anderen Bauteile, die die Daten via deren 
-E1 und E2 bekommen sollten. E3 sollte bei diesen anderen Bausteinen nicht 
+E1 bekommen sollten. E2 sollte bei diesen anderen Bausteinen nicht 
 getriggert werden, sonst würden sie zusätzlich den Status abfragen.
 
 Sollen die Bausteine zum Schalten, etc. verwendet werden, brauchen Sie IP, 
-Port und Benutzer und Group Id. Die Light Id wird nur für den Status genutzt 
-(Reachable wird nur pro Light, nicht für Gruppen ausgegeben).
+Port und Benutzer und Item Id (= Gruppen Id oder Lampen Id). 
 
 ## Eingänge
 
