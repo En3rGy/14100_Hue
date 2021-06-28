@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <config>
     <modules>
-        <module category="Datenaustausch" context="hsl20_3_Hue" id="14100" name="Hue Group (14100)" version="1.6">
+        <module category="Datenaustausch" context="hsl20_3_Hue" id="14100" name="Hue Group (14100)" version="2.0">
             <inputs>
                 <input type="string" const_name="stat_json" init_value="">Json</input>
 				<input type="number" const_name="bTrigger" init_value="0">Get Status</input>				

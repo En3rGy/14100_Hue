@@ -35,7 +35,7 @@ Port und Benutzer und Item Id (= Gruppen Id oder Lampen Id).
 | 13 | r | 0 | RGB Rotwert 0-100% |
 | 14 | g | 0 | RGB Grünwert 0-100% |
 | 15 | b | 0 | RGB Blauwert 0-100% |
-| 16 | Grp Hue Scene | | Hue Scene für die Hue Gruppe, vgl. http://hue-bridge-ip/user/scenes |
+| 16 | Grp Hue Scene | | Hue Scene für die Hue Gruppe, vgl. http://hue-bridge-ip/user/scenes <br> *Funktioniert nur für die Steuerung von Gruppen!*|
 | 17 | Transition Time | 0 | Zeit zum Einnehmen des neuen Zustandes in x * 10ms, 10 führt z.B. zu einem Übergangszeit von 1 sek. |
 | 18 | Alert Effect | 0 | 1 startet den Alarm, 0 stoppt den Alarm wieder |
 | 19 | Color Loop | 0 | Schaltet einen endlos-Farbdurchlauf ein oder aus. |
@@ -73,10 +73,14 @@ Port und Benutzer und Item Id (= Gruppen Id oder Lampen Id).
 
 ### Change Log
 
- - v1.5
-     - Refactoring w.r.t. warnings
-     - Light control
- - v1.4
+- v2.0
+    - Keine Änderung zu v1.6
+- v1.6
+    - Bug fixing	
+- v1.5
+    - Refactoring w.r.t. warnings
+    - Light control
+- v1.4
 
 ### Open Issues / Know Bugs
 
