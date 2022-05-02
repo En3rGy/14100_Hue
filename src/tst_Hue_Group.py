@@ -155,7 +155,6 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         return int(val)
 
-    ### @todo
     def discover_hue(self):
         """
 
@@ -260,7 +259,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         return str()
 
     # get general web request
-    def get_data(self, api_url, api_port, api_user, api_cmd):
+    def get_data(self, api_url, api_user, api_cmd):
         api_path = 'https://' + api_url + '/clip/v2/resource/' + api_cmd
         data = ""
         url_parsed = urlparse.urlparse(api_path)
@@ -275,6 +274,68 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 request = urllib2.Request(api_path, headers=headers)
                 # Open the URL and read the response.
                 response = urllib2.urlopen(request, data=None, timeout=5, context=ctx)
+                data = {'data': response.read(), 'status': str(response.getcode())}
+            else:
+                data = {'data': "debug", 'status': str(200)}
+            self.DEBUG.add_message("14100: Hue bridge response code: " + data["status"])
+
+        except Exception as e:
+            self.log_data("Error", "getData: " + str(e))
+            data = {'data': str(e), 'status': 0}
+
+        return data
+
+    def http_put(self, api_url, api_user, group, payload):
+        ctrl_grp = bool(self._get_input_value(self.PIN_I_CTRL_GRP))
+        api_path = "https://" + api_url
+
+        if ctrl_grp:
+            api_path = api_path + '/clip/v2/resource/grouped_light/' + str(group)
+        else:
+            api_path = api_path + '/clip/v2/resource/light/' + str(group)
+
+        url_parsed = urlparse.urlparse(api_path)
+        headers = {"Host": url_parsed.hostname,
+                   "Content-type": 'application/json',
+                   "hue-application-key": api_user}
+
+        # Build a SSL Context to disable certificate verification.
+        ctx = ssl._create_unverified_context()
+
+        try:
+            if not self.debug:
+                # Build a http request and overwrite host header with the original hostname.
+                request = urllib2.Request(api_path, headers=headers)
+                request.get_method = lambda: 'PUT'
+                # Open the URL and read the response.
+                response = urllib2.urlopen(request, data=payload, timeout=5, context=ctx)
+                data = {'data': response.read(), 'status': str(response.getcode())}
+            else:
+                data = {'data': '{"success" : True}', 'status': str(200)}
+
+            self.DEBUG.add_message("14100: Hue bridge response code: " + data["status"])
+
+        except Exception as e:
+            self.log_data("Error", "http_put, " + str(e))
+            data = {'data': str(e), 'status': 0}
+
+        return data
+
+    def eventstream(self, api_url, api_user):
+        # curl --insecure -N -H 'hue-application-key: <appkey>' -H 'Accept: text/event-stream' https://<ipaddress>/eventstream/clip/v2
+        api_path = 'https://' + api_url + '/eventstream/clip/v2'
+        url_parsed = urlparse.urlparse(api_path)
+        headers = {'Host': url_parsed.hostname, "hue-application-key": api_user, "Accept": "text/event-stream"}
+
+        # Build a SSL Context to disable certificate verification.
+        ctx = ssl._create_unverified_context()
+
+        try:
+            if not self.debug:
+                # Build a http request and overwrite host header with the original hostname.
+                request = urllib2.Request(api_path, headers=headers)
+                # Open the URL and read the response.
+                response = urllib2.urlopen(request, data=None, timeout=30, context=ctx)
                 data = {'data': response.read(), 'status': str(response.getcode())}
             else:
                 data = {'data': "debug", 'status': str(200)}
@@ -337,43 +398,6 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         return json.dumps(json_state)
 
-    def http_put(self, api_url, api_port, api_user, group, payload):
-
-        ctrl_grp = bool(self._get_input_value(self.PIN_I_CTRL_GRP))
-        api_path = "https://" + api_url
-
-        if ctrl_grp:
-            api_path = api_path + '/clip/v2/resource/grouped_light/' + str(group)
-        else:
-            api_path = api_path + '/clip/v2/resource/light/' + str(group)
-
-        url_parsed = urlparse.urlparse(api_path)
-        headers = {"Host": url_parsed.hostname,
-                   "Content-type": 'application/json',
-                   "hue-application-key": api_user}
-
-        # Build a SSL Context to disable certificate verification.
-        ctx = ssl._create_unverified_context()
-
-        try:
-            if not self.debug:
-                # Build a http request and overwrite host header with the original hostname.
-                request = urllib2.Request(api_path, headers=headers)
-                request.get_method = lambda: 'PUT'
-                # Open the URL and read the response.
-                response = urllib2.urlopen(request, data=payload, timeout=5, context=ctx)
-                data = {'data': response.read(), 'status': str(response.getcode())}
-            else:
-                data = {'data': '{"success" : True}', 'status': str(200)}
-
-            self.DEBUG.add_message("14100: Hue bridge response code: " + data["status"])
-
-        except Exception as e:
-            self.log_data("Error", "http_put, " + str(e))
-            data = {'data': str(e), 'status': 0}
-
-        return data
-
     def hue_on_off(self, api_url, api_port, api_user, group, set_on):
         payload = ""
         if set_on:
@@ -381,12 +405,12 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         else:
             payload = '{"on":{"on":false}}'
 
-        ret = self.http_put(api_url, api_port, api_user, group, payload)
+        ret = self.http_put(api_url, api_user, group, payload)
         return ret["status"] == '200'
 
     def set_scene(self, api_url, api_port, api_user, group, scene):
         payload = '{"scene":"' + scene + '"}'
-        ret = self.http_put(api_url, api_port, api_user, group, payload)
+        ret = self.http_put(api_url, api_user, group, payload)
         return "success" in ret["data"]
 
     def set_effect(self, api_url, api_port, api_user, group, effect):
@@ -397,7 +421,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         else:
             payload = payload + 'none"}'
 
-        ret = self.http_put(api_url, api_port, api_user, group, payload)
+        ret = self.http_put(api_url, api_user, group, payload)
         return "success" in ret["data"]
 
     def set_alert(self, api_url, api_port, api_user, group, alert):
@@ -407,31 +431,31 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         else:
             payload = '{"alert":"none"}'
 
-        ret = self.http_put(api_url, api_port, api_user, group, payload)
+        ret = self.http_put(api_url, api_user, group, payload)
         return "success" in ret["data"]
 
     def set_bri(self, api_url, api_port, api_user, group, bri):
         if bri > 0:
             self.hue_on_off(api_url, api_port, api_user, group, True)
         payload = '{"bri":' + str(bri) + '}'
-        ret = self.http_put(api_url, api_port, api_user, group, payload)
+        ret = self.http_put(api_url, api_user, group, payload)
         if "success" in ret["data"]:
             self.curr_bri = bri
         return "success" in ret["data"]
 
     def set_hue_color(self, api_url, api_port, api_user, group, hue_col):
         payload = '{"hue":' + str(hue_col) + '}'
-        ret = self.http_put(api_url, api_port, api_user, group, payload)
+        ret = self.http_put(api_url, api_user, group, payload)
         return "success" in ret["data"]
 
     def set_sat(self, api_url, api_port, api_user, group, sat):
         payload = '{"sat":' + str(sat) + '}'
-        ret = self.http_put(api_url, api_port, api_user, group, payload)
+        ret = self.http_put(api_url, api_user, group, payload)
         return "success" in ret["data"]
 
     def set_ct(self, api_url, api_port, api_user, group, ct):
         payload = '{"ct":' + str(ct) + '}'
-        ret = self.http_put(api_url, api_port, api_user, group, payload)
+        ret = self.http_put(api_url, api_user, group, payload)
         return "success" in ret["data"]
 
     def prep_dim(self, val):
@@ -512,9 +536,9 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         # If trigger == 1, get data via web request
         if (self.PIN_I_BTRIGGER == index) and (bool(value)):
             if ctrl_group:
-                hue_state = self.get_data(api_url, api_port, api_user, "group")
+                hue_state = self.get_data(api_url, api_user, "group")
             else:
-                hue_state = self.get_data(api_url, api_port, api_user, "light")
+                hue_state = self.get_data(api_url, api_user, "light")
 
         if ((self.PIN_I_BTRIGGER == index) or
                 (self.PIN_I_STAT_JSON == index)):
@@ -631,7 +655,6 @@ class UnitTests(unittest.TestCase):
     def test_get_data(self):
         print("\n###test_get_data")
         data = self.dummy.get_data(str(self.dummy._get_input_value(self.dummy.PIN_I_SHUEIP)),
-                                   int(self.dummy._get_input_value(self.dummy.PIN_I_NHUEPORT)),
                                    str(self.dummy._get_input_value(self.dummy.PIN_I_SUSER)),
                                    'device')
         print(data["data"])
