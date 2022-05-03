@@ -7,14 +7,16 @@ import urllib2
 import urlparse
 import socket
 import time
-import httplib
 import json
 import colorsys
+import thread
 import threading
 
-import re
-import struct
-import hashlib
+
+# import httplib
+# import re
+# import struct
+# import hashlib
 
 
 class hsl20_4:
@@ -93,38 +95,38 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
     def __init__(self, homeserver_context):
         hsl20_4.BaseModule.__init__(self, homeserver_context, "hsl20_3_Hue")
         self.FRAMEWORK = self._get_framework()
-        self.LOGGER = self._get_logger(hsl20_4.LOGGING_NONE,())
-        self.PIN_I_STAT_JSON=1
-        self.PIN_I_BTRIGGER=2
-        self.PIN_I_SHUEIP=3
-        self.PIN_I_NHUEPORT=4
-        self.PIN_I_SUSER=5
-        self.PIN_I_CTRL_GRP=6
-        self.PIN_I_ITM_IDX=7
-        self.PIN_I_BONOFF=8
-        self.PIN_I_NBRI=9
-        self.PIN_I_NHUE=10
-        self.PIN_I_NSAT=11
-        self.PIN_I_NCT=12
-        self.PIN_I_NR=13
-        self.PIN_I_NG=14
-        self.PIN_I_NB=15
-        self.PIN_I_SSCENE=16
-        self.PIN_I_NTRANSTIME=17
-        self.PIN_I_BALERT=18
-        self.PIN_I_NEFFECT=19
-        self.PIN_I_NRELDIM=20
-        self.PIN_I_NDIMRAMP=21
-        self.PIN_O_BSTATUSONOFF=1
-        self.PIN_O_NBRI=2
-        self.PIN_O_NHUE=3
-        self.PIN_O_NSAT=4
-        self.PIN_O_NCT=5
-        self.PIN_O_NR=6
-        self.PIN_O_NG=7
-        self.PIN_O_NB=8
-        self.PIN_O_NREACHABLE=9
-        self.PIN_O_JSON=10
+        self.LOGGER = self._get_logger(hsl20_4.LOGGING_NONE, ())
+        self.PIN_I_STAT_JSON = 1
+        self.PIN_I_BTRIGGER = 2
+        self.PIN_I_SHUEIP = 3
+        self.PIN_I_NHUEPORT = 4
+        self.PIN_I_SUSER = 5
+        self.PIN_I_CTRL_GRP = 6
+        self.PIN_I_ITM_IDX = 7
+        self.PIN_I_BONOFF = 8
+        self.PIN_I_NBRI = 9
+        self.PIN_I_NHUE = 10
+        self.PIN_I_NSAT = 11
+        self.PIN_I_NCT = 12
+        self.PIN_I_NR = 13
+        self.PIN_I_NG = 14
+        self.PIN_I_NB = 15
+        self.PIN_I_SSCENE = 16
+        self.PIN_I_NTRANSTIME = 17
+        self.PIN_I_BALERT = 18
+        self.PIN_I_NEFFECT = 19
+        self.PIN_I_NRELDIM = 20
+        self.PIN_I_NDIMRAMP = 21
+        self.PIN_O_BSTATUSONOFF = 1
+        self.PIN_O_NBRI = 2
+        self.PIN_O_NHUE = 3
+        self.PIN_O_NSAT = 4
+        self.PIN_O_NCT = 5
+        self.PIN_O_NR = 6
+        self.PIN_O_NG = 7
+        self.PIN_O_NB = 8
+        self.PIN_O_NREACHABLE = 9
+        self.PIN_O_JSON = 10
 
     ########################################################################################################
     #### Own written code can be placed after this commentblock . Do not change or delete commentblock! ####
@@ -160,7 +162,6 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         :rtype: urlparse
         """
-
         # mDNS query request msg from application
         MCAST_PORT = 5353
         MCAST_GRP = '224.0.0.251'
@@ -236,7 +237,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                     ar_length = self.hex2int(ar_length)
                     # self.log_data("Addition record no. " + str(i), (":".join("{:02x}".format(ord(c)) for c in add_records[ar_offset:ar_offset + 12 + ar_length])))
 
-                    if ar_type == "\x00\x01": # Type A, get IP & Port
+                    if ar_type == "\x00\x01":  # Type A, get IP & Port
                         ar_ip = add_records[ar_offset + 12:ar_offset + 12 + ar_length]
                         ip1 = self.hex2int(ar_ip[0])
                         ip2 = self.hex2int(ar_ip[1])
@@ -245,25 +246,28 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
                         ip = str(ip1) + "." + str(ip2) + "." + str(ip3) + "." + str(ip4)
                         self.log_data("Discovered IP", ip)
-                        return ip
+                        self.bridge_ip = ip
 
                     ar_offset = ar_offset + 12 + ar_length
 
-                return str()
+                return
 
             except socket.timeout:
                 self.log_msg("Discovery timeout")
                 break
 
         sock.close()
-        return str()
 
     # get general web request
-    def get_data(self, api_url, api_user, api_cmd):
-        api_path = 'https://' + api_url + '/clip/v2/resource/' + api_cmd
+    def get_data(self, api_cmd):
+        """
+        {'data': str(result), 'status': str(return code)}
+        :rtype: {string, string}
+        """
+        api_path = 'https://' + self.bridge_ip + '/clip/v2/resource/' + api_cmd
         data = ""
         url_parsed = urlparse.urlparse(api_path)
-        headers = {'Host': url_parsed.hostname, "hue-application-key": api_user}
+        headers = {'Host': url_parsed.hostname, "hue-application-key": self._get_input_value(self.PIN_I_SUSER)}
 
         # Build a SSL Context to disable certificate verification.
         ctx = ssl._create_unverified_context()
@@ -275,29 +279,39 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 # Open the URL and read the response.
                 response = urllib2.urlopen(request, data=None, timeout=5, context=ctx)
                 data = {'data': response.read(), 'status': str(response.getcode())}
+                if data["status"] != str(200):
+                    print data["data"]
             else:
                 data = {'data': "debug", 'status': str(200)}
             self.DEBUG.add_message("14100: Hue bridge response code: " + data["status"])
 
         except Exception as e:
             self.log_data("Error", "getData: " + str(e))
-            data = {'data': str(e), 'status': 0}
+            data = {'data': str(e), 'status': str(0)}
+            print(data)
 
         return data
 
-    def http_put(self, api_url, api_user, group, payload):
+    def http_put(self, payload, device_rid):
+        # type: (str) -> {str, int}
+        """
+        {"data": str, "status": int}
+
+        :rtype: {string, int}
+        """
         ctrl_grp = bool(self._get_input_value(self.PIN_I_CTRL_GRP))
-        api_path = "https://" + api_url
 
+        api_path = "https://" + self.bridge_ip
         if ctrl_grp:
-            api_path = api_path + '/clip/v2/resource/grouped_light/' + str(group)
+            api_path = api_path + '/clip/v2/resource/grouped_light/'
         else:
-            api_path = api_path + '/clip/v2/resource/light/' + str(group)
+            api_path = api_path + '/clip/v2/resource/light/'
 
+        api_path = api_path + device_rid
         url_parsed = urlparse.urlparse(api_path)
         headers = {"Host": url_parsed.hostname,
                    "Content-type": 'application/json',
-                   "hue-application-key": api_user}
+                   "hue-application-key": self._get_input_value(self.PIN_I_SUSER)}
 
         # Build a SSL Context to disable certificate verification.
         ctx = ssl._create_unverified_context()
@@ -309,11 +323,14 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 request.get_method = lambda: 'PUT'
                 # Open the URL and read the response.
                 response = urllib2.urlopen(request, data=payload, timeout=5, context=ctx)
-                data = {'data': response.read(), 'status': str(response.getcode())}
+                data = {'data': response.read(), 'status': response.getcode()}
+                if data["status"] != 200:
+                    print data["data"]["error"]
+                    data["status"] = 200
             else:
-                data = {'data': '{"success" : True}', 'status': str(200)}
+                data = {'data': '{"success" : True}', 'status': 200}
 
-            self.DEBUG.add_message("14100: Hue bridge response code: " + data["status"])
+            self.DEBUG.add_message("14100: Hue bridge response code: " + str(data["status"]))
 
         except Exception as e:
             self.log_data("Error", "http_put, " + str(e))
@@ -321,99 +338,173 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         return data
 
-    def eventstream(self, api_url, api_user):
-        # curl --insecure -N -H 'hue-application-key: <appkey>' -H 'Accept: text/event-stream' https://<ipaddress>/eventstream/clip/v2
-        api_path = 'https://' + api_url + '/eventstream/clip/v2'
-        url_parsed = urlparse.urlparse(api_path)
-        headers = {'Host': url_parsed.hostname, "hue-application-key": api_user, "Accept": "text/event-stream"}
-
-        # Build a SSL Context to disable certificate verification.
-        ctx = ssl._create_unverified_context()
+    def register_devices(self):
+        # type: () -> bool
+        data = self.get_data("device")["data"]
 
         try:
-            if not self.debug:
-                # Build a http request and overwrite host header with the original hostname.
-                request = urllib2.Request(api_path, headers=headers)
-                # Open the URL and read the response.
-                response = urllib2.urlopen(request, data=None, timeout=30, context=ctx)
-                data = {'data': response.read(), 'status': str(response.getcode())}
-            else:
-                data = {'data': "debug", 'status': str(200)}
-            self.DEBUG.add_message("14100: Hue bridge response code: " + data["status"])
+            data = json.loads(data)
+            if "data" not in data:
+                self.log_msg("No data field in 'device' reply")
+                return False
+
+            data = data["data"]
+
+            for data_set in data:
+                device_id = data_set["id"]
+                self.devices[device_id] = {}
+                device_services = data_set["services"]
+                for service in device_services:
+                    service_type = service["rtype"]
+                    self.devices[device_id][service_type] = service["rid"]
+
+            print(self.devices)
 
         except Exception as e:
-            self.log_data("Error", "getData: " + str(e))
-            data = {'data': str(e), 'status': 0}
+            self.log_msg("In print_lights '" + str(e) + "'")
+            return False
 
-        return data
+        return True
 
-    def read_json(self, json_state, hue_id):
+    def register_eventstream(self):
+        thread.start_new_thread(self.eventstream, ())
+
+    def eventstream(self):
+        while True:
+            self.log_msg("Connecting to eventstream...")
+            api_path = 'https://' + self.bridge_ip + '/eventstream/clip/v2'
+            url_parsed = urlparse.urlparse(api_path)
+
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock = ssl.wrap_socket(sock, cert_reqs=ssl.CERT_NONE)
+            # sock.settimeout(5)
+
+            try:
+                sock.bind(('', 0))
+                sock.connect((self.bridge_ip, 443))
+                sock.send("GET /eventstream/clip/v2 HTTP/1.1\r\n")
+                sock.send("Host: " + url_parsed.hostname + "\r\n")
+                sock.send("hue-application-key: " + self._get_input_value(self.PIN_I_SUSER) + "\r\n")
+                sock.send("Accept: text/event-stream\r\n\r\n")
+
+            except socket.error as e:
+                self.log_data("Error", "discover: " + str(e))
+                sock.close()
+
+            while True:
+                try:
+                    data = sock.recv(1024)
+                    data = data[data.find("data: ") + 6:]
+                    data = str(data).replace("\r", '').replace("\n", '')
+                    self.process_json(data)
+
+                    if self.stop_eventstream:
+                        return
+
+                except socket.timeout:
+                    self.log_msg("Eventstream timeout")
+                    break
+
+                except Exception as e:
+                    self.log_msg(str(e))
+                    break
+
+            print("Exit thread")
+            sock.close()
+            return str()
+
+    def process_json(self, msg):
+        # type: (str) -> None
+        # --
+        # [{"creationtime":"2022-05-02T21:25:32Z","data":
+        # [
+        #   {
+        #     "id":"fbbd07de-5bf0-4dd6-b819-db3d9ee9a429", ### service id of device
+        #     "id_v1":"/lights/3",
+        #     "on":{"on":false},
+        #     "owner":
+        #       {
+        #         "rid":"3603093d-b456-4d02-a6ab-6a23aad1f6ba", ### device id
+        #         "rtype":"device"
+        #       },"type":"light"
+        #   }
+        # ],
+        # "id":"9a3e1580-4fc3-40fb-b280-73c1bb45f0d3","type":"update"}]
+
+        out = json.dumps(msg)
+        self.set_output_value_sbc(self.PIN_O_JSON, out)
+
         try:
-            json_state = json.loads(json_state)
-            ctrl_grp = bool(self._get_input_value(self.PIN_I_CTRL_GRP))
-            mode = 'state'
+            json_obj = json.loads(msg)
+            for data_set in json_obj:
+                device_id = data_set["data"]["owner"]["rid"]
 
-            if ctrl_grp:
-                mode = 'action'
+                if device_id == self._get_input_value(self.PIN_I_ITM_IDX):
+                    if "on" in data_set["data"]:
+                        on = data_set["data"]["on"]["on"]
+                        self.set_output_value_sbc(self.PIN_O_BSTATUSONOFF, on)
 
-            if str(idx) in json_state:
-                json_device = json_state[str(idx)]
-            else:
-                print("Device not found in json in  read_groups_json")
-                return ""
+                    if "color" in data_set["data"]:
+                        color = data_set["data"]["color"]
+                        # todo calculate rgb
 
-            if mode in json_device:
-                action_sub = json_device[mode]
-                on_off = action_sub['on']
-                self.set_output_value_sbc(self.PIN_O_BSTATUSONOFF, on_off)
+                    if "dimming" in data_set["data"]:
+                        dimming = data_set["data"]["dimming"]
+                        self.set_output_value_sbc(self.PIN_O_NBRI, data_set["data"]["dimming"]["brightness"])
 
-                if 'reachable' in action_sub:
-                    reachable = int(action_sub['reachable'])
-                    self.set_output_value_sbc(self.PIN_O_NREACHABLE, reachable)
-                if 'bri' in action_sub:
-                    bri = int(action_sub['bri'])
-                    self.curr_bri = bri
-                    self.set_output_value_sbc(self.PIN_O_NBRI, bri / 255.0 * 100.0)
-                if 'hue' in action_sub:
-                    hue = action_sub['hue']
-                    self.set_output_value_sbc(self.PIN_O_NHUE, hue)
-                if 'sat' in action_sub:
-                    sat = action_sub['sat']
-                    self.set_output_value_sbc(self.PIN_O_NSAT, sat / 255.0 * 100)
-                if 'ct' in action_sub:
-                    ct = action_sub['ct']
-                    self.set_output_value_sbc(self.PIN_O_NCT, ct)
+        except Exception as e:
+            self.log_msg("Error in 'process_json', '" + str(e) + "', with message '" + str(out) + "'")
 
-                r, g, b = colorsys.hsv_to_rgb(hue / 360.0 / 182.04, sat / 255.0, bri / 255.0)
+    def get_rig(self, service):
+        # type: (str) -> str
+        device_id = self._get_input_value(self.PIN_I_ITM_IDX)
+        if device_id not in self.devices:
+            self.log_msg("In 'get_rid', device id not yet registered in self.devices.")
+            return str()
 
-                r = int(r * 100.0)
-                g = int(g * 100.0)
-                b = int(b * 100.0)
+        if service not in self.devices[device_id]:
+            self.log_msg("In 'get_rid', service '" + service + "' not registered for device in self.devices.")
+            return str()
 
-                self.set_output_value_sbc(self.PIN_O_NR, r)
-                self.set_output_value_sbc(self.PIN_O_NG, g)
-                self.set_output_value_sbc(self.PIN_O_NB, b)
-        except:
-            json_state = []
+        return self.devices[device_id][service]
 
-        return json.dumps(json_state)
+    def set_on(self, set_on):
+        # type: (bool) -> bool
 
-    def hue_on_off(self, api_url, api_port, api_user, group, set_on):
-        payload = ""
+        rid = self.get_rig("light")
+        if not rid:
+            return False
+
         if set_on:
             payload = '{"on":{"on":true}}'
         else:
             payload = '{"on":{"on":false}}'
 
-        ret = self.http_put(api_url, api_user, group, payload)
-        return ret["status"] == '200'
+        ret = self.http_put(payload, rid)
+        return ret["status"] == 200
 
-    def set_scene(self, api_url, api_port, api_user, group, scene):
+    def set_dimming(self, brightness):
+        # type: (int) -> bool
+        """
+        Brightness percentage. value cannot be 0, writing 0 changes it to the lowest possible brightness
+
+        :param brightness: number – maximum: 100
+        :return: True if successful, otherwise False
+        """
+        rid = self.get_rig("light")
+        if not rid:
+            return False
+
+        payload = '{"dimming":{"brightness":' + str(brightness) + '}}'
+        ret = self.http_put(payload, rid)
+        return ret["status"] == 200
+
+    def set_scene(self, scene):
         payload = '{"scene":"' + scene + '"}'
-        ret = self.http_put(api_url, api_user, group, payload)
+        ret = self.http_put(payload)
         return "success" in ret["data"]
 
-    def set_effect(self, api_url, api_port, api_user, group, effect):
+    def set_effect(self, effect):
         payload = '{"effect":"'
 
         if effect:
@@ -421,41 +512,32 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         else:
             payload = payload + 'none"}'
 
-        ret = self.http_put(api_url, api_user, group, payload)
+        ret = self.http_put(payload)
         return "success" in ret["data"]
 
-    def set_alert(self, api_url, api_port, api_user, group, alert):
+    def set_alert(self, alert):
         payload = ""
         if alert:
             payload = '{"alert":"lselect"}'
         else:
             payload = '{"alert":"none"}'
 
-        ret = self.http_put(api_url, api_user, group, payload)
+        ret = self.http_put(payload)
         return "success" in ret["data"]
 
-    def set_bri(self, api_url, api_port, api_user, group, bri):
-        if bri > 0:
-            self.hue_on_off(api_url, api_port, api_user, group, True)
-        payload = '{"bri":' + str(bri) + '}'
-        ret = self.http_put(api_url, api_user, group, payload)
-        if "success" in ret["data"]:
-            self.curr_bri = bri
-        return "success" in ret["data"]
-
-    def set_hue_color(self, api_url, api_port, api_user, group, hue_col):
+    def set_hue_color(self, hue_col):
         payload = '{"hue":' + str(hue_col) + '}'
-        ret = self.http_put(api_url, api_user, group, payload)
+        ret = self.http_put(payload)
         return "success" in ret["data"]
 
-    def set_sat(self, api_url, api_port, api_user, group, sat):
+    def set_sat(self, sat):
         payload = '{"sat":' + str(sat) + '}'
-        ret = self.http_put(api_url, api_user, group, payload)
+        ret = self.http_put(payload)
         return "success" in ret["data"]
 
-    def set_ct(self, api_url, api_port, api_user, group, ct):
+    def set_ct(self, ct):
         payload = '{"ct":' + str(ct) + '}'
-        ret = self.http_put(api_url, api_user, group, payload)
+        ret = self.http_put(payload)
         return "success" in ret["data"]
 
     def prep_dim(self, val):
@@ -500,7 +582,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         elif new_bri < 1:
             new_bri = 1
 
-        self.set_bri(api_url, api_port, api_user, itm_idx, new_bri)
+        self.set_bri(new_bri)
 
         duration = float(self._get_input_value(self.PIN_I_NDIMRAMP))
         steps = 255 / abs(self.interval)
@@ -512,11 +594,10 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
     def on_init(self):
         self.DEBUG = self.FRAMEWORK.create_debug_section()
         self.g_out_sbc = {}
-        self.debug = False
-        self.curr_bri = 0
-        self.interval = 0
-        self.timer = threading.Timer(1000, None)
-        self.stop = False
+        self.debug = False # type: bool
+        self.bridge_ip = self._get_input_value(self.PIN_I_SHUEIP)
+        self.stop_eventstream = False  # type: bool
+        self.devices = {}  # type: Dict[device_id, [service_type, rid]]
 
     def on_input_value(self, index, value):
         res = False
@@ -536,9 +617,9 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         # If trigger == 1, get data via web request
         if (self.PIN_I_BTRIGGER == index) and (bool(value)):
             if ctrl_group:
-                hue_state = self.get_data(api_url, api_user, "group")
+                hue_state = self.get_data("group")
             else:
-                hue_state = self.get_data(api_url, api_user, "light")
+                hue_state = self.get_data("light")
 
         if ((self.PIN_I_BTRIGGER == index) or
                 (self.PIN_I_STAT_JSON == index)):
@@ -552,44 +633,44 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             return
 
         if self.PIN_I_BONOFF == index:
-            res = self.hue_on_off(api_url, api_port, api_user, itm_idx, value)
+            res = self.set_on(value)
             if res:
                 self.set_output_value_sbc(self.PIN_O_BSTATUSONOFF, value)
 
         elif self.PIN_I_SSCENE == index:
-            res = self.set_scene(api_url, api_port, api_user, itm_idx, value)
+            res = self.set_scene(value)
             if res:
                 self.set_output_value_sbc(self.PIN_O_BSTATUSONOFF, True)
 
         elif self.PIN_I_NBRI == index:
-            self.hue_on_off(api_url, api_port, api_user, itm_idx, True)
-            res = self.set_bri(api_url, api_port, api_user, itm_idx, bri)
+            self.set_on(True)
+            res = self.set_bri(bri)
             print(res)
             if res:
                 self.set_output_value_sbc(self.PIN_O_NBRI, bri / 255.0 * 100.0)
 
         elif self.PIN_I_NHUE == index:
-            self.hue_on_off(api_url, api_port, api_user, itm_idx, True)
-            res = self.set_hue_color(api_url, api_port, api_user, itm_idx, hue_ol)
+            self.set_on(True)
+            res = self.set_hue_color(hue_ol)
             if res:
                 self.set_output_value_sbc(self.PIN_O_NHUE, hue_ol)
 
         elif self.PIN_I_NSAT == index:
-            self.hue_on_off(api_url, api_port, api_user, itm_idx, True)
-            res = self.set_sat(api_url, api_port, api_user, itm_idx, sat)
+            self.set_on(True)
+            res = self.set_sat(sat)
             if res:
                 self.set_output_value_sbc(self.PIN_O_NSAT, sat / 255.0 * 100)
 
         elif self.PIN_I_NCT == index:
-            self.hue_on_off(api_url, api_port, api_user, itm_idx, True)
-            res = self.set_ct(api_url, api_port, api_user, itm_idx, ct)
+            self.set_on(True)
+            res = self.set_ct(ct)
             if res:
                 self.set_output_value_sbc(self.PIN_O_NCT, ct)
 
         elif ((self.PIN_I_NR == index) or
               (self.PIN_I_NG == index) or
               (self.PIN_I_NB == index)):
-            self.hue_on_off(api_url, api_port, api_user, itm_idx, True)
+            self.set_on(True)
 
             red = int(int(self._get_input_value(self.PIN_I_NR)) * 2.55)
             green = int(int(self._get_input_value(self.PIN_I_NG)) * 2.55)
@@ -600,9 +681,9 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             s = int(s * 255)
             v = int(v * 255)
 
-            ret1 = self.set_bri(api_url, api_port, api_user, itm_idx, v)
-            ret2 = self.set_hue_color(api_url, api_port, api_user, itm_idx, h)
-            ret3 = self.set_sat(api_url, api_port, api_user, itm_idx, s)
+            ret1 = self.set_bri(v)
+            ret2 = self.set_hue_color(h)
+            ret3 = self.set_sat(s)
 
             if ret1 and ret2 and ret3:
                 # set rgb as output
@@ -612,12 +693,12 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         elif self.PIN_I_BALERT == index:
             alert = int(self._get_input_value(self.PIN_I_BALERT))
-            self.set_alert(api_url, api_port, api_user, itm_idx, alert)
+            self.set_alert(alert)
             ###
 
         elif self.PIN_I_NEFFECT == index:
             effect = int(self._get_input_value(self.PIN_I_NEFFECT))
-            self.set_effect(api_url, api_port, api_user, itm_idx, effect)
+            self.set_effect(effect)
 
         elif self.PIN_I_NRELDIM == index:
             self.prep_dim(value)
@@ -629,7 +710,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 class UnitTests(unittest.TestCase):
 
     def setUp(self):
-        print("\n ##setUp")
+        print("\n###setUp")
         with open("credentials.txt") as f:
             self.cred = json.load(f)
 
@@ -638,40 +719,71 @@ class UnitTests(unittest.TestCase):
 
         self.dummy.debug_input_value[self.dummy.PIN_I_SHUEIP] = self.cred["PIN_I_SHUEIP"]
         self.dummy.debug_input_value[self.dummy.PIN_I_SUSER] = self.cred["PIN_I_SUSER"]
-        self.dummy.debug_input_value[self.dummy.PIN_I_NHUEPORT] = self.cred["PIN_I_NHUEPORT"]
 
         self.dummy.debug_input_value[self.dummy.PIN_I_CTRL_GRP] = 0
-        self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["Hue_id"]
+        self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_device_id"]
+        self.dummy.devices[self.cred["hue_device_id"]] = {}
+        self.dummy.devices[self.cred["hue_device_id"]]["light"] = self.cred["hue_light_id"]
+        self.dummy.debug_rid = self.cred["hue_light_id"]
+
+        self.dummy.bridge_ip = self.cred["PIN_I_SHUEIP"]
+        self.dummy.stop_eventstream = True
 
     def tearDown(selfself):
-        print("\n ##tearDown")
+        print("\n###tearDown")
         pass
+
+    def test_get_rig(self):
+        print("\n###test_get_rig")
+        ret = self.dummy.get_rig("light")
+        self.assertEqual(ret, self.dummy.debug_rid)
+        ret = self.dummy.get_rig("dummy")
+        self.assertEqual(ret, str())
 
     def test_discover(self):
         print("\n###test_discover")
-        data = self.dummy.discover_hue()
-        self.assertTrue("192" in data)
+        self.dummy.bridge_ip = None
+        self.dummy.discover_hue()
+        self.assertTrue("192" in self.dummy.bridge_ip)
 
     def test_get_data(self):
         print("\n###test_get_data")
-        data = self.dummy.get_data(str(self.dummy._get_input_value(self.dummy.PIN_I_SHUEIP)),
-                                   str(self.dummy._get_input_value(self.dummy.PIN_I_SUSER)),
-                                   'device')
+        data = self.dummy.get_data('device')
         print(data["data"])
         self.assertTrue("id" in data["data"])
 
-    def test_on_off_light(self):
-        print("###test_on_off_light")
-        self.dummy.on_input_value(self.dummy.PIN_I_BONOFF, 0)
-        self.assertEqual(0, self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF])
+    def test_set_on(self):
+        print("###test_set_on")
+        self.assertTrue(self.dummy.set_on(0))
         time.sleep(3)
-        self.dummy.on_input_value(self.dummy.PIN_I_BONOFF, 1)
-        self.assertEqual(1, self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF])
+        self.assertTrue(self.dummy.set_on(1))
         time.sleep(3)
-        self.dummy.on_input_value(self.dummy.PIN_I_BONOFF, 0)
-        self.assertEqual(0, self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF])
+        self.assertTrue(self.dummy.set_on(0))
 
-    # todo: curl --insecure -N -H 'hue-application-key: <appkey>' -H 'Accept: text/event-stream' https://<ipaddress>/eventstream/clip/v2
+#    def test_eventstream(self):
+#        self.dummy.stop_eventstream = False
+#        self.dummy.register_eventstream()
+
+    def test_print_devices(self):
+        print("###test_print_devices")
+        res = self.dummy.register_devices()
+        self.assertTrue(res)
+
+    def test_dimming(self):
+        self.dummy.set_on(True)
+        time.sleep(2)
+        res = self.dummy.set_dimming(70)
+        self.assertTrue(res)
+        time.sleep(2)
+        res = self.dummy.set_dimming(50)
+        self.assertTrue(res)
+        time.sleep(2)
+        res = self.dummy.set_dimming(30)
+        self.assertTrue(res)
+        time.sleep(2)
+        self.dummy.set_on(False)
+
+
 
 #     def test_setBri(self):
 #         self.dummy.debug = True
