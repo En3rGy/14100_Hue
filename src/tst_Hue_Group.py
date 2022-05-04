@@ -338,6 +338,11 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         return data
 
+    # todo dynamic scene
+    # PUT 'https://<ipaddress>/clip/v2/resource/scene/<v2-id>'
+    # -H 'hue-application-key: <appkey>' -H 'Content-Type: application/json'
+    # --data-raw '{"recall": {"action": "dynamic_palette"}}'
+
     def register_devices(self):
         # type: () -> bool
         item_types = {"device", "room", "scene", "zone", "grouped_light"}
@@ -348,7 +353,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             try:
                 data = json.loads(data)
                 if "data" not in data:
-                    self.log_msg("In register_devices, no data field in '" + itemtype + "' reply")
+                    self.log_msg("In register_devices, no data field in '" + item_type + "' reply")
                     return False
 
                 data = data["data"]
@@ -356,6 +361,11 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 for data_set in data:
                     device_id = data_set["id"]
                     self.devices[device_id] = {}
+                    if item_type == "light" or item_type == "scene" or item_type == "room" or item_type == "zone":
+                        self.devices[device_id]["name"] = data_set["metadata"]["name"]
+                    else:
+                        self.devices[device_id]["name"] = str()
+
                     if item_type == "grouped_light" or item_type == "scene":
                         self.devices[device_id]["light"] = data_set["id"]
                     else:

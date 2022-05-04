@@ -105,13 +105,22 @@ Der Code des Bausteins befindet sich in der hslz Datei oder auf [github](https:/
 
 
 ## Requirements
-- Lampen ein/ausschalten & ein/aus Status-ausgeben
-- Lampen dimmen & Dimmwert ausgeben
-- Farbe bei Lampen vorgeben & ausgeben
-- Erreichbar Status / Verbunden-Status ausgeben
-- Auch für Zonen / Räume / Gruppen?
+1. Pairing mit Hue Bridge über Logikmodul durchführen, s. [API v2 Getting started](https://developers.meethue.com/develop/hue-api-v2/getting-started/)
+2. Lampen ein/ausschalten
+3. Ein/aus-Status ausgeben
+4. Lampen dimmen
+5. Dimmwert ausgeben
+6. Farbe bei Lampen vorgeben
+7. Farbe der Lampe ausgeben
+8. Erreichbar Status / Verbunden-Status ausgeben
+9. Starten von Szenen
+1. Abspielen von dynamischen Szenen
+2. Auch für Zonen / Räume / Gruppen
 
 ## Software Design Description
+- Lampen / Szenen / Zonen / Räume / Gruppen werden über die Id unterschieden; Abfrage des Typs via /resource {data{id, type}}
+- Abh. von der Aktion wird die jew. rid über die Device id herausgesucht
+- Der Status wird über den Event Stream ausgelesen
 
 
 ## Validation & Verification
