@@ -340,30 +340,35 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
     def register_devices(self):
         # type: () -> bool
-        data = self.get_data("device")["data"]
+        item_types = {"device", "room", "scene", "zone", "grouped_light"}
 
-        try:
-            data = json.loads(data)
-            if "data" not in data:
-                self.log_msg("No data field in 'device' reply")
+        for item_type in item_types:
+            data = self.get_data(item_type)["data"]
+
+            try:
+                data = json.loads(data)
+                if "data" not in data:
+                    self.log_msg("In register_devices, no data field in '" + itemtype + "' reply")
+                    return False
+
+                data = data["data"]
+
+                for data_set in data:
+                    device_id = data_set["id"]
+                    self.devices[device_id] = {}
+                    if item_type == "grouped_light" or item_type == "scene":
+                        self.devices[device_id]["light"] = data_set["id"]
+                    else:
+                        device_services = data_set["services"]
+                        for service in device_services:
+                            service_type = service["rtype"]
+                            self.devices[device_id][service_type] = service["rid"]
+
+            except Exception as e:
+                self.log_msg("In register_devices '" + str(e) + "' for " + item_type)
                 return False
 
-            data = data["data"]
-
-            for data_set in data:
-                device_id = data_set["id"]
-                self.devices[device_id] = {}
-                device_services = data_set["services"]
-                for service in device_services:
-                    service_type = service["rtype"]
-                    self.devices[device_id][service_type] = service["rid"]
-
-            print(self.devices)
-
-        except Exception as e:
-            self.log_msg("In print_lights '" + str(e) + "'")
-            return False
-
+        print(self.devices)
         return True
 
     def register_eventstream(self):

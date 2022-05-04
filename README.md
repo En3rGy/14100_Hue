@@ -21,11 +21,9 @@ Port und Benutzer und Item Id (= Gruppen Id oder Lampen Id).
 | Nr. | Name | Initialisierung | Beschreibung |
 | --- | ---  | --- | --- |
 | 1   | Json |     | Für Baustein-Kaskade: Verknüpfung des gleichnamigen Ausgangs eines anderen Bausteins.<br/>Die Einstellung für die Steuerung einer Gruppe oder Leuchte muss in der ganzen Kaskade identisch konfiguriert sein (E6 bei allen 1 oder 0) |
-| 2 | Get Status | | Ein Wert =1 triggert den Status-Abruf über die Hue-Bridge. Hier ist es z.B. Sinnvoll einen Telegrammgenerator anzuschließen. Damit kann detektiert werden, wenn eine Lampe auf einem anderen Weg, als über den Baustein geschaltet wird. |
+| 2 | Get Status | | Ein Wert =1 triggert den Status-Abruf über die Hue-Bridge. |
 | 3 | Hue Bridge IP | | IP der Hue Bridge |
-| 4 | Hue Bridge Port | 80 | Port der Hue Bridge |
-| 5 | User | | Hue Bridge User |
-| 6 | Control Group | 0 | 1, wenn eine Lampengruppe gesteuert werden soll,<br/> 0 wenn eine einzelne Lampe gesteuert werden soll |
+| 5 | Key | | Hue Bridge User Key |
 | 7 | Item Id | 0 | Abh. von Eingang 6, die Id der auszuwertenden Hue Gruppe oder Lampe, vgl. http://hue-ip/api/hue-user/lights |
 | 8 | Grp On/Off | 0 | Schaltet die Lampe / Gruppe ein (1) / aus (0). |
 | 9 | Brightness | 0 | Helligkeit für die Hue Lampe / Gruppe in 0-100% <br/> Wird der Wert gesetzt, wird die Gruppe eingeschaltet. |
@@ -73,6 +71,8 @@ Port und Benutzer und Item Id (= Gruppen Id oder Lampen Id).
 
 ### Change Log
 
+- v3.0
+    - Refactoring & Umstellung auf Hue API v2
 - v2.0
     - Keine Änderung zu v1.6
 - v1.6
@@ -105,7 +105,11 @@ Der Code des Bausteins befindet sich in der hslz Datei oder auf [github](https:/
 
 
 ## Requirements
--
+- Lampen ein/ausschalten & ein/aus Status-ausgeben
+- Lampen dimmen & Dimmwert ausgeben
+- Farbe bei Lampen vorgeben & ausgeben
+- Erreichbar Status / Verbunden-Status ausgeben
+- Auch für Zonen / Räume / Gruppen?
 
 ## Software Design Description
 
