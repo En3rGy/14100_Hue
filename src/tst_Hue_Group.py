@@ -354,17 +354,21 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 data = json.loads(data)
                 if "data" not in data:
                     self.log_msg("In register_devices, no data field in '" + item_type + "' reply")
-                    return False
+                    continue
 
                 data = data["data"]
 
                 for data_set in data:
                     device_id = data_set["id"]
                     self.devices[device_id] = {}
+                    self.devices[device_id]["type"] = item_type
                     if item_type == "light" or item_type == "scene" or item_type == "room" or item_type == "zone":
                         self.devices[device_id]["name"] = data_set["metadata"]["name"]
                     else:
                         self.devices[device_id]["name"] = str()
+
+                    if item_type == "scene":
+                        self.devices[device_id]["associated group"] = data_set["group"]["rid"]
 
                     if item_type == "grouped_light" or item_type == "scene":
                         self.devices[device_id]["light"] = data_set["id"]
@@ -378,7 +382,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 self.log_msg("In register_devices '" + str(e) + "' for " + item_type)
                 return False
 
-        print(self.devices)
+        self.log_data("Items", json.dumps(self.devices, sort_keys=True, indent=4))
         return True
 
     def register_eventstream(self):

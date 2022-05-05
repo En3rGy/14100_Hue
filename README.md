@@ -2,19 +2,15 @@
 
 ## Beschreibung 
 
-Der Baustein steuert Hue Gruppen und liest den Status der Gruppe oder 
-einzelner Lampen aus. Um die Netzwerklast zu verringern können mehrere 
-Bausteine als Kaskade geschaltet werden, um die Statusmeldung der Hue-Bridge 
-für mehrere Lampen bzw. Gruppen auszulesen.
+Der Baustein stellt eiene Schnittstelle zu einzelnen Leuchten / Gruppen / Räumen / Zonen 
+eines Hue-Systems dar. D.h. die angesprochenen Geräte lassen sich steuern und deren Status wird ausgegeben.
+Hierzu meldet sich der Baustein bei der Hue-Bridge an und erhält so direkt von dieser Informationen zu 
+Statusänderungen. Um die Netzwerklast zu verringern, können mehrere 
+Bausteine als Kaskade geschaltet werden.
 
-Die ersten beiden Eingänge sind ausschließlich für den Status. Ein Baustein muss 
-regelmäßig via Get (E2) getriggered werden. Dann generiert er über die letzten 
-beiden Ausgänge die Infos für alle anderen Bauteile, die die Daten via deren 
-E1 bekommen sollten. E2 sollte bei diesen anderen Bausteinen nicht 
-getriggert werden, sonst würden sie zusätzlich den Status abfragen.
+Der Baustein erkennt selbständig die Hue-Bridge im Netzwerk und verbindet sich mit dieser.
 
-Sollen die Bausteine zum Schalten, etc. verwendet werden, brauchen Sie IP, 
-Port und Benutzer und Item Id (= Gruppen Id oder Lampen Id). 
+Der Baustein nutzt die [Hue API v2](https://developers.meethue.com/develop/hue-api-v2/).
 
 ## Eingänge
 
@@ -114,13 +110,18 @@ Der Code des Bausteins befindet sich in der hslz Datei oder auf [github](https:/
 7. Farbe der Lampe ausgeben
 8. Erreichbar Status / Verbunden-Status ausgeben
 9. Starten von Szenen
-1. Abspielen von dynamischen Szenen
-2. Auch für Zonen / Räume / Gruppen
+10. Abspielen von dynamischen Szenen
+11. Auch für Zonen / Räume / Gruppen
+12. Selbständiges finden & verbinden mit der Hue-Bridge
+13. Automatisches re-connect mit Hue-Bridge bei Verbindungsabbruch
+14. Bei mehreren Bausteininstanzen verbindet sich nur einer mit der Hue Bridge und teilt die erhaltenen Informationen
+15. Bereitstellen einer Web-Seite mit Informationen zu Hue-IDs
 
 ## Software Design Description
 - Lampen / Szenen / Zonen / Räume / Gruppen werden über die Id unterschieden; Abfrage des Typs via /resource {data{id, type}}
 - Abh. von der Aktion wird die jew. rid über die Device id herausgesucht
 - Der Status wird über den Event Stream ausgelesen
+- Nur ein Baustein verbindet sich mit der Hue Bridge, die übrigen nutzen diese Verbindung über [HS Instanzen](/doc_extra/de/commloginst.html)
 
 
 ## Validation & Verification
