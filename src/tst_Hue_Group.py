@@ -26,9 +26,9 @@ class hsl20_4:
         pass
 
     class BaseModule:
-        debug_output_value = {}  # type: float
-        debug_set_remanent = {}  # type: float
-        debug_input_value = {}
+        debug_output_value = {}  # type: {int, any}
+        debug_set_remanent = {}  # type: {int, any}
+        debug_input_value = {}  # type: {int: any}
 
         def __init__(self, a, b):
             pass
@@ -41,20 +41,25 @@ class hsl20_4:
             return 0
 
         def _get_remanent(self, key):
+            # type: (str) -> any
             return 0
 
         def _set_remanent(self, key, val):
+            # type: (str, any) -> None
             self.debug_set_remanent = val
 
         def _set_output_value(self, pin, value):
+            # type: (int, any) -> None
             self.debug_output_value[int(pin)] = value
             print "# Out: " + str(value) + " @ pin " + str(pin)
 
         def _set_input_value(self, pin, value):
+            # type: (int, any) -> None
             self.debug_input_value[int(pin)] = value
             print "# In: " + str(value) + " @ pin " + str(pin)
 
         def _get_input_value(self, pin):
+            # type: (int) -> any
             if pin in self.debug_input_value:
                 return self.debug_input_value[pin]
             else:
@@ -72,9 +77,11 @@ class hsl20_4:
             return d
 
         def get_homeserver_private_ip(self):
+            # type: () -> str
             return "127.0.0.1"
 
         def get_instance_by_id(self, id):
+            # type: (int) -> str
             return ""
 
     class DebugHelper:
@@ -89,44 +96,41 @@ class hsl20_4:
 
     ############################################
 
-
 class HueGroup_14100_14100(hsl20_4.BaseModule):
 
     def __init__(self, homeserver_context):
         hsl20_4.BaseModule.__init__(self, homeserver_context, "hsl20_3_Hue")
         self.FRAMEWORK = self._get_framework()
-        self.LOGGER = self._get_logger(hsl20_4.LOGGING_NONE, ())
-        self.PIN_I_STAT_JSON = 1
-        self.PIN_I_BTRIGGER = 2
-        self.PIN_I_SHUEIP = 3
-        self.PIN_I_NHUEPORT = 4
-        self.PIN_I_SUSER = 5
-        self.PIN_I_CTRL_GRP = 6
-        self.PIN_I_ITM_IDX = 7
-        self.PIN_I_BONOFF = 8
-        self.PIN_I_NBRI = 9
-        self.PIN_I_NHUE = 10
-        self.PIN_I_NSAT = 11
-        self.PIN_I_NCT = 12
-        self.PIN_I_NR = 13
-        self.PIN_I_NG = 14
-        self.PIN_I_NB = 15
-        self.PIN_I_SSCENE = 16
-        self.PIN_I_NTRANSTIME = 17
-        self.PIN_I_BALERT = 18
-        self.PIN_I_NEFFECT = 19
-        self.PIN_I_NRELDIM = 20
-        self.PIN_I_NDIMRAMP = 21
-        self.PIN_O_BSTATUSONOFF = 1
-        self.PIN_O_NBRI = 2
-        self.PIN_O_NHUE = 3
-        self.PIN_O_NSAT = 4
-        self.PIN_O_NCT = 5
-        self.PIN_O_NR = 6
-        self.PIN_O_NG = 7
-        self.PIN_O_NB = 8
-        self.PIN_O_NREACHABLE = 9
-        self.PIN_O_JSON = 10
+        self.LOGGER = self._get_logger(hsl20_4.LOGGING_NONE,())
+        self.PIN_I_STAT_JSON=1
+        self.PIN_I_BTRIGGER=2
+        self.PIN_I_SHUEIP=3
+        self.PIN_I_HUE_KEY=4
+        self.PIN_I_ITM_IDX=5
+        self.PIN_I_BONOFF=6
+        self.PIN_I_NBRI=7
+        self.PIN_I_NHUE=8
+        self.PIN_I_NSAT=9
+        self.PIN_I_NCT=10
+        self.PIN_I_NR=11
+        self.PIN_I_NG=12
+        self.PIN_I_NB=13
+        self.PIN_I_SSCENE=14
+        self.PIN_I_NTRANSTIME=15
+        self.PIN_I_BALERT=16
+        self.PIN_I_NEFFECT=17
+        self.PIN_I_NRELDIM=18
+        self.PIN_I_NDIMRAMP=19
+        self.PIN_O_BSTATUSONOFF=1
+        self.PIN_O_NBRI=2
+        self.PIN_O_NHUE=3
+        self.PIN_O_NSAT=4
+        self.PIN_O_NCT=5
+        self.PIN_O_NR=6
+        self.PIN_O_NG=7
+        self.PIN_O_NB=8
+        self.PIN_O_NREACHABLE=9
+        self.PIN_O_JSON=10
 
     ########################################################################################################
     #### Own written code can be placed after this commentblock . Do not change or delete commentblock! ####
@@ -267,7 +271,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         api_path = 'https://' + self.bridge_ip + '/clip/v2/resource/' + api_cmd
         data = ""
         url_parsed = urlparse.urlparse(api_path)
-        headers = {'Host': url_parsed.hostname, "hue-application-key": self._get_input_value(self.PIN_I_SUSER)}
+        headers = {'Host': url_parsed.hostname, "hue-application-key": self._get_input_value(self.PIN_I_HUE_KEY)}
 
         # Build a SSL Context to disable certificate verification.
         ctx = ssl._create_unverified_context()
@@ -293,25 +297,25 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         return data
 
     def http_put(self, payload, device_rid):
-        # type: (str) -> {str, int}
-        """
-        {"data": str, "status": int}
+        # type: (str, str) -> {str, int}
 
-        :rtype: {string, int}
-        """
-        ctrl_grp = bool(self._get_input_value(self.PIN_I_CTRL_GRP))
+        if device_rid not in self.devices:
+            return {'data': 'Device id not registered', 'status': 0}
+
+        device_type = self.devices[device_rid]["type"]
 
         api_path = "https://" + self.bridge_ip
-        if ctrl_grp:
+        if device_type == "grouped_light":
             api_path = api_path + '/clip/v2/resource/grouped_light/'
-        else:
+        elif type == "light":
             api_path = api_path + '/clip/v2/resource/light/'
+        # todo add szene, zone, etc.
 
         api_path = api_path + device_rid
         url_parsed = urlparse.urlparse(api_path)
         headers = {"Host": url_parsed.hostname,
                    "Content-type": 'application/json',
-                   "hue-application-key": self._get_input_value(self.PIN_I_SUSER)}
+                   "hue-application-key": str(self._get_input_value(self.PIN_I_HUE_KEY))}
 
         # Build a SSL Context to disable certificate verification.
         ctx = ssl._create_unverified_context()
@@ -325,7 +329,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 response = urllib2.urlopen(request, data=payload, timeout=5, context=ctx)
                 data = {'data': response.read(), 'status': response.getcode()}
                 if data["status"] != 200:
-                    print data["data"]["error"]
+                    print (str(data["data"]["error"]))
                     data["status"] = 200
             else:
                 data = {'data': '{"success" : True}', 'status': 200}
@@ -403,7 +407,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 sock.connect((self.bridge_ip, 443))
                 sock.send("GET /eventstream/clip/v2 HTTP/1.1\r\n")
                 sock.send("Host: " + url_parsed.hostname + "\r\n")
-                sock.send("hue-application-key: " + self._get_input_value(self.PIN_I_SUSER) + "\r\n")
+                sock.send("hue-application-key: " + str(self._get_input_value(self.PIN_I_HUE_KEY)) + "\r\n")
                 sock.send("Accept: text/event-stream\r\n\r\n")
 
             except socket.error as e:
@@ -520,7 +524,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
     def set_scene(self, scene):
         payload = '{"scene":"' + scene + '"}'
-        ret = self.http_put(payload)
+        ret = self.http_put(payload, scene)
         return "success" in ret["data"]
 
     def set_effect(self, effect):
@@ -531,7 +535,8 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         else:
             payload = payload + 'none"}'
 
-        ret = self.http_put(payload)
+        rid = self.get_rig("light")
+        ret = self.http_put(payload, rid)
         return "success" in ret["data"]
 
     def set_alert(self, alert):
@@ -541,22 +546,26 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         else:
             payload = '{"alert":"none"}'
 
-        ret = self.http_put(payload)
+        rid = self.get_rig("light")
+        ret = self.http_put(payload, rid)
         return "success" in ret["data"]
 
     def set_hue_color(self, hue_col):
         payload = '{"hue":' + str(hue_col) + '}'
-        ret = self.http_put(payload)
+        rid = self.get_rig("light")
+        ret = self.http_put(payload, rid)
         return "success" in ret["data"]
 
     def set_sat(self, sat):
         payload = '{"sat":' + str(sat) + '}'
-        ret = self.http_put(payload)
+        rid = self.get_rig("light")
+        ret = self.http_put(payload, rid)
         return "success" in ret["data"]
 
     def set_ct(self, ct):
         payload = '{"ct":' + str(ct) + '}'
-        ret = self.http_put(payload)
+        rid = self.get_rig("light")
+        ret = self.http_put(payload, rid)
         return "success" in ret["data"]
 
     def prep_dim(self, val):
@@ -590,11 +599,6 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         if self.stop:
             return
 
-        api_url = str(self._get_input_value(self.PIN_I_SHUEIP))
-        api_port = int(self._get_input_value(self.PIN_I_NHUEPORT))
-        api_user = str(self._get_input_value(self.PIN_I_SUSER))
-        itm_idx = int(self._get_input_value(self.PIN_I_ITM_IDX))
-
         new_bri = int(self.curr_bri + self.interval)
         if new_bri > 255:
             new_bri = 255
@@ -616,39 +620,32 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.debug = False # type: bool
         self.bridge_ip = self._get_input_value(self.PIN_I_SHUEIP)
         self.stop_eventstream = False  # type: bool
-        self.devices = {}  # type: Dict[device_id, [service_type, rid]]
+        self.devices = {}  # type: {str: {str: str}}
 
     def on_input_value(self, index, value):
         res = False
 
         # Process State
-        api_url = str(self._get_input_value(self.PIN_I_SHUEIP))
-        api_port = int(self._get_input_value(self.PIN_I_NHUEPORT))
-        api_user = str(self._get_input_value(self.PIN_I_SUSER))
         itm_idx = str(self._get_input_value(self.PIN_I_ITM_IDX))
         hue_state = {"data": str(self._get_input_value(self.PIN_I_STAT_JSON)), "status": 200}
         bri = int(self._get_input_value(self.PIN_I_NBRI) / 100.0 * 255.0)
         hue_ol = int(self._get_input_value(self.PIN_I_NHUE))
         sat = int(self._get_input_value(self.PIN_I_NSAT) / 100.0 * 255.0)
         ct = int(self._get_input_value(self.PIN_I_NCT))
-        ctrl_group = self._get_input_value(self.PIN_I_CTRL_GRP)
 
         # If trigger == 1, get data via web request
         if (self.PIN_I_BTRIGGER == index) and (bool(value)):
-            if ctrl_group:
-                hue_state = self.get_data("group")
-            else:
-                hue_state = self.get_data("light")
+            self.get_data(str())
 
         if ((self.PIN_I_BTRIGGER == index) or
                 (self.PIN_I_STAT_JSON == index)):
             if hue_state["data"]:
-                if itm_idx > 0:
+                if itm_idx:
                     self.read_json(hue_state["data"], itm_idx)
                     self.set_output_value_sbc(self.PIN_O_JSON, hue_state["data"])
 
         # Process set commands
-        if (self._get_input_value(self.PIN_I_SUSER) == "") or (self._get_input_value(self.PIN_I_SHUEIP) == ""):
+        if (self._get_input_value(self.PIN_I_HUE_KEY) == "") or (self._get_input_value(self.PIN_I_SHUEIP) == ""):
             return
 
         if self.PIN_I_BONOFF == index:
@@ -737,7 +734,7 @@ class UnitTests(unittest.TestCase):
         self.dummy.on_init()
 
         self.dummy.debug_input_value[self.dummy.PIN_I_SHUEIP] = self.cred["PIN_I_SHUEIP"]
-        self.dummy.debug_input_value[self.dummy.PIN_I_SUSER] = self.cred["PIN_I_SUSER"]
+        self.dummy.debug_input_value[self.dummy.PIN_I_HUE_KEY] = self.cred["PIN_I_SUSER"]
 
         self.dummy.debug_input_value[self.dummy.PIN_I_CTRL_GRP] = 0
         self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_device_id"]
@@ -759,11 +756,13 @@ class UnitTests(unittest.TestCase):
         ret = self.dummy.get_rig("dummy")
         self.assertEqual(ret, str())
 
-    def test_discover(self):
-        print("\n###test_discover")
+    def test_11_discover(self):
+        print("\n###test_11_discover")
         self.dummy.bridge_ip = None
         self.dummy.discover_hue()
         self.assertTrue("192" in self.dummy.bridge_ip)
+
+        self.dummy.bridge_ip = None
 
     def test_get_data(self):
         print("\n###test_get_data")
@@ -801,7 +800,6 @@ class UnitTests(unittest.TestCase):
         self.assertTrue(res)
         time.sleep(2)
         self.dummy.set_on(False)
-
 
 
 #     def test_setBri(self):
