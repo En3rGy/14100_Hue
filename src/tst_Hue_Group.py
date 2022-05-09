@@ -616,11 +616,14 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
     def on_init(self):
         self.DEBUG = self.FRAMEWORK.create_debug_section()
-        self.g_out_sbc = {}
+        self.g_out_sbc = {}  # type: {int: Any}
         self.debug = False # type: bool
-        self.bridge_ip = self._get_input_value(self.PIN_I_SHUEIP)
+        self.bridge_ip = self._get_input_value(self.PIN_I_SHUEIP)  # type: str
         self.stop_eventstream = False  # type: bool
         self.devices = {}  # type: {str: {str: str}}
+
+        self.register_devices()
+        self.register_eventstream()
 
     def on_input_value(self, index, value):
         res = False
@@ -633,31 +636,31 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         sat = int(self._get_input_value(self.PIN_I_NSAT) / 100.0 * 255.0)
         ct = int(self._get_input_value(self.PIN_I_NCT))
 
+        if self._get_input_value(self.PIN_I_HUE_KEY) == "":
+            self.log_msg("Hue key not set. Abort processing.")
+            return
+
         # If trigger == 1, get data via web request
         if (self.PIN_I_BTRIGGER == index) and (bool(value)):
             self.get_data(str())
 
-        if ((self.PIN_I_BTRIGGER == index) or
-                (self.PIN_I_STAT_JSON == index)):
+        if (self.PIN_I_BTRIGGER == index) or (self.PIN_I_STAT_JSON == index):
             if hue_state["data"]:
                 if itm_idx:
-                    self.read_json(hue_state["data"], itm_idx)
+                    self.process_json(hue_state["data"])
                     self.set_output_value_sbc(self.PIN_O_JSON, hue_state["data"])
 
         # Process set commands
-        if (self._get_input_value(self.PIN_I_HUE_KEY) == "") or (self._get_input_value(self.PIN_I_SHUEIP) == ""):
-            return
-
         if self.PIN_I_BONOFF == index:
-            res = self.set_on(value)
-            if res:
-                self.set_output_value_sbc(self.PIN_O_BSTATUSONOFF, value)
+            res = self.set_on(bool(value))
 
+        # todo set scene
         elif self.PIN_I_SSCENE == index:
             res = self.set_scene(value)
             if res:
                 self.set_output_value_sbc(self.PIN_O_BSTATUSONOFF, True)
 
+        # todo set bri
         elif self.PIN_I_NBRI == index:
             self.set_on(True)
             res = self.set_bri(bri)
@@ -665,24 +668,28 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             if res:
                 self.set_output_value_sbc(self.PIN_O_NBRI, bri / 255.0 * 100.0)
 
+        # todo set hue
         elif self.PIN_I_NHUE == index:
             self.set_on(True)
             res = self.set_hue_color(hue_ol)
             if res:
                 self.set_output_value_sbc(self.PIN_O_NHUE, hue_ol)
 
+        # todo set sat
         elif self.PIN_I_NSAT == index:
             self.set_on(True)
             res = self.set_sat(sat)
             if res:
                 self.set_output_value_sbc(self.PIN_O_NSAT, sat / 255.0 * 100)
 
+        # todo set nct
         elif self.PIN_I_NCT == index:
             self.set_on(True)
             res = self.set_ct(ct)
             if res:
                 self.set_output_value_sbc(self.PIN_O_NCT, ct)
 
+        # todo set rgb
         elif ((self.PIN_I_NR == index) or
               (self.PIN_I_NG == index) or
               (self.PIN_I_NB == index)):
@@ -707,15 +714,18 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 self.set_output_value_sbc(self.PIN_O_NG, green)
                 self.set_output_value_sbc(self.PIN_O_NB, blue)
 
+        # todo set alert
         elif self.PIN_I_BALERT == index:
             alert = int(self._get_input_value(self.PIN_I_BALERT))
             self.set_alert(alert)
             ###
 
+        # todo set effect
         elif self.PIN_I_NEFFECT == index:
             effect = int(self._get_input_value(self.PIN_I_NEFFECT))
             self.set_effect(effect)
 
+        # todo do relative dim
         elif self.PIN_I_NRELDIM == index:
             self.prep_dim(value)
 
@@ -736,7 +746,6 @@ class UnitTests(unittest.TestCase):
         self.dummy.debug_input_value[self.dummy.PIN_I_SHUEIP] = self.cred["PIN_I_SHUEIP"]
         self.dummy.debug_input_value[self.dummy.PIN_I_HUE_KEY] = self.cred["PIN_I_SUSER"]
 
-        self.dummy.debug_input_value[self.dummy.PIN_I_CTRL_GRP] = 0
         self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_device_id"]
         self.dummy.devices[self.cred["hue_device_id"]] = {}
         self.dummy.devices[self.cred["hue_device_id"]]["light"] = self.cred["hue_light_id"]
@@ -772,11 +781,11 @@ class UnitTests(unittest.TestCase):
 
     def test_set_on(self):
         print("###test_set_on")
-        self.assertTrue(self.dummy.set_on(0))
+        self.assertTrue(self.dummy.set_on(False))
         time.sleep(3)
-        self.assertTrue(self.dummy.set_on(1))
+        self.assertTrue(self.dummy.set_on(True))
         time.sleep(3)
-        self.assertTrue(self.dummy.set_on(0))
+        self.assertTrue(self.dummy.set_on(False))
 
 #    def test_eventstream(self):
 #        self.dummy.stop_eventstream = False

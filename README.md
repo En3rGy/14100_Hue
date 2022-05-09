@@ -87,7 +87,6 @@ Der Baustein nutzt die [Hue API v2](https://developers.meethue.com/develop/hue-a
 Please use [GitHub issue feature](https://github.com/En3rGy/14100_Hue/issues) to report bugs or rise feature requests.
 Questions can be addressed as new threads at the [knx-user-forum.de](https://knx-user-forum.de) also. There might be discussions and solutions already.
 
-
 ### Code
 
 Der Code des Bausteins befindet sich in der hslz Datei oder auf [github](https://github.com/En3rGy/14100_Hue).
@@ -101,21 +100,21 @@ Der Code des Bausteins befindet sich in der hslz Datei oder auf [github](https:/
 
 
 ## Requirements
-1. Pairing mit Hue Bridge über Logikmodul durchführen, s. [API v2 Getting started](https://developers.meethue.com/develop/hue-api-v2/getting-started/)
-2. Lampen ein/ausschalten
-3. Ein/aus-Status ausgeben
-4. Lampen dimmen
-5. Dimmwert ausgeben
-6. Farbe bei Lampen vorgeben
-7. Farbe der Lampe ausgeben
-8. Erreichbar-Status / Verbunden-Status ausgeben
-9. Starten von Szenen
-10. Abspielen von dynamischen Szenen
-11. Auch für Zonen / Räume / Gruppen
-12. Selbständiges finden & verbinden mit der Hue-Bridge [#11](https://github.com/En3rGy/14100_Hue/issues/11)
-13. Automatisches re-connect mit Hue-Bridge bei Verbindungsabbruch
-14. Bei mehreren Bausteininstanzen verbindet sich nur einer mit der Hue Bridge und teilt die erhaltenen Informationen
-15. Bereitstellen einer Web-Seite mit Informationen zu Hue-IDs
+- Pairing mit Hue Bridge über Logikmodul durchführen, s. [API v2 Getting started](https://developers.meethue.com/develop/hue-api-v2/getting-started/)
+- Lampen ein/ausschalten [#12](https://github.com/En3rGy/14100_Hue/issues/12)
+- Ein/aus-Status ausgeben
+- Lampen dimmen
+- Dimmwert ausgeben
+- Farbe bei Lampen vorgeben
+- Farbe der Lampe ausgeben
+- Erreichbar-Status / Verbunden-Status ausgeben
+- Starten von Szenen
+- Abspielen von dynamischen Szenen
+- Auch für Zonen / Räume / Gruppen
+- Selbständiges finden & verbinden mit der Hue-Bridge [#11](https://github.com/En3rGy/14100_Hue/issues/11)
+- Automatisches re-connect mit Hue-Bridge bei Verbindungsabbruch
+- Bei mehreren Bausteininstanzen verbindet sich nur einer mit der Hue Bridge und teilt die erhaltenen Informationen
+- Bereitstellen einer Web-Seite mit Informationen zu Hue-IDs [#8](https://github.com/En3rGy/14100_Hue/issues/8)
 
 ## Software Design Description
 - Lampen / Szenen / Zonen / Räume / Gruppen werden über die Id unterschieden; Abfrage des Typs via /resource {data{id, type}}
