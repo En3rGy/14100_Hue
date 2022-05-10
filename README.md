@@ -102,8 +102,8 @@ Der Code des Bausteins befindet sich in der hslz Datei oder auf [github](https:/
 ## Requirements
 - Pairing mit Hue Bridge über Logikmodul durchführen, s. [API v2 Getting started](https://developers.meethue.com/develop/hue-api-v2/getting-started/)
 - Lampen ein/ausschalten [#12](https://github.com/En3rGy/14100_Hue/issues/12)
-- Ein/aus-Status ausgeben
-- Lampen dimmen
+- Ein/aus-Status ausgeben [#16](https://github.com/En3rGy/14100_Hue/issues/16)
+- Lampen dimmen [#17](https://github.com/En3rGy/14100_Hue/issues/17)
 - Dimmwert ausgeben
 - Farbe bei Lampen vorgeben
 - Farbe der Lampe ausgeben

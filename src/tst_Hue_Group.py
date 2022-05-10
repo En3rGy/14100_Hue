@@ -188,11 +188,13 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             sock.sendto(query_msg, (mcast_grp, mcast_port))
         except socket.error as e:
             self.log_data("Error", "discover: " + str(e))
+            sock.shutdown()
             sock.close()
 
         while True:
             try:
                 data = sock.recv(1024)
+                sock.shutdown(socket.SHUT_RDWR)
                 sock.close()
 
                 # check reply for "additional records", Type A, class IN contains IP4 address
@@ -243,6 +245,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 self.log_msg("Discovery timeout")
                 break
 
+        sock.shutdown(socket.SHUT_RDWR)
         sock.close()
         return str()
 
@@ -368,16 +371,18 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
     def register_eventstream(self):
         if not self.eventstream_is_connected:
-            thread.start_new_thread(self.eventstream, ())
+            self.eventstream_thread = thread.start_new_thread(self.eventstream, ())
 
     def eventstream(self):
+        # type: () -> None
         self.eventstream_is_connected = True
-        while True:
-            if not self.bridge_ip:
-                time.sleep(5)
-                continue
+        self.log_msg("Entering eventstream.")
 
+        while True:
             self.log_msg("Connecting to eventstream.")
+            while not self.bridge_ip:
+                self.log_msg("Waiting for Hue discovery to connect to eventstream.")
+                time.sleep(5)
 
             api_path = 'https://' + str(self.bridge_ip) + '/eventstream/clip/v2'
             url_parsed = urlparse.urlparse(api_path)
@@ -395,35 +400,47 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
             except Exception as e:
                 self.log_data("Error", "In eventstream, " + str(e))
+                self.log_msg("In eventstream, disconnecting due to " + str(e))
                 sock.close()
+                time.sleep(5)
+                continue
 
             while True:
                 # todo check / handle "normal" disconnects
                 try:
-                    data = sock.recv(1024)
-                    data = data[data.find("data: ") + 6:]
-                    data = str(data).replace("\r", '').replace("\n", '')
-                    self.process_json(data)
-
                     if self.eventstream_stop:
                         sock.close()
                         self.log_msg("Stopping eventstream on request")
                         self.eventstream_is_connected = False
                         return
 
+                    data = sock.recv(1024)
+                    if "data: " not in data:
+                        continue
+
+                    data = data[data.find("data: ") + 6:]
+                    #data = str(data).replace("\r", '').replace("\n", '')
+                    data = json.loads(data)
+                    self.process_json(data)
+
+                except socket.error as e:
+                    self.log_msg("In 'eventstream', socket error '" + str(e) + "' with '" + str(data) + "'.")
+                    continue
+
                 except Exception as e:
-                    self.log_msg("In 'eventstream', " + str(e))
-                    break
+                    self.log_msg("In 'eventstream', '" + str(e) + "' with '" + str(data) + "'.")
+                    continue
 
             # gently disconnect and wait for re-connection
             sock.close()
             self.log_msg("Disconnected from hue eventstream, waiting to reconnect.")
             time.sleep(4)
 
+        self.log_msg("Exit eventstream. No further processing.")
         self.eventstream_is_connected = False
 
     def process_json(self, msg):
-        # type: (str) -> None
+        # type: (json) -> None
         # --
         # [{"creationtime":"2022-05-02T21:25:32Z","data":
         # [
@@ -444,22 +461,27 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.set_output_value_sbc(self.PIN_O_JSON, out)
 
         try:
-            json_obj = json.loads(msg)
-            for data_set in json_obj:
-                device_id = data_set["data"]["owner"]["rid"]
+            for data_set in msg:
+                if "data" not in data_set:
+                    continue
 
-                if device_id == self._get_input_value(self.PIN_I_ITM_IDX):
-                    if "on" in data_set["data"]:
-                        on = data_set["data"]["on"]["on"]
-                        self.set_output_value_sbc(self.PIN_O_BSTATUSONOFF, on)
+                data = data_set["data"]
 
-                    if "color" in data_set["data"]:
-                        color = data_set["data"]["color"]
-                        # todo calculate rgb
+                for data_data in data:
+                    device_id = data_data["owner"]["rid"]
 
-                    if "dimming" in data_set["data"]:
-                        dimming = data_set["data"]["dimming"]
-                        self.set_output_value_sbc(self.PIN_O_NBRI, data_set["data"]["dimming"]["brightness"])
+                    if device_id == self._get_input_value(self.PIN_I_ITM_IDX):
+                        if "on" in data_data:
+                            is_on = bool(data_data["on"]["on"])
+                            self.set_output_value_sbc(self.PIN_O_BSTATUSONOFF, is_on)
+
+                        if "color" in data_data:
+                            color = data_data["color"]
+                            # todo calculate rgb
+
+                        if "dimming" in data_data:
+                            dimming = data_data["dimming"]
+                            self.set_output_value_sbc(self.PIN_O_NBRI, dimming["brightness"])
 
         except Exception as e:
             self.log_msg("Error in 'process_json', '" + str(e) + "', with message '" + str(out) + "'")
@@ -613,6 +635,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.DEBUG = self.FRAMEWORK.create_debug_section()
         self.g_out_sbc = {}  # type: {int, object}
         self.debug = False  # type: bool
+        self.eventstream_thread = 0  # type: int
 
         if str(self._get_input_value(self.PIN_I_SHUEIP)):
             self.bridge_ip = str(self._get_input_value(self.PIN_I_SHUEIP))
@@ -741,23 +764,15 @@ class UnitTests(unittest.TestCase):
 
         self.dummy = HueGroup_14100_14100(0)
 
-        # self.dummy.debug_input_value[self.dummy.PIN_I_SHUEIP] = self.cred["PIN_I_SHUEIP"]
         self.dummy.debug_input_value[self.dummy.PIN_I_HUE_KEY] = self.cred["PIN_I_SUSER"]
-
         self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_device_id"]
-        # self.dummy.devices[self.cred["hue_device_id"]] = {}
-        # self.dummy.devices[self.cred["hue_device_id"]]["light"] = self.cred["hue_light_id"]
         self.dummy.debug_rid = self.cred["hue_light_id"]
-
-        # self.dummy.bridge_ip = self.cred["PIN_I_SHUEIP"]
-        self.dummy.eventstream_stop = False
+        self.dummy.eventstream_stop = True
 
         self.dummy.on_init()
 
-
-    def tearDown(selfself):
+    def tearDown(self):
         print("\n###tearDown")
-        pass
 
     def test_get_rig(self):
         print("\n###test_get_rig")
@@ -776,7 +791,7 @@ class UnitTests(unittest.TestCase):
 
     def test_get_data(self):
         print("\n###test_get_data")
-        data = self.dummy.get_data('device')
+        data = self.dummy.get_data("device")
         print(data["data"])
         self.assertTrue("id" in data["data"])
 
@@ -795,29 +810,35 @@ class UnitTests(unittest.TestCase):
         self.dummy.stop_eventstream = True
         self.assertFalse(self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF])
 
-#    def test_eventstream(self):
-#        self.dummy.stop_eventstream = False
-#        self.dummy.register_eventstream()
+    def test_16_eventstream_on_off(self):
+        self.dummy.eventstream_stop = False
+        self.dummy.register_eventstream()
+        self.dummy.on_input_value(self.dummy.PIN_I_BONOFF, False)
+        time.sleep(3)
+        self.dummy.on_input_value(self.dummy.PIN_I_BONOFF, True)
+        time.sleep(3)
+        self.dummy.stop_eventstream = True
+        self.assertTrue(self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF])
 
     def test_08_print_devices(self):
         print("###test_08_print_devices")
         res = self.dummy.register_devices()
         self.assertTrue(res)
 
-    def test_dimming(self):
+    def test_17_dimming(self):
+        print("###test_17_dimming")
         self.dummy.set_on(True)
         time.sleep(2)
         res = self.dummy.set_dimming(70)
-        self.assertTrue(res)
+        self.assertTrue(res, "70")
         time.sleep(2)
         res = self.dummy.set_dimming(50)
-        self.assertTrue(res)
+        self.assertTrue(res, 50)
         time.sleep(2)
         res = self.dummy.set_dimming(30)
-        self.assertTrue(res)
+        self.assertTrue(res, "30")
         time.sleep(2)
         self.dummy.set_on(False)
-
 
 #     def test_setBri(self):
 #         self.dummy.debug = True
