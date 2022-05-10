@@ -121,7 +121,7 @@ Der Code des Bausteins befindet sich in der hslz Datei oder auf [github](https:/
 - Abh. von der Aktion wird die jew. rid über die Device id herausgesucht
 - Der Status wird über den Event Stream ausgelesen
 - Nur ein Baustein verbindet sich mit der Hue Bridge, die übrigen nutzen diese Verbindung über [HS Instanzen](http://127.0.0.1/doc_extra/de/commloginst.html)
-
+- Die eventstream Verbindung läuft in einem eigenen Thread in einer `While true`-Schleife
 
 ## Validation & Verification
 - Unit tests are performed.
