@@ -132,12 +132,15 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
     bridge_ip = str()  # type: str
 
     def log_msg(self, text):
+        # type: (str) -> None
         self.DEBUG.add_message("14100: " + str(text))
 
     def log_data(self, key, value):
+        # type: (str, any) -> None
         self.DEBUG.set_value("14100: " + str(key), str(value))
 
     def set_output_value_sbc(self, pin, val):
+        # type:  (int, any) -> None
         if pin in self.g_out_sbc:
             if self.g_out_sbc[pin] == val:
                 print ("# SBC: pin " + str(pin) + " <- data not send / " + str(val).decode("utf-8"))
@@ -279,7 +282,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             data = {'data': str(e), 'status': str(0)}
             print(data)
 
-        self.process_json(data["data"])
+        self.process_json(json.loads(data["data"]))
         return data
 
     def http_put(self, device_rid, api_path, payload):
@@ -325,7 +328,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
     def register_devices(self):
         # type: () -> bool
-        item_types = {"device", "room", "scene", "zone", "grouped_light"}
+        item_types = {"device", "room", "scene", "zone", "grouped_light"}  # "light" is intentionally missing
 
         for item_type in item_types:
             data = self.get_data(item_type)["data"]
@@ -362,7 +365,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                             self.devices[device_id][service_type] = service["rid"]
 
             except Exception as e:
-                self.log_msg("In register_devices '" + str(e) + "' for " + item_type)
+                self.log_msg("Exception in register_devices " + str(e) + " for " + item_type)
                 return False
 
         self.log_data("Items", json.dumps(self.devices, sort_keys=True, indent=4))
@@ -440,49 +443,44 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
     def process_json(self, msg):
         # type: (json) -> None
-        # --
-        # [{"creationtime":"2022-05-02T21:25:32Z","data":
-        # [
-        #   {
-        #     "id":"fbbd07de-5bf0-4dd6-b819-db3d9ee9a429", ### service id of device
-        #     "id_v1":"/lights/3",
-        #     "on":{"on":false},
-        #     "owner":
-        #       {
-        #         "rid":"3603093d-b456-4d02-a6ab-6a23aad1f6ba", ### device id
-        #         "rtype":"device"
-        #       },"type":"light"
-        #   }
-        # ],
-        # "id":"9a3e1580-4fc3-40fb-b280-73c1bb45f0d3","type":"update"}]
-
+        # eventstream: /List/ [{"data": [{"owner": {"rid": "c0c1325d-4678-482b-9d39-831687b486ce", "rtype": "device"}, "on": {"on": false}, "id_v1": "/lights/12", "id": "5e6771a6-7f28-4856-85fa-5025a42b050e", "type": "light"}], "creationtime": "2022-05-12T19:16:34Z", "id": "8fe327d3-53d3-4d2c-8175-2f4711daad4f", "type": "update"}]
+        # get_data: /Dict/ {"errors": [], "data": [{"product_data": {"model_id": "LCT015", "manufacturer_name": "Signify Netherlands B.V.", "hardware_platform_type": "100b-10c", "software_version": "1.88.1", "product_archetype": "sultan_bulb", "product_name": "Hue color lamp", "certified": true}, "identify": {}, "services": [{"rid": "5c459c5c-d5d1-485b-990e-c45e8bff0b64", "rtype": "light"}, {"rid": "2c2a7201-3786-47e7-a538-31c4b6859f44", "rtype": "zigbee_connectivity"}, {"rid": "97e106a0-1480-48ef-98a4-3731ed9a635d", "rtype": "entertainment"}], "id_v1": "/lights/4", "type": "device", "id": "65fb9063-edd8-470d-8341-70400264f819", "metadata": {"archetype": "ceiling_round", "name": "Deckenleuchte Bad"}}, {"product_data": {"model_id": "LCA001", "manufacturer_name": "Signify Netherlands B.V.", "hardware_platform_type": "100b-112", "software_version": "1.53.3", "product_archetype": "sultan_bulb", "product_name": "Hue color lamp", "certified": true}, "identify": {}, "services": [{"rid": "3ed36098-061b-479c-acd5-81074954f367", "rtype": "light"}, {"rid": "2c50844b-2040-435a-810b-f68b2e3396b9", "rtype": "zigbee_connectivity"}, {"rid": "7c194f14-9f84-4514-8925-09d16d7a7a0e", "rtype": "entertainment"}], "id_v1": "/lights/13", "type": "device", "id": "84646230-4f47-4665-99fb-b84d910b5763", "metadata": {"archetype": "sultan_bulb", "name": "DG Leselampe"}}, {"product_data": {"model_id": "LOM007", "manufacturer_name": "Signify Netherlands B.V.", "hardware_platform_type": "100b-11a", "software_version": "1.93.6", "product_archetype": "plug", "product_name": "Hue smart plug", "certified": true}, "identify": {}, "services": [{"rid": "15e36641-5e81-4049-9e71-1df5060c86c8", "rtype": "light"}, {"rid": "41a5cb30-066a-42a3-aa31-e54d2362d3a7", "rtype": "zigbee_connectivity"}], "id_v1": "/lights/14", "type": "device", "id": "2f0a1e62-e078-49d6-83fb-db817aeb50ff", "metadata": {"archetype": "plug", "name": "Weihnachtsbaum"}}, {"product_data": {"model_id": "LCT015", "manufacturer_name": "Signify Netherlands B.V.", "hardware_platform_type": "100b-10c", "software_version": "1.88.1", "product_archetype": "sultan_bulb", "product_name": "Hue color lamp", "certified": true}, "identify": {}, "services": [{"rid": "ec86940a-ce69-414d-9b6c-81e50793f8c4", "rtype": "light"}, {"rid": "5c25a1dd-83f5-4b31-9d24-ec7c0392fcf2", "rtype": "zigbee_connectivity"}, {"rid": "39eb5629-bb01-461b-80b0-90e571eea072", "rtype": "entertainment"}], "id_v1": "/lights/5", "type": "device", "id": "549af4ad-9f99-49bf-8f6f-d299f3a31b1c", "metadata": {"archetype": "table_shade", "name": "Kugelleuchte"}}, {"product_data": {"model_id": "BSB002", "manufacturer_name": "Signify Netherlands B.V.", "software_version": "1.51.1951086030", "product_archetype": "bridge_v2", "product_name": "Philips hue", "certified": true}, "identify": {}, "services": [{"rid": "f54227ea-1ca1-4840-86d8-de3dab043837", "rtype": "bridge"}, {"rid": "3610a049-1025-4a11-a7e9-bcf0a02da06b", "rtype": "zigbee_connectivity"}, {"rid": "04d2d748-95d2-41aa-9cad-6af5d0fae3a7", "rtype": "entertainment"}], "id_v1": "", "type": "device", "id": "c75e9cf7-e368-4847-af14-d7b1ee99ee28", "metadata": {"archetype": "bridge_v2", "name": "Philips hue"}}, {"product_data": {"model_id": "LWB010", "manufacturer_name": "Signify Netherlands B.V.", "hardware_platform_type": "100b-10c", "software_version": "1.88.1", "product_archetype": "classic_bulb", "product_name": "Hue white lamp", "certified": true}, "identify": {}, "services": [{"rid": "67bfc31f-e4df-43f1-989e-5a58570a04e8", "rtype": "light"}, {"rid": "06d833ba-4de9-46d7-92ac-3ea11c2dd9bf", "rtype": "zigbee_connectivity"}], "id_v1": "/lights/8", "type": "device", "id": "ee53baf2-d2da-4a59-b4b3-2a6e8d97d049", "metadata": {"archetype": "classic_bulb", "name": "P1077-002"}}, {"product_data": {"model_id": "LIGHTIFY Outdoor Flex RGBW", "manufacturer_name": "OSRAM", "hardware_platform_type": "110c-5b", "software_version": "0.0.0", "product_archetype": "classic_bulb", "product_name": "Extended color light", "certified": false}, "identify": {}, "services": [{"rid": "842f7de5-c5d6-4619-92e5-1a819cb97a36", "rtype": "light"}, {"rid": "ee7566dd-936e-4289-b750-117d2f49a73c", "rtype": "zigbee_connectivity"}], "id_v1": "/lights/9", "type": "device", "id": "c4875244-fe10-422a-a839-e1a6c116c65d", "metadata": {"archetype": "hue_lightstrip", "name": "LED Stripe"}}, {"product_data": {"model_id": "LCA001", "manufacturer_name": "Signify Netherlands B.V.", "hardware_platform_type": "100b-112", "software_version": "1.93.7", "product_archetype": "sultan_bulb", "product_name": "Hue color lamp", "certified": true}, "identify": {}, "services": [{"rid": "5e6771a6-7f28-4856-85fa-5025a42b050e", "rtype": "light"}, {"rid": "a5c79f8c-0b94-40f7-a42d-25ab7b21d58e", "rtype": "zigbee_connectivity"}, {"rid": "928bf428-671e-4fdd-ab8e-3ce0f989e230", "rtype": "entertainment"}], "id_v1": "/lights/12", "type": "device", "id": "c0c1325d-4678-482b-9d39-831687b486ce", "metadata": {"archetype": "table_shade", "name": "Kugelleuchte Esszimmer P1075-007"}}, {"product_data": {"model_id": "LWB010", "manufacturer_name": "Signify Netherlands B.V.", "hardware_platform_type": "100b-10c", "software_version": "1.88.1", "product_archetype": "classic_bulb", "product_name": "Hue white lamp", "certified": true}, "identify": {}, "services": [{"rid": "ab1bbd5c-6a04-436c-9036-067ecd17959e", "rtype": "light"}, {"rid": "785d145a-a568-4c90-9c03-7eac1b347e50", "rtype": "zigbee_connectivity"}], "id_v1": "/lights/7", "type": "device", "id": "47308e2f-217e-4179-983a-e39184133144", "metadata": {"archetype": "classic_bulb", "name": "P1077-003"}}, {"product_data": {"model_id": "LWU001", "manufacturer_name": "Signify Netherlands B.V.", "hardware_platform_type": "100b-114", "software_version": "1.93.3", "product_archetype": "luster_bulb", "product_name": "Hue white lamp", "certified": true}, "identify": {}, "services": [{"rid": "3d4e6297-a8ef-4c62-aad0-9c43af7fc945", "rtype": "light"}, {"rid": "57d33cd9-e37e-4963-9349-7eee7b36172e", "rtype": "zigbee_connectivity"}], "id_v1": "/lights/11", "type": "device", "id": "36987ec2-13dd-4f5a-b82c-9681b33ea656", "metadata": {"archetype": "luster_bulb", "name": "Garten Ecke"}}, {"product_data": {"model_id": "LWU001", "manufacturer_name": "Signify Netherlands B.V.", "hardware_platform_type": "100b-114", "software_version": "1.93.3", "product_archetype": "luster_bulb", "product_name": "Hue white lamp", "certified": true}, "identify": {}, "services": [{"rid": "9a8aaf65-822b-4593-863e-4676e99bfe0f", "rtype": "light"}, {"rid": "c8de3902-b51c-4f3c-824e-4aeb9bbff667", "rtype": "zigbee_connectivity"}], "id_v1": "/lights/10", "type": "device", "id": "0846971e-d1b8-4110-8b09-3cfd54262d97", "metadata": {"archetype": "luster_bulb", "name": "Garten Terrasse"}}, {"product_data": {"model_id": "LCT015", "manufacturer_name": "Signify Netherlands B.V.", "hardware_platform_type": "100b-10c", "software_version": "1.88.1", "product_archetype": "sultan_bulb", "product_name": "Hue color lamp", "certified": true}, "identify": {}, "services": [{"rid": "fbbd07de-5bf0-4dd6-b819-db3d9ee9a429", "rtype": "light"}, {"rid": "f15ebeef-8f47-40d7-b64b-382f19f520d2", "rtype": "zigbee_connectivity"}, {"rid": "0753a25b-e481-4fa1-9176-a393161a3586", "rtype": "entertainment"}], "id_v1": "/lights/3", "type": "device", "id": "3603093d-b456-4d02-a6ab-6a23aad1f6ba", "metadata": {"archetype": "floor_shade", "name": "Leselampe"}}, {"product_data": {"model_id": "LWB010", "manufacturer_name": "Signify Netherlands B.V.", "hardware_platform_type": "100b-10c", "software_version": "1.88.1", "product_archetype": "classic_bulb", "product_name": "Hue white lamp", "certified": true}, "identify": {}, "services": [{"rid": "f6197905-f63f-40d1-a53c-0e1b5dce08c1", "rtype": "light"}, {"rid": "d9c69a6a-42c8-4ddc-a56c-64e152072b20", "rtype": "zigbee_connectivity"}], "id_v1": "/lights/6", "type": "device", "id": "90dc33a1-f26f-492a-a952-ee96d57b42cc", "metadata": {"archetype": "pendant_round", "name": "Deckenleuchte"}}]}
         out = json.dumps(msg)
         self.set_output_value_sbc(self.PIN_O_JSON, out)
 
+        if type(msg) == dict:
+            msg = [msg]
+
+        device_ids = [self._get_input_value(self.PIN_I_ITM_IDX)]
+        if device_ids[0] in self.devices:
+
+            for type_id in self.devices[device_ids[0]]:
+                curr_id = self.devices[device_ids[0]][type_id]
+                if len(curr_id) > 20:  # go for ids only, not for name or type.
+                    device_ids.append(curr_id)
+
         try:
-            for data_set in msg:
-                if "data" not in data_set:
+            for msg_entry in msg:
+                if "data" not in msg_entry:
                     continue
 
-                data = data_set["data"]
-
-                for data_data in data:
-                    if "owner" in data_data:
-                        device_id = data_data["owner"]["rid"]
+                for data in msg_entry["data"]:
+                    if "owner" in data:
+                        device_id = data["owner"]["rid"]
                     else:
-                        device_id = data_data["id"]
+                        device_id = data["id"]
 
-                    if device_id == self._get_input_value(self.PIN_I_ITM_IDX):
-                        if "on" in data_data:
-                            is_on = bool(data_data["on"]["on"])
+                    if device_id in device_ids:
+                        if "on" in data:
+                            is_on = bool(data["on"]["on"])
                             self.set_output_value_sbc(self.PIN_O_BSTATUSONOFF, is_on)
 
-                        if "color" in data_data:
-                            color = data_data["color"]
+                        if "color" in data:
+                            color = data["color"]
                             # todo calculate rgb
 
-                        if "dimming" in data_data:
-                            dimming = data_data["dimming"]
+                        if "dimming" in data:
+                            dimming = data["dimming"]
                             self.set_output_value_sbc(self.PIN_O_BRI, int(dimming["brightness"]))
 
         except Exception as e:
@@ -665,7 +663,10 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         # If trigger == 1, get data via web request
         if (self.PIN_I_BTRIGGER == index) and (bool(value)):
-            self.get_data("device")
+            item_types = {"device", "light", "room", "scene", "zone", "grouped_light"}
+
+            for item_type in item_types:
+                self.get_data(item_type)
 
         if self.PIN_I_STAT_JSON == index:
             # todo implement
@@ -756,7 +757,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 class UnitTests(unittest.TestCase):
 
     def setUp(self):
-        print("\n###setUp")
+        print("\n### setUp")
         with open("credentials.txt") as f:
             self.cred = json.load(f)
 
@@ -770,14 +771,27 @@ class UnitTests(unittest.TestCase):
         self.dummy.on_init()
 
     def tearDown(self):
-        print("\n###tearDown")
+        print("\n### tearDown")
 
     def test_get_rig(self):
-        print("\n###test_get_rig")
+        print("\n### test_get_rig")
         ret = self.dummy.get_rig("light")
         self.assertEqual(ret, self.dummy.debug_rid)
         ret = self.dummy.get_rig("dummy")
         self.assertEqual(ret, str())
+
+    # def test_08_print_devices(self):
+    #     print("\n### ###test_08_print_devices")
+    #     res = self.dummy.register_devices()
+    #     self.assertTrue(res)
+    #
+    # def test_09_singleton_eventstream(self):
+    #     print("test_09_singleton_eventstream")
+    #     self.assertTrue(False, "Test not implemented")
+    #
+    # def test_10_eventstream_reconnect(self):
+    #     print("\n### test_10_eventstream_reconnect")
+    #     self.assertTrue(False, "Test not implemented")
 
     def test_11_discover(self):
         print("\n###test_11_discover")
@@ -787,32 +801,32 @@ class UnitTests(unittest.TestCase):
 
         self.dummy.bridge_ip = None
 
-    def test_18_get_data(self):
-        # todo error, correct!
-
-        print("\n###test_get_data")
-        self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF] = str()
-        self.dummy.on_input_value(self.dummy.PIN_I_BTRIGGER, 1)
-        res = self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF]
-        print(type(res))
-        self.assertTrue(type(res) == bool)
-
     def test_12_set_on(self):
-        print("###test_12_set_on")
-        self.dummy.eventstream_stop = True
+        print("\n### test_12_set_on")
         self.assertTrue(self.dummy.set_on(False))
-        time.sleep(3)
-        self.assertTrue(self.dummy.set_on(True))
+        time.sleep(2)
 
-        self.dummy.stop_eventstream = False
-        self.dummy.register_eventstream()
-        time.sleep(3)
-        self.dummy.on_input_value(self.dummy.PIN_I_BONOFF, False)
-        time.sleep(3)
+        self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF] = False
+        self.dummy.on_input_value(self.dummy.PIN_I_BONOFF, True)
+        time.sleep(2)
+
         self.dummy.stop_eventstream = True
-        self.assertFalse(self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF])
+        self.assertTrue(self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF])
+
+    # def test_13_on_off_group(self):
+    #     print("\n### test_13_on_off_group")
+    #     self.assertTrue(False, "Test not implemented")
+    #
+    # def test_14_on_off_zone(self):
+    #     print("\n### test_14_on_off_zone")
+    #     self.assertTrue(False, "Test not implemented")
+    #
+    # def test_15_on_off_room(self):
+    #     print("\n### test_15_on_off_room")
+    #     self.assertTrue(False, "Test not implemented")
 
     def test_16_eventstream_on_off(self):
+        print("\n### test_16_eventstream_on_off")
         self.dummy.eventstream_stop = False
         self.dummy.register_eventstream()
         self.dummy.on_input_value(self.dummy.PIN_I_BONOFF, False)
@@ -822,13 +836,8 @@ class UnitTests(unittest.TestCase):
         self.dummy.stop_eventstream = True
         self.assertTrue(self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF])
 
-    def test_08_print_devices(self):
-        print("###test_08_print_devices")
-        res = self.dummy.register_devices()
-        self.assertTrue(res)
-
     def test_17_dimming(self):
-        print("###test_17_dimming")
+        print("\n### test_17_dimming")
 
         self.dummy.eventstream_stop = False
         time.sleep(2)
@@ -849,37 +858,17 @@ class UnitTests(unittest.TestCase):
         self.dummy.set_on(False)
         time.sleep(2)
 
-#     def test_setBri(self):
-#         self.dummy.debug = True
-#
-#         api_url = "192.168.0.10"
-#         api_port = "80"
-#         api_user = "debug"
-#         group = "1"
-#         light = 3
-#
-#         ret = self.dummy.set_bri(api_url, api_port, api_user, group, 100)
-#         self.assertTrue(ret)
-#         self.assertEqual(self.dummy.curr_bri, 100)
-#
-#     def test_trigger(self):
-#         self.dummy.on_input_value(self.dummy.PIN_I_BTRIGGER, 1)
-#         self.assertNotEqual("", self.dummy.debug_output_value[self.dummy.PIN_O_JSON])
-#
-#     def test_on_off_group(self):
-#         print("###test_on_off_group")
-#         self.dummy.debug_input_value[self.dummy.PIN_I_CTRL_GRP] = 1
-#         self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = 1
-#
-#         self.dummy.on_input_value(self.dummy.PIN_I_BONOFF, 0)
-#         self.assertEqual(0, self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF])
-#         time.sleep(3)
-#         self.dummy.on_input_value(self.dummy.PIN_I_BONOFF, 1)
-#         self.assertEqual(1, self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF])
-#         time.sleep(3)
-#         self.dummy.on_input_value(self.dummy.PIN_I_BONOFF, 0)
-#         self.assertEqual(0, self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF])
-##
+    def test_18_get_data(self):
+        print("\n### test_get_data")
+        self.dummy.eventstream_stop = True
+        self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF] = None
+        self.dummy.g_out_sbc = {}
+
+        self.dummy.on_input_value(self.dummy.PIN_I_BTRIGGER, 1)
+        res = self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF]
+
+        self.assertTrue(bool == type(res))
+
 #     def test_dim(self):
 #         self.dummy.debug = True
 #         self.dummy.curr_bri = 255

@@ -103,18 +103,16 @@ Der Code des Bausteins befindet sich in der hslz Datei oder auf [github](https:/
 - Pairing mit Hue Bridge über Logikmodul durchführen, s. [API v2 Getting started](https://developers.meethue.com/develop/hue-api-v2/getting-started/)
 - Lampen ein/ausschalten [#12](https://github.com/En3rGy/14100_Hue/issues/12)
 - Ein/aus-Status ausgeben [#16](https://github.com/En3rGy/14100_Hue/issues/16)
-- Lampen dimmen [#17](https://github.com/En3rGy/14100_Hue/issues/17)
-- Dimmwert ausgeben
-- Farbe bei Lampen vorgeben
-- Farbe der Lampe ausgeben
-- Erreichbar-Status / Verbunden-Status ausgeben
-- Starten von Szenen
-- Abspielen von dynamischen Szenen
-- Auch für Zonen / Räume / Gruppen
+- Lampen dimmen und Dimmwert ausgeben [#17](https://github.com/En3rGy/14100_Hue/issues/17)
+- Farbe bei Lampen vorgeben und ausgeben [#19](https://github.com/En3rGy/14100_Hue/issues/19)
+- Erreichbar-Status / Verbunden-Status ausgeben [#20](https://github.com/En3rGy/14100_Hue/issues/20)
+- Starten von Szenen [#21](https://github.com/En3rGy/14100_Hue/issues/21)
+- Abspielen von dynamischen Szenen [#22](https://github.com/En3rGy/14100_Hue/issues/22)
+- Auch für Zonen [#14](https://github.com/En3rGy/14100_Hue/issues/14) / Räume [#15](https://github.com/En3rGy/14100_Hue/issues/15) / Gruppen [#13](https://github.com/En3rGy/14100_Hue/issues/13)
 - Manuelles Abrufen des Status der Leuchten [#18](https://github.com/En3rGy/14100_Hue/issues/18)
 - Selbständiges finden & verbinden mit der Hue-Bridge [#11](https://github.com/En3rGy/14100_Hue/issues/11)
-- Automatisches re-connect mit Hue-Bridge bei Verbindungsabbruch
-- Bei mehreren Bausteininstanzen verbindet sich nur einer mit der Hue Bridge und teilt die erhaltenen Informationen
+- Automatisches re-connect mit Hue-Bridge bei Verbindungsabbruch [#10](https://github.com/En3rGy/14100_Hue/issues/10)
+- Bei mehreren Bausteininstanzen verbindet sich nur einer mit der Hue Bridge und teilt die erhaltenen Informatione [#9](https://github.com/En3rGy/14100_Hue/issues/9)
 - Bereitstellen einer Web-Seite mit Informationen zu Hue-IDs [#8](https://github.com/En3rGy/14100_Hue/issues/8)
 
 ## Software Design Description
