@@ -8,9 +8,9 @@ import urlparse
 import socket
 import time
 import json
-import colorsys
+# import colorsys
 import thread
-import threading
+# import threading
 
 
 class hsl20_4:
@@ -45,12 +45,12 @@ class hsl20_4:
         def _set_output_value(self, pin, value):
             # type: (int, any) -> None
             self.debug_output_value[int(pin)] = value
-            print "# Out: " + str(value) + " @ pin " + str(pin)
+            print "# Out: pin " + str(pin) + " <- \t" + str(value)
 
         def _set_input_value(self, pin, value):
             # type: (int, any) -> None
             self.debug_input_value[int(pin)] = value
-            print "# In: " + str(value) + " @ pin " + str(pin)
+            print "# In: pin " + str(pin) + " -> \t" + str(value)
 
         def _get_input_value(self, pin):
             # type: (int) -> any
@@ -102,21 +102,19 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.PIN_I_HUE_KEY=4
         self.PIN_I_ITM_IDX=5
         self.PIN_I_BONOFF=6
-        self.PIN_I_NBRI=7
+        self.PIN_I_BRI=7
         self.PIN_I_NHUE=8
-        self.PIN_I_NSAT=9
-        self.PIN_I_NCT=10
-        self.PIN_I_NR=11
-        self.PIN_I_NG=12
-        self.PIN_I_NB=13
-        self.PIN_I_SSCENE=14
-        self.PIN_I_NTRANSTIME=15
-        self.PIN_I_BALERT=16
-        self.PIN_I_NEFFECT=17
-        self.PIN_I_NRELDIM=18
-        self.PIN_I_NDIMRAMP=19
+        self.PIN_I_NR=9
+        self.PIN_I_NG=10
+        self.PIN_I_NB=11
+        self.PIN_I_SSCENE=12
+        self.PIN_I_NTRANSTIME=13
+        self.PIN_I_BALERT=14
+        self.PIN_I_NEFFECT=15
+        self.PIN_I_NRELDIM=16
+        self.PIN_I_NDIMRAMP=17
         self.PIN_O_BSTATUSONOFF=1
-        self.PIN_O_NBRI=2
+        self.PIN_O_BRI=2
         self.PIN_O_NHUE=3
         self.PIN_O_NSAT=4
         self.PIN_O_NCT=5
@@ -188,7 +186,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             sock.sendto(query_msg, (mcast_grp, mcast_port))
         except socket.error as e:
             self.log_data("Error", "discover: " + str(e))
-            sock.shutdown()
+            sock.shutdown(socket.SHUT_RDWR)
             sock.close()
 
         while True:
@@ -277,10 +275,11 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             self.log_msg("In get_data, Hue bridge response code for '" + api_cmd + "' is " + data["status"])
 
         except Exception as e:
-            self.log_data("Error", "getData: " + str(e))
+            self.log_msg("in get_data, " + str(e))
             data = {'data': str(e), 'status': str(0)}
             print(data)
 
+        self.process_json(data["data"])
         return data
 
     def http_put(self, device_rid, api_path, payload):
@@ -424,11 +423,11 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                     self.process_json(data)
 
                 except socket.error as e:
-                    self.log_msg("In 'eventstream', socket error '" + str(e) + "' with '" + str(data) + "'.")
+                    self.log_msg("In 'eventstream', socket error '" + str(e) + "'.")
                     continue
 
                 except Exception as e:
-                    self.log_msg("In 'eventstream', '" + str(e) + "' with '" + str(data) + "'.")
+                    self.log_msg("In 'eventstream', '" + str(e) + "'.")
                     continue
 
             # gently disconnect and wait for re-connection
@@ -468,7 +467,10 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 data = data_set["data"]
 
                 for data_data in data:
-                    device_id = data_data["owner"]["rid"]
+                    if "owner" in data_data:
+                        device_id = data_data["owner"]["rid"]
+                    else:
+                        device_id = data_data["id"]
 
                     if device_id == self._get_input_value(self.PIN_I_ITM_IDX):
                         if "on" in data_data:
@@ -481,7 +483,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
                         if "dimming" in data_data:
                             dimming = data_data["dimming"]
-                            self.set_output_value_sbc(self.PIN_O_NBRI, dimming["brightness"])
+                            self.set_output_value_sbc(self.PIN_O_BRI, int(dimming["brightness"]))
 
         except Exception as e:
             self.log_msg("Error in 'process_json', '" + str(e) + "', with message '" + str(out) + "'")
@@ -539,97 +541,97 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         ret = self.http_put(rid, "light", payload)
         return ret["status"] == 200
 
-    def set_scene(self, scene):
-        payload = '{"scene":"' + scene + '"}'
-        ret = self.http_put(payload, scene)
-        return "success" in ret["data"]
-
-    def set_effect(self, effect):
-        payload = '{"effect":"'
-
-        if effect:
-            payload = payload + 'colorloop"}'
-        else:
-            payload = payload + 'none"}'
-
-        rid = self.get_rig("light")
-        ret = self.http_put(payload, rid)
-        return "success" in ret["data"]
-
-    def set_alert(self, alert):
-        payload = ""
-        if alert:
-            payload = '{"alert":"lselect"}'
-        else:
-            payload = '{"alert":"none"}'
-
-        rid = self.get_rig("light")
-        ret = self.http_put(payload, rid)
-        return "success" in ret["data"]
-
-    def set_hue_color(self, hue_col):
-        payload = '{"hue":' + str(hue_col) + '}'
-        rid = self.get_rig("light")
-        ret = self.http_put(payload, rid)
-        return "success" in ret["data"]
-
-    def set_sat(self, sat):
-        payload = '{"sat":' + str(sat) + '}'
-        rid = self.get_rig("light")
-        ret = self.http_put(payload, rid)
-        return "success" in ret["data"]
-
-    def set_ct(self, ct):
-        payload = '{"ct":' + str(ct) + '}'
-        rid = self.get_rig("light")
-        ret = self.http_put(payload, rid)
-        return "success" in ret["data"]
-
-    def prep_dim(self, val):
-        self.DEBUG.set_value("Dim cmd", str(val) + " " + str(type(val)))
-
-        if (type(val) is float) or (type(val) is int):
-            val = int(val)
-            val = chr(val)
-            val = bytearray(val)
-
-        if val[-1] == 0x00:
-            self.stop = True
-            self.timer = threading.Timer(1000, None)
-            print("abort")
-            return
-
-        sgn_bte = int((val[-1] & 0x08) >> 3)
-        val = int(val[-1] & 0x07)
-
-        self.interval = round(255.0 / pow(2, val - 1), 0)
-
-        if sgn_bte == 1:
-            pass
-        else:
-            self.interval = int(-1 * self.interval)
-
-        self.stop = False
-        self.do_dim()
-
-    def do_dim(self):
-        if self.stop:
-            return
-
-        new_bri = int(self.curr_bri + self.interval)
-        if new_bri > 255:
-            new_bri = 255
-        elif new_bri < 1:
-            new_bri = 1
-
-        self.set_bri(new_bri)
-
-        duration = float(self._get_input_value(self.PIN_I_NDIMRAMP))
-        steps = 255 / abs(self.interval)
-        step = float(round(duration / steps, 4))
-
-        self.timer = threading.Timer(step, self.do_dim)
-        self.timer.start()
+    # def set_scene(self, scene):
+    #     payload = '{"scene":"' + scene + '"}'
+    #     ret = self.http_put(payload, scene)
+    #     return "success" in ret["data"]
+    #
+    # def set_effect(self, effect):
+    #     payload = '{"effect":"'
+    #
+    #     if effect:
+    #         payload = payload + 'colorloop"}'
+    #     else:
+    #         payload = payload + 'none"}'
+    #
+    #     rid = self.get_rig("light")
+    #     ret = self.http_put(payload, rid)
+    #     return "success" in ret["data"]
+    #
+    # def set_alert(self, alert):
+    #     payload = ""
+    #     if alert:
+    #         payload = '{"alert":"lselect"}'
+    #     else:
+    #         payload = '{"alert":"none"}'
+    #
+    #     rid = self.get_rig("light")
+    #     ret = self.http_put(payload, rid)
+    #     return "success" in ret["data"]
+    #
+    # def set_hue_color(self, hue_col):
+    #     payload = '{"hue":' + str(hue_col) + '}'
+    #     rid = self.get_rig("light")
+    #     ret = self.http_put(payload, rid)
+    #     return "success" in ret["data"]
+    #
+    # def set_sat(self, sat):
+    #     payload = '{"sat":' + str(sat) + '}'
+    #     rid = self.get_rig("light")
+    #     ret = self.http_put(payload, rid)
+    #     return "success" in ret["data"]
+    #
+    # def set_ct(self, ct):
+    #     payload = '{"ct":' + str(ct) + '}'
+    #     rid = self.get_rig("light")
+    #     ret = self.http_put(payload, rid)
+    #     return "success" in ret["data"]
+    #
+    # def prep_dim(self, val):
+    #     self.DEBUG.set_value("Dim cmd", str(val) + " " + str(type(val)))
+    #
+    #     if (type(val) is float) or (type(val) is int):
+    #         val = int(val)
+    #         val = chr(val)
+    #         val = bytearray(val)
+    #
+    #     if val[-1] == 0x00:
+    #         self.stop = True
+    #         self.timer = threading.Timer(1000, None)
+    #         print("abort")
+    #         return
+    #
+    #     sgn_bte = int((val[-1] & 0x08) >> 3)
+    #     val = int(val[-1] & 0x07)
+    #
+    #     self.interval = round(255.0 / pow(2, val - 1), 0)
+    #
+    #     if sgn_bte == 1:
+    #         pass
+    #     else:
+    #         self.interval = int(-1 * self.interval)
+    #
+    #     self.stop = False
+    #     self.do_dim()
+    #
+    # def do_dim(self):
+    #     if self.stop:
+    #         return
+    #
+    #     new_bri = int(self.curr_bri + self.interval)
+    #     if new_bri > 255:
+    #         new_bri = 255
+    #     elif new_bri < 1:
+    #         new_bri = 1
+    #
+    #     self.set_bri(new_bri)
+    #
+    #     duration = float(self._get_input_value(self.PIN_I_NDIMRAMP))
+    #     steps = 255 / abs(self.interval)
+    #     step = float(round(duration / steps, 4))
+    #
+    #     self.timer = threading.Timer(step, self.do_dim)
+    #     self.timer.start()
 
     def on_init(self):
         self.DEBUG = self.FRAMEWORK.create_debug_section()
@@ -653,10 +655,9 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         # Process State
         itm_idx = str(self._get_input_value(self.PIN_I_ITM_IDX))
         hue_state = {"data": str(self._get_input_value(self.PIN_I_STAT_JSON)), "status": 200}
-        bri = int(self._get_input_value(self.PIN_I_NBRI) / 100.0 * 255.0)
-        hue_ol = int(self._get_input_value(self.PIN_I_NHUE))
-        sat = int(self._get_input_value(self.PIN_I_NSAT) / 100.0 * 255.0)
-        ct = int(self._get_input_value(self.PIN_I_NCT))
+#        hue_ol = int(self._get_input_value(self.PIN_I_NHUE))
+#        sat = int(self._get_input_value(self.PIN_I_NSAT) / 100.0 * 255.0)
+#        ct = int(self._get_input_value(self.PIN_I_NCT))
 
         if self._get_input_value(self.PIN_I_HUE_KEY) == "":
             self.log_msg("Hue key not set. Abort processing.")
@@ -664,9 +665,10 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         # If trigger == 1, get data via web request
         if (self.PIN_I_BTRIGGER == index) and (bool(value)):
-            self.get_data(str())
+            self.get_data("device")
 
-        if (self.PIN_I_BTRIGGER == index) or (self.PIN_I_STAT_JSON == index):
+        if self.PIN_I_STAT_JSON == index:
+            # todo implement
             if hue_state["data"]:
                 if itm_idx:
                     self.process_json(hue_state["data"])
@@ -674,82 +676,78 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         # Process set commands
         if self.PIN_I_BONOFF == index:
-            res = self.set_on(bool(value))
+            self.set_on(bool(value))
 
-        # todo set scene
-        elif self.PIN_I_SSCENE == index:
-            res = self.set_scene(value)
-            if res:
-                self.set_output_value_sbc(self.PIN_O_BSTATUSONOFF, True)
-
-        # todo set bri
-        elif self.PIN_I_NBRI == index:
+        elif self.PIN_I_BRI == index:
             self.set_on(True)
-            res = self.set_bri(bri)
-            print(res)
-            if res:
-                self.set_output_value_sbc(self.PIN_O_NBRI, bri / 255.0 * 100.0)
+            self.set_dimming(int(value))
 
-        # todo set hue
-        elif self.PIN_I_NHUE == index:
-            self.set_on(True)
-            res = self.set_hue_color(hue_ol)
-            if res:
-                self.set_output_value_sbc(self.PIN_O_NHUE, hue_ol)
-
-        # todo set sat
-        elif self.PIN_I_NSAT == index:
-            self.set_on(True)
-            res = self.set_sat(sat)
-            if res:
-                self.set_output_value_sbc(self.PIN_O_NSAT, sat / 255.0 * 100)
-
-        # todo set nct
-        elif self.PIN_I_NCT == index:
-            self.set_on(True)
-            res = self.set_ct(ct)
-            if res:
-                self.set_output_value_sbc(self.PIN_O_NCT, ct)
-
-        # todo set rgb
-        elif ((self.PIN_I_NR == index) or
-              (self.PIN_I_NG == index) or
-              (self.PIN_I_NB == index)):
-            self.set_on(True)
-
-            red = int(int(self._get_input_value(self.PIN_I_NR)) * 2.55)
-            green = int(int(self._get_input_value(self.PIN_I_NG)) * 2.55)
-            blue = int(int(self._get_input_value(self.PIN_I_NB)) * 2.55)
-            # h, s, v = self.rgb2hsv(r, g, b)
-            h, s, v = colorsys.rgb_to_hsv(r=(red / 255.0), g=(green / 255.0), b=(blue / 255.0))
-            h = int(360.0 * 182.04 * h)
-            s = int(s * 255)
-            v = int(v * 255)
-
-            ret1 = self.set_bri(v)
-            ret2 = self.set_hue_color(h)
-            ret3 = self.set_sat(s)
-
-            if ret1 and ret2 and ret3:
-                # set rgb as output
-                self.set_output_value_sbc(self.PIN_O_NR, red)
-                self.set_output_value_sbc(self.PIN_O_NG, green)
-                self.set_output_value_sbc(self.PIN_O_NB, blue)
-
-        # todo set alert
-        elif self.PIN_I_BALERT == index:
-            alert = int(self._get_input_value(self.PIN_I_BALERT))
-            self.set_alert(alert)
-            ###
-
-        # todo set effect
-        elif self.PIN_I_NEFFECT == index:
-            effect = int(self._get_input_value(self.PIN_I_NEFFECT))
-            self.set_effect(effect)
-
-        # todo do relative dim
-        elif self.PIN_I_NRELDIM == index:
-            self.prep_dim(value)
+        # # todo set scene
+        # elif self.PIN_I_SSCENE == index:
+        #     res = self.set_scene(value)
+        #     if res:
+        #         self.set_output_value_sbc(self.PIN_O_BSTATUSONOFF, True)
+        #
+        # # todo set hue
+        # elif self.PIN_I_NHUE == index:
+        #     self.set_on(True)
+        #     res = self.set_hue_color(hue_ol)
+        #     if res:
+        #         self.set_output_value_sbc(self.PIN_O_NHUE, hue_ol)
+        #
+        # # todo set sat
+        # elif self.PIN_I_NSAT == index:
+        #     self.set_on(True)
+        #     res = self.set_sat(sat)
+        #     if res:
+        #         self.set_output_value_sbc(self.PIN_O_NSAT, sat / 255.0 * 100)
+        #
+        # # todo set nct
+        # elif self.PIN_I_NCT == index:
+        #     self.set_on(True)
+        #     res = self.set_ct(ct)
+        #     if res:
+        #         self.set_output_value_sbc(self.PIN_O_NCT, ct)
+        #
+        # # todo set rgb
+        # elif ((self.PIN_I_NR == index) or
+        #       (self.PIN_I_NG == index) or
+        #       (self.PIN_I_NB == index)):
+        #     self.set_on(True)
+        #
+        #     red = int(int(self._get_input_value(self.PIN_I_NR)) * 2.55)
+        #     green = int(int(self._get_input_value(self.PIN_I_NG)) * 2.55)
+        #     blue = int(int(self._get_input_value(self.PIN_I_NB)) * 2.55)
+        #     # h, s, v = self.rgb2hsv(r, g, b)
+        #     h, s, v = colorsys.rgb_to_hsv(r=(red / 255.0), g=(green / 255.0), b=(blue / 255.0))
+        #     h = int(360.0 * 182.04 * h)
+        #     s = int(s * 255)
+        #     v = int(v * 255)
+        #
+        #     ret1 = self.set_bri(v)
+        #     ret2 = self.set_hue_color(h)
+        #     ret3 = self.set_sat(s)
+        #
+        #     if ret1 and ret2 and ret3:
+        #         # set rgb as output
+        #         self.set_output_value_sbc(self.PIN_O_NR, red)
+        #         self.set_output_value_sbc(self.PIN_O_NG, green)
+        #         self.set_output_value_sbc(self.PIN_O_NB, blue)
+        #
+        # # todo set alert
+        # elif self.PIN_I_BALERT == index:
+        #     alert = int(self._get_input_value(self.PIN_I_BALERT))
+        #     self.set_alert(alert)
+        #     ###
+        #
+        # # todo set effect
+        # elif self.PIN_I_NEFFECT == index:
+        #     effect = int(self._get_input_value(self.PIN_I_NEFFECT))
+        #     self.set_effect(effect)
+        #
+        # # todo do relative dim
+        # elif self.PIN_I_NRELDIM == index:
+        #     self.prep_dim(value)
 
 
 ############################################
@@ -767,8 +765,8 @@ class UnitTests(unittest.TestCase):
         self.dummy.debug_input_value[self.dummy.PIN_I_HUE_KEY] = self.cred["PIN_I_SUSER"]
         self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_device_id"]
         self.dummy.debug_rid = self.cred["hue_light_id"]
-        self.dummy.eventstream_stop = True
 
+        self.dummy.eventstream_stop = True
         self.dummy.on_init()
 
     def tearDown(self):
@@ -789,11 +787,15 @@ class UnitTests(unittest.TestCase):
 
         self.dummy.bridge_ip = None
 
-    def test_get_data(self):
+    def test_18_get_data(self):
+        # todo error, correct!
+
         print("\n###test_get_data")
-        data = self.dummy.get_data("device")
-        print(data["data"])
-        self.assertTrue("id" in data["data"])
+        self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF] = str()
+        self.dummy.on_input_value(self.dummy.PIN_I_BTRIGGER, 1)
+        res = self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF]
+        print(type(res))
+        self.assertTrue(type(res) == bool)
 
     def test_12_set_on(self):
         print("###test_12_set_on")
@@ -827,18 +829,25 @@ class UnitTests(unittest.TestCase):
 
     def test_17_dimming(self):
         print("###test_17_dimming")
+
+        self.dummy.eventstream_stop = False
+        time.sleep(2)
+        print("------ On")
         self.dummy.set_on(True)
         time.sleep(2)
+        print("------ 70%")
         res = self.dummy.set_dimming(70)
-        self.assertTrue(res, "70")
+        self.assertTrue(res)
         time.sleep(2)
-        res = self.dummy.set_dimming(50)
-        self.assertTrue(res, 50)
+        print("------ 30%")
+        self.dummy.on_input_value(self.dummy.PIN_I_BRI, 30)
         time.sleep(2)
-        res = self.dummy.set_dimming(30)
-        self.assertTrue(res, "30")
-        time.sleep(2)
+        res = abs(30 - float(self.dummy.debug_output_value[self.dummy.PIN_O_BRI]))
+        self.assertTrue( res <= 1, res)
+        print("------ off")
+        self.dummy.eventstream_stop = True
         self.dummy.set_on(False)
+        time.sleep(2)
 
 #     def test_setBri(self):
 #         self.dummy.debug = True

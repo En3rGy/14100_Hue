@@ -111,6 +111,7 @@ Der Code des Bausteins befindet sich in der hslz Datei oder auf [github](https:/
 - Starten von Szenen
 - Abspielen von dynamischen Szenen
 - Auch für Zonen / Räume / Gruppen
+- Manuelles Abrufen des Status der Leuchten [#18](https://github.com/En3rGy/14100_Hue/issues/18)
 - Selbständiges finden & verbinden mit der Hue-Bridge [#11](https://github.com/En3rGy/14100_Hue/issues/11)
 - Automatisches re-connect mit Hue-Bridge bei Verbindungsabbruch
 - Bei mehreren Bausteininstanzen verbindet sich nur einer mit der Hue Bridge und teilt die erhaltenen Informationen
