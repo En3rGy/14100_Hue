@@ -16,33 +16,23 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         hsl20_4.BaseModule.__init__(self, homeserver_context, "hsl20_3_Hue")
         self.FRAMEWORK = self._get_framework()
         self.LOGGER = self._get_logger(hsl20_4.LOGGING_NONE,())
-        self.PIN_I_STAT_JSON=1
-        self.PIN_I_BTRIGGER=2
-        self.PIN_I_SHUEIP=3
-        self.PIN_I_HUE_KEY=4
-        self.PIN_I_ITM_IDX=5
-        self.PIN_I_BONOFF=6
-        self.PIN_I_BRI=7
-        self.PIN_I_NHUE=8
-        self.PIN_I_NR=9
-        self.PIN_I_NG=10
-        self.PIN_I_NB=11
-        self.PIN_I_SSCENE=12
-        self.PIN_I_NTRANSTIME=13
-        self.PIN_I_BALERT=14
-        self.PIN_I_NEFFECT=15
-        self.PIN_I_NRELDIM=16
-        self.PIN_I_NDIMRAMP=17
-        self.PIN_O_BSTATUSONOFF=1
+        self.PIN_I_TRIGGER=1
+        self.PIN_I_HUE_KEY=2
+        self.PIN_I_PORT=3
+        self.PIN_I_ITM_IDX=4
+        self.PIN_I_ON_OFF=5
+        self.PIN_I_BRI=6
+        self.PIN_I_R=7
+        self.PIN_I_G=8
+        self.PIN_I_B=9
+        self.PIN_I_REL_DIM=10
+        self.PIN_I_DIM_RAMP=11
+        self.PIN_O_STATUS_ON_OFF=1
         self.PIN_O_BRI=2
-        self.PIN_O_NHUE=3
-        self.PIN_O_NSAT=4
-        self.PIN_O_NCT=5
-        self.PIN_O_NR=6
-        self.PIN_O_NG=7
-        self.PIN_O_NB=8
-        self.PIN_O_NREACHABLE=9
-        self.PIN_O_JSON=10
+        self.PIN_O_R=3
+        self.PIN_O_G=4
+        self.PIN_O_B=5
+        self.PIN_O_REACHABLE=6
 
 ########################################################################################################
 #### Own written code can be placed after this commentblock . Do not change or delete commentblock! ####

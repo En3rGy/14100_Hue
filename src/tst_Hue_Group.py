@@ -9,8 +9,10 @@ import socket
 import time
 import json
 # import colorsys
-import thread
-# import threading
+# import thread
+import threading
+import BaseHTTPServer
+import SocketServer
 
 
 class hsl20_4:
@@ -45,7 +47,7 @@ class hsl20_4:
         def _set_output_value(self, pin, value):
             # type: (int, any) -> None
             self.debug_output_value[int(pin)] = value
-            print "# Out: pin " + str(pin) + " <- \t" + str(value)
+            print (str(time.time()) + "# Out: pin " + str(pin) + " <- \t" + str(value))
 
         def _set_input_value(self, pin, value):
             # type: (int, any) -> None
@@ -83,51 +85,44 @@ class hsl20_4:
             pass
 
         def set_value(self, cap, text):
-            print("DEBUG value\t'" + str(cap) + "': " + str(text))
+            print(str(time.time()) + " DEBUG value\t'" + str(cap) + "': " + str(text))
 
         def add_message(self, msg):
-            print("Debug Msg\t" + str(msg))
+            print(str(time.time()) + " Debug Msg\t" + str(msg))
 
     ############################################
+
 
 class HueGroup_14100_14100(hsl20_4.BaseModule):
 
     def __init__(self, homeserver_context):
         hsl20_4.BaseModule.__init__(self, homeserver_context, "hsl20_3_Hue")
         self.FRAMEWORK = self._get_framework()
-        self.LOGGER = self._get_logger(hsl20_4.LOGGING_NONE,())
-        self.PIN_I_STAT_JSON=1
-        self.PIN_I_BTRIGGER=2
-        self.PIN_I_SHUEIP=3
-        self.PIN_I_HUE_KEY=4
-        self.PIN_I_ITM_IDX=5
-        self.PIN_I_BONOFF=6
-        self.PIN_I_BRI=7
-        self.PIN_I_NHUE=8
-        self.PIN_I_NR=9
-        self.PIN_I_NG=10
-        self.PIN_I_NB=11
-        self.PIN_I_SSCENE=12
-        self.PIN_I_NTRANSTIME=13
-        self.PIN_I_BALERT=14
-        self.PIN_I_NEFFECT=15
-        self.PIN_I_NRELDIM=16
-        self.PIN_I_NDIMRAMP=17
-        self.PIN_O_BSTATUSONOFF=1
-        self.PIN_O_BRI=2
-        self.PIN_O_NHUE=3
-        self.PIN_O_NSAT=4
-        self.PIN_O_NCT=5
-        self.PIN_O_NR=6
-        self.PIN_O_NG=7
-        self.PIN_O_NB=8
-        self.PIN_O_NREACHABLE=9
-        self.PIN_O_JSON=10
+        self.LOGGER = self._get_logger(hsl20_4.LOGGING_NONE, ())
+        self.PIN_I_TRIGGER = 1
+        self.PIN_I_HUE_KEY = 2
+        self.PIN_I_PORT = 3
+        self.PIN_I_ITM_IDX = 4
+        self.PIN_I_ON_OFF = 5
+        self.PIN_I_BRI = 6
+        self.PIN_I_R = 7
+        self.PIN_I_G = 8
+        self.PIN_I_B = 9
+        self.PIN_I_REL_DIM = 10
+        self.PIN_I_DIM_RAMP = 11
+        self.PIN_O_STATUS_ON_OFF = 1
+        self.PIN_O_BRI = 2
+        self.PIN_O_R = 3
+        self.PIN_O_G = 4
+        self.PIN_O_B = 5
+        self.PIN_O_REACHABLE = 6
 
     ########################################################################################################
     #### Own written code can be placed after this commentblock . Do not change or delete commentblock! ####
     ###################################################################################################!!!##
 
+    sbc_data_lock = threading.Lock()
+    eventstream_is_connected_lock = threading.Lock()
     eventstream_is_connected = False  # type: bool
     bridge_ip = str()  # type: str
 
@@ -139,15 +134,22 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         # type: (str, any) -> None
         self.DEBUG.set_value("14100: " + str(key), str(value))
 
+    def log_debug(self, msg):
+        pass
+        # print(str(time.time()) + " --- " + str(msg) + " ---")
+
     def set_output_value_sbc(self, pin, val):
         # type:  (int, any) -> None
+        self.sbc_data_lock.acquire()
         if pin in self.g_out_sbc:
             if self.g_out_sbc[pin] == val:
-                print ("# SBC: pin " + str(pin) + " <- data not send / " + str(val).decode("utf-8"))
+                print (str(time.time()) + " # SBC: pin " + str(pin) + " <- data not send / " + str(val).decode("utf-8"))
+                self.sbc_data_lock.release()
                 return
 
         self._set_output_value(pin, val)
         self.g_out_sbc[pin] = val
+        self.sbc_data_lock.release()
 
     def hex2int(self, msg):
         msg = bytearray(msg)
@@ -158,6 +160,41 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             val = val | byte
 
         return int(val)
+
+    class HueDevice:
+        def __init__(self):
+            self.id = str()  # type: str
+            self.type = str()  # type: str
+            self.name = str()  # type: str
+            self.linked_device = str()  # type: str
+            self.light_id = str()  # type: str
+            self.service_id_dict = {}  # type {str: str}
+
+        def __str__(self):
+            return ("<tr>" +
+                    "<td>" + self.id.encode("ascii", "xmlcharrefreplace") + "</td>" +
+                    "<td>" + self.type.encode("ascii", "xmlcharrefreplace") + "</td>" +
+                    "<td>" + self.name.encode("ascii", "xmlcharrefreplace") + "</td>" +
+                    "<td>" + self.light_id.encode("ascii", "xmlcharrefreplace") + "</td>" +
+                    "<td>" + self.get_light_type().encode("ascii", "xmlcharrefreplace") + "</td>" +
+                    "<td>" + self.linked_device.encode("ascii", "xmlcharrefreplace") + "</td>" +
+                    "<td>" + str(self.service_id_dict).encode("ascii", "xmlcharrefreplace") + "</td>" +
+                    "</tr>\n")
+
+        def get_device_ids(self):
+            ret = [self.id, self.light_id, self.linked_device]  # type: [str]
+            for service_id in self.service_id_dict.keys():
+                ret.append(self.service_id_dict[service_id])
+
+            return ret
+
+        def get_light_type(self):
+            if self.type == "room" or self.type == "zone":
+                return "grouped_light"
+            elif "light" in self.service_id_dict.keys():
+                return "light"
+            else:
+                return self.type
 
     def discover_hue(self):
         # type: () -> str
@@ -250,12 +287,12 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         sock.close()
         return str()
 
-    # get general web request
     def get_data(self, api_cmd):
         """
         {'data': str(result), 'status': str(return code)}
         :rtype: {string, string}
         """
+        self.log_debug("entering get_data")
         api_path = 'https://' + self.bridge_ip + '/clip/v2/resource/' + api_cmd
         url_parsed = urlparse.urlparse(api_path)
         headers = {'Host': url_parsed.hostname, "hue-application-key": self._get_input_value(self.PIN_I_HUE_KEY)}
@@ -270,27 +307,26 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 # Open the URL and read the response.
                 response = urllib2.urlopen(request, data=None, timeout=5, context=ctx)
                 data = {'data': response.read(), 'status': str(response.getcode())}
-                if data["status"] != str(200):
-                    print data["data"]
             else:
                 data = {'data': "debug", 'status': str(200)}
 
             self.log_msg("In get_data, Hue bridge response code for '" + api_cmd + "' is " + data["status"])
 
         except Exception as e:
-            self.log_msg("in get_data, " + str(e))
+            self.log_msg("In get_data, " + str(e))
             data = {'data': str(e), 'status': str(0)}
             print(data)
 
-        self.process_json(json.loads(data["data"]))
         return data
 
     def http_put(self, device_rid, api_path, payload):
         # type: (str, str, str) -> {str, int}
 
-        api_path = "https://" + self.bridge_ip + '/clip/v2/resource/' + api_path + "/" + device_rid
-        # todo add szene, zone, etc.
+        self.log_debug("entering http_put with device_rid=" + device_rid +
+                       "; api_path=" + api_path +
+                       "; payload=" + str(payload))
 
+        api_path = "https://" + self.bridge_ip + '/clip/v2/resource/' + api_path + "/" + device_rid
         url_parsed = urlparse.urlparse(api_path)
         headers = {"Host": url_parsed.hostname,
                    "Content-type": 'application/json',
@@ -300,24 +336,31 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         ctx = ssl._create_unverified_context()
 
         try:
-            if not self.debug:
-                # Build a http request and overwrite host header with the original hostname.
-                request = urllib2.Request(api_path, headers=headers)
-                request.get_method = lambda: 'PUT'
-                # Open the URL and read the response.
-                response = urllib2.urlopen(request, data=payload, timeout=5, context=ctx)
-                data = {'data': response.read(), 'status': response.getcode()}
-                if data["status"] != 200:
-                    print (str(data["data"]["error"]))
-                    data["status"] = 200
-            else:
-                data = {'data': '{"success" : True}', 'status': 200}
-
-            self.DEBUG.add_message("14100: Hue bridge response code: " + str(data["status"]))
-
+            # Build a http request and overwrite host header with the original hostname.
+            request = urllib2.Request(api_path, headers=headers)
+            request.get_method = lambda: 'PUT'
+            # Open the URL and read the response.
+            response = urllib2.urlopen(request, data=payload, timeout=5, context=ctx)
+            data = {'data': response.read(), 'status': response.getcode()}
         except Exception as e:
-            self.log_data("Error", "http_put, " + str(e))
+            self.log_msg("In http_put, " + str(e) + " with " +
+                         "device_rid=" + device_rid +
+                         "; api_path=" + api_path +
+                         "; payload=" + str(payload))
             data = {'data': str(e), 'status': 0}
+
+        self.log_msg("In http_put, hue bridge response code: " + str(data["status"]))
+        if data["status"] != 200:
+            try:
+                json_data = json.loads(data["data"])
+                if "errors" in json_data:
+                    for msg_error in json_data["errors"]:
+                        self.log_msg("In http_put, " + self.get_val(msg_error, "description"))
+            except Exception as e:
+                self.log_msg("In http_put, got an error from hue bridge but don't know which.")
+
+        if data["status"] == 207:
+            data["status"] = 200
 
         return data
 
@@ -326,62 +369,131 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
     # -H 'hue-application-key: <appkey>' -H 'Content-Type: application/json'
     # --data-raw '{"recall": {"action": "dynamic_palette"}}'
 
+    def get_val(self, json_data, key, do_xmlcharrefreplace=True):
+        # type : (json, str, bool) -> Any
+
+        val = str()
+
+        if type(json_data) != dict:
+            return val
+
+        if key in json_data:
+            val = json_data[key]
+        if (type(val) == unicode) and do_xmlcharrefreplace:
+            val = val.encode("ascii", "xmlcharrefreplace")
+        return val
+
     def register_devices(self):
         # type: () -> bool
-        item_types = {"device", "room", "scene", "zone", "grouped_light"}  # "light" is intentionally missing
+        self.log_debug("entering register_devices")
+        item_types = {"light", "device", "room", "scene", "zone", "grouped_light"}  # "light" is intentionally missing
+
+        info_data = "<html>"
+        info_data = (info_data + '<table border="1">' +
+                     "<tr>" +
+                     "<th>id</th>" +
+                     "<th>type</th>" +
+                     "<th>name</th>" +
+                     "<th>light_id</th>" +
+                     "<th>light_type</th>" +
+                     "<th>linked_device</th>" +
+                     "<th>service_id_dict</th>" +
+                     "</tr>\n")
+
+        # start to store info of devices
+        self.devices = {}
 
         for item_type in item_types:
-            data = self.get_data(item_type)["data"]
+            # get data from bridge
+            data = self.get_val(self.get_data(item_type), "data")
 
+            # convert received data to json
             try:
                 data = json.loads(data)
-                if "data" not in data:
-                    self.log_msg("In register_devices, no data field in '" + item_type + "' reply")
-                    continue
-
-                data = data["data"]
-
-                for data_set in data:
-                    device_id = data_set["id"]
-
-                    if device_id not in self.devices:
-                        self.devices[device_id] = {}
-
-                    self.devices[device_id]["type"] = item_type
-                    if item_type == "light" or item_type == "scene" or item_type == "room" or item_type == "zone":
-                        self.devices[device_id]["name"] = data_set["metadata"]["name"]
-                    else:
-                        self.devices[device_id]["name"] = str()
-
-                    if item_type == "scene":
-                        self.devices[device_id]["associated group"] = data_set["group"]["rid"]
-
-                    if item_type == "grouped_light" or item_type == "scene":
-                        self.devices[device_id]["light"] = data_set["id"]
-                    else:
-                        device_services = data_set["services"]
-                        for service in device_services:
-                            service_type = service["rtype"]
-                            self.devices[device_id][service_type] = service["rid"]
-
             except Exception as e:
-                self.log_msg("Exception in register_devices " + str(e) + " for " + item_type)
-                return False
+                self.log_msg("In register_devices, " + str(e))
+                continue
 
-        self.log_data("Items", json.dumps(self.devices, sort_keys=True, indent=4))
+            # get data filed in json
+            data = self.get_val(data, "data")  # type: {}
+            if not data:
+                self.log_msg("In register_devices, no data field in '" + item_type + "' reply")
+                continue
+
+            for data_set in data:
+                device = self.HueDevice()
+                device.id = self.get_val(data_set, "id")
+                device.light_id = device.id
+                device.type = item_type
+
+                if item_type == "light" or item_type == "scene" or item_type == "room" or item_type == "zone":
+                    device.name = data_set["metadata"]["name"]
+                else:
+                    device.name = str()
+
+                if item_type == "scene":
+                    device.linked_device = data_set["group"]["rid"]
+
+                if item_type == "grouped_light" or item_type == "scene":
+                    device.light_id = self.get_val(data_set, "id")
+                else:
+                    device_services = self.get_val(data_set, "services")
+                    for service in device_services:
+                        rtype = str(self.get_val(service, "rtype"))
+                        rid = str(self.get_val(service, "rid"))
+                        if rtype == "light" or rtype == "grouped_light":
+                            device.light_id = rid
+                        device.service_id_dict[rtype] = rid
+
+                self.devices[device.id] = device
+                info_data = info_data + str(device).encode("ascii", "xmlcharrefreplace")
+
+                # self.process_json(data)
+
+        self.log_msg("In register_devices, registered " + str(len(self.devices)) + " devices")
+        info_data = info_data + "</table>"
+        info_data = info_data + "</html>"
+        # print(info_data)  # todo remove
+        self.set_html_content(info_data)
         return True
 
+    def set_html_content(self, content):
+        with self.http_request_handler.data_lock:
+            self.http_request_handler.response_content_type = "text"
+            self.http_request_handler.response_data = content
+
+    def get_eventstream_is_connected(self):
+        # type: () -> bool
+        self.eventstream_is_connected_lock.acquire()
+        ret = self.eventstream_is_connected  # tpye: bool
+        self.eventstream_is_connected_lock.release()
+        return ret
+
+    def set_eventstream_is_connected(self, is_connected):
+        # type: (bool) -> bool
+        self.eventstream_is_connected_lock.acquire()
+        self.eventstream_is_connected = is_connected
+        self.eventstream_is_connected_lock.release()
+        return is_connected
+
     def register_eventstream(self):
-        if not self.eventstream_is_connected:
-            self.eventstream_thread = thread.start_new_thread(self.eventstream, ())
+        self.log_debug("entering register_eventstream")
+        if not self.get_eventstream_is_connected():
+            self.eventstream_thread = threading.Thread(target=self.eventstream, args=(self.eventstream_running,))
+            self.eventstream_thread.start()
 
-    def eventstream(self):
-        # type: () -> None
-        self.eventstream_is_connected = True
-        self.log_msg("Entering eventstream.")
+    def eventstream(self, running):
+        # type: (threading.Event) -> None
+        self.log_debug("Entering eventstream")
+        self.set_eventstream_is_connected(True)
 
-        while True:
-            self.log_msg("Connecting to eventstream.")
+        msg_sep = "\n\n\r\n"
+
+        sock = socket.socket()
+
+        while running.is_set():
+            self.log_msg("In eventstream, connecting...")
+
             while not self.bridge_ip:
                 self.log_msg("Waiting for Hue discovery to connect to eventstream.")
                 time.sleep(5)
@@ -391,6 +503,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock = ssl.wrap_socket(sock, cert_reqs=ssl.CERT_NONE)
+            # sock.settimeout(3)
 
             try:
                 sock.bind(('', 0))
@@ -401,63 +514,72 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 sock.send("Accept: text/event-stream\r\n\r\n")
 
             except Exception as e:
-                self.log_data("Error", "In eventstream, " + str(e))
                 self.log_msg("In eventstream, disconnecting due to " + str(e))
                 sock.close()
                 time.sleep(5)
                 continue
 
-            while True:
-                # todo check / handle "normal" disconnects
+            data = str()  # type: str
+
+            while running.is_set():
                 try:
-                    if self.eventstream_stop:
-                        sock.close()
-                        self.log_msg("Stopping eventstream on request")
-                        self.eventstream_is_connected = False
-                        return
-
-                    data = sock.recv(1024)
-                    if "data: " not in data:
-                        continue
-
-                    data = data[data.find("data: ") + 6:]
-                    #data = str(data).replace("\r", '').replace("\n", '')
-                    data = json.loads(data)
-                    self.process_json(data)
+                    while running.is_set():
+                        data = data + sock.recv()
+                        if msg_sep in data:
+                            break
 
                 except socket.error as e:
-                    self.log_msg("In 'eventstream', socket error '" + str(e) + "'.")
-                    continue
+                    self.log_msg("In eventstream, socket error " + str(e.errno) + " '" + str(e.message) + "'")
 
-                except Exception as e:
-                    self.log_msg("In 'eventstream', '" + str(e) + "'.")
-                    continue
+                msgs = data.split(msg_sep)
 
-            # gently disconnect and wait for re-connection
-            sock.close()
-            self.log_msg("Disconnected from hue eventstream, waiting to reconnect.")
-            time.sleep(4)
+                self.log_debug("In eventstream, " + str(len(msgs)) + " messages received.")
+                for i in range(len(msgs)):
+                    if "data: " not in msgs[i]:
+                        continue
+
+                    msg = msgs[i][msgs[i].find("data: ") + 6:]
+                    try:
+                        msg = json.loads(msg)
+                        self.process_json(msg)
+                    except Exception as e:
+                        self.log_msg("In eventstream, '" + str(e) + "'.")
+                        continue
+                    else:
+                        msgs[i] = str()  # remove successful processed msg
+
+                last_msg = msgs[-1]
+                if msg_sep in last_msg:
+                    index = last_msg.rfind(msg_sep)
+                    data = last_msg[index:]  # keep not yet finished messages
+
+        # gently disconnect and wait for re-connection
+        sock.close()
+        self.log_msg("Disconnected from hue eventstream.")
+        time.sleep(4)
 
         self.log_msg("Exit eventstream. No further processing.")
-        self.eventstream_is_connected = False
+        self.set_eventstream_is_connected(False)
 
     def process_json(self, msg):
-        # type: (json) -> None
-        # eventstream: /List/ [{"data": [{"owner": {"rid": "c0c1325d-4678-482b-9d39-831687b486ce", "rtype": "device"}, "on": {"on": false}, "id_v1": "/lights/12", "id": "5e6771a6-7f28-4856-85fa-5025a42b050e", "type": "light"}], "creationtime": "2022-05-12T19:16:34Z", "id": "8fe327d3-53d3-4d2c-8175-2f4711daad4f", "type": "update"}]
-        # get_data: /Dict/ {"errors": [], "data": [{"product_data": {"model_id": "LCT015", "manufacturer_name": "Signify Netherlands B.V.", "hardware_platform_type": "100b-10c", "software_version": "1.88.1", "product_archetype": "sultan_bulb", "product_name": "Hue color lamp", "certified": true}, "identify": {}, "services": [{"rid": "5c459c5c-d5d1-485b-990e-c45e8bff0b64", "rtype": "light"}, {"rid": "2c2a7201-3786-47e7-a538-31c4b6859f44", "rtype": "zigbee_connectivity"}, {"rid": "97e106a0-1480-48ef-98a4-3731ed9a635d", "rtype": "entertainment"}], "id_v1": "/lights/4", "type": "device", "id": "65fb9063-edd8-470d-8341-70400264f819", "metadata": {"archetype": "ceiling_round", "name": "Deckenleuchte Bad"}}, {"product_data": {"model_id": "LCA001", "manufacturer_name": "Signify Netherlands B.V.", "hardware_platform_type": "100b-112", "software_version": "1.53.3", "product_archetype": "sultan_bulb", "product_name": "Hue color lamp", "certified": true}, "identify": {}, "services": [{"rid": "3ed36098-061b-479c-acd5-81074954f367", "rtype": "light"}, {"rid": "2c50844b-2040-435a-810b-f68b2e3396b9", "rtype": "zigbee_connectivity"}, {"rid": "7c194f14-9f84-4514-8925-09d16d7a7a0e", "rtype": "entertainment"}], "id_v1": "/lights/13", "type": "device", "id": "84646230-4f47-4665-99fb-b84d910b5763", "metadata": {"archetype": "sultan_bulb", "name": "DG Leselampe"}}, {"product_data": {"model_id": "LOM007", "manufacturer_name": "Signify Netherlands B.V.", "hardware_platform_type": "100b-11a", "software_version": "1.93.6", "product_archetype": "plug", "product_name": "Hue smart plug", "certified": true}, "identify": {}, "services": [{"rid": "15e36641-5e81-4049-9e71-1df5060c86c8", "rtype": "light"}, {"rid": "41a5cb30-066a-42a3-aa31-e54d2362d3a7", "rtype": "zigbee_connectivity"}], "id_v1": "/lights/14", "type": "device", "id": "2f0a1e62-e078-49d6-83fb-db817aeb50ff", "metadata": {"archetype": "plug", "name": "Weihnachtsbaum"}}, {"product_data": {"model_id": "LCT015", "manufacturer_name": "Signify Netherlands B.V.", "hardware_platform_type": "100b-10c", "software_version": "1.88.1", "product_archetype": "sultan_bulb", "product_name": "Hue color lamp", "certified": true}, "identify": {}, "services": [{"rid": "ec86940a-ce69-414d-9b6c-81e50793f8c4", "rtype": "light"}, {"rid": "5c25a1dd-83f5-4b31-9d24-ec7c0392fcf2", "rtype": "zigbee_connectivity"}, {"rid": "39eb5629-bb01-461b-80b0-90e571eea072", "rtype": "entertainment"}], "id_v1": "/lights/5", "type": "device", "id": "549af4ad-9f99-49bf-8f6f-d299f3a31b1c", "metadata": {"archetype": "table_shade", "name": "Kugelleuchte"}}, {"product_data": {"model_id": "BSB002", "manufacturer_name": "Signify Netherlands B.V.", "software_version": "1.51.1951086030", "product_archetype": "bridge_v2", "product_name": "Philips hue", "certified": true}, "identify": {}, "services": [{"rid": "f54227ea-1ca1-4840-86d8-de3dab043837", "rtype": "bridge"}, {"rid": "3610a049-1025-4a11-a7e9-bcf0a02da06b", "rtype": "zigbee_connectivity"}, {"rid": "04d2d748-95d2-41aa-9cad-6af5d0fae3a7", "rtype": "entertainment"}], "id_v1": "", "type": "device", "id": "c75e9cf7-e368-4847-af14-d7b1ee99ee28", "metadata": {"archetype": "bridge_v2", "name": "Philips hue"}}, {"product_data": {"model_id": "LWB010", "manufacturer_name": "Signify Netherlands B.V.", "hardware_platform_type": "100b-10c", "software_version": "1.88.1", "product_archetype": "classic_bulb", "product_name": "Hue white lamp", "certified": true}, "identify": {}, "services": [{"rid": "67bfc31f-e4df-43f1-989e-5a58570a04e8", "rtype": "light"}, {"rid": "06d833ba-4de9-46d7-92ac-3ea11c2dd9bf", "rtype": "zigbee_connectivity"}], "id_v1": "/lights/8", "type": "device", "id": "ee53baf2-d2da-4a59-b4b3-2a6e8d97d049", "metadata": {"archetype": "classic_bulb", "name": "P1077-002"}}, {"product_data": {"model_id": "LIGHTIFY Outdoor Flex RGBW", "manufacturer_name": "OSRAM", "hardware_platform_type": "110c-5b", "software_version": "0.0.0", "product_archetype": "classic_bulb", "product_name": "Extended color light", "certified": false}, "identify": {}, "services": [{"rid": "842f7de5-c5d6-4619-92e5-1a819cb97a36", "rtype": "light"}, {"rid": "ee7566dd-936e-4289-b750-117d2f49a73c", "rtype": "zigbee_connectivity"}], "id_v1": "/lights/9", "type": "device", "id": "c4875244-fe10-422a-a839-e1a6c116c65d", "metadata": {"archetype": "hue_lightstrip", "name": "LED Stripe"}}, {"product_data": {"model_id": "LCA001", "manufacturer_name": "Signify Netherlands B.V.", "hardware_platform_type": "100b-112", "software_version": "1.93.7", "product_archetype": "sultan_bulb", "product_name": "Hue color lamp", "certified": true}, "identify": {}, "services": [{"rid": "5e6771a6-7f28-4856-85fa-5025a42b050e", "rtype": "light"}, {"rid": "a5c79f8c-0b94-40f7-a42d-25ab7b21d58e", "rtype": "zigbee_connectivity"}, {"rid": "928bf428-671e-4fdd-ab8e-3ce0f989e230", "rtype": "entertainment"}], "id_v1": "/lights/12", "type": "device", "id": "c0c1325d-4678-482b-9d39-831687b486ce", "metadata": {"archetype": "table_shade", "name": "Kugelleuchte Esszimmer P1075-007"}}, {"product_data": {"model_id": "LWB010", "manufacturer_name": "Signify Netherlands B.V.", "hardware_platform_type": "100b-10c", "software_version": "1.88.1", "product_archetype": "classic_bulb", "product_name": "Hue white lamp", "certified": true}, "identify": {}, "services": [{"rid": "ab1bbd5c-6a04-436c-9036-067ecd17959e", "rtype": "light"}, {"rid": "785d145a-a568-4c90-9c03-7eac1b347e50", "rtype": "zigbee_connectivity"}], "id_v1": "/lights/7", "type": "device", "id": "47308e2f-217e-4179-983a-e39184133144", "metadata": {"archetype": "classic_bulb", "name": "P1077-003"}}, {"product_data": {"model_id": "LWU001", "manufacturer_name": "Signify Netherlands B.V.", "hardware_platform_type": "100b-114", "software_version": "1.93.3", "product_archetype": "luster_bulb", "product_name": "Hue white lamp", "certified": true}, "identify": {}, "services": [{"rid": "3d4e6297-a8ef-4c62-aad0-9c43af7fc945", "rtype": "light"}, {"rid": "57d33cd9-e37e-4963-9349-7eee7b36172e", "rtype": "zigbee_connectivity"}], "id_v1": "/lights/11", "type": "device", "id": "36987ec2-13dd-4f5a-b82c-9681b33ea656", "metadata": {"archetype": "luster_bulb", "name": "Garten Ecke"}}, {"product_data": {"model_id": "LWU001", "manufacturer_name": "Signify Netherlands B.V.", "hardware_platform_type": "100b-114", "software_version": "1.93.3", "product_archetype": "luster_bulb", "product_name": "Hue white lamp", "certified": true}, "identify": {}, "services": [{"rid": "9a8aaf65-822b-4593-863e-4676e99bfe0f", "rtype": "light"}, {"rid": "c8de3902-b51c-4f3c-824e-4aeb9bbff667", "rtype": "zigbee_connectivity"}], "id_v1": "/lights/10", "type": "device", "id": "0846971e-d1b8-4110-8b09-3cfd54262d97", "metadata": {"archetype": "luster_bulb", "name": "Garten Terrasse"}}, {"product_data": {"model_id": "LCT015", "manufacturer_name": "Signify Netherlands B.V.", "hardware_platform_type": "100b-10c", "software_version": "1.88.1", "product_archetype": "sultan_bulb", "product_name": "Hue color lamp", "certified": true}, "identify": {}, "services": [{"rid": "fbbd07de-5bf0-4dd6-b819-db3d9ee9a429", "rtype": "light"}, {"rid": "f15ebeef-8f47-40d7-b64b-382f19f520d2", "rtype": "zigbee_connectivity"}, {"rid": "0753a25b-e481-4fa1-9176-a393161a3586", "rtype": "entertainment"}], "id_v1": "/lights/3", "type": "device", "id": "3603093d-b456-4d02-a6ab-6a23aad1f6ba", "metadata": {"archetype": "floor_shade", "name": "Leselampe"}}, {"product_data": {"model_id": "LWB010", "manufacturer_name": "Signify Netherlands B.V.", "hardware_platform_type": "100b-10c", "software_version": "1.88.1", "product_archetype": "classic_bulb", "product_name": "Hue white lamp", "certified": true}, "identify": {}, "services": [{"rid": "f6197905-f63f-40d1-a53c-0e1b5dce08c1", "rtype": "light"}, {"rid": "d9c69a6a-42c8-4ddc-a56c-64e152072b20", "rtype": "zigbee_connectivity"}], "id_v1": "/lights/6", "type": "device", "id": "90dc33a1-f26f-492a-a952-ee96d57b42cc", "metadata": {"archetype": "pendant_round", "name": "Deckenleuchte"}}]}
-        out = json.dumps(msg)
-        self.set_output_value_sbc(self.PIN_O_JSON, out)
+        # type: (json) -> bool
+        self.log_debug("Entering process_json")
+        try:
+            out = json.dumps(msg)
+        except Exception as e:
+            self.log_msg("In process_json, " + str(e))
+            return False
 
         if type(msg) == dict:
             msg = [msg]
 
-        device_ids = [self._get_input_value(self.PIN_I_ITM_IDX)]
-        if device_ids[0] in self.devices:
+        own_id = self._get_input_value(self.PIN_I_ITM_IDX)
+        device = self.get_val(self.devices, own_id)  # type: HueGroup_14100_14100.HueDevice
+        if not device:
+            self.log_debug("In process_json device not yet registered in global dictionary")
+            return False
 
-            for type_id in self.devices[device_ids[0]]:
-                curr_id = self.devices[device_ids[0]][type_id]
-                if len(curr_id) > 20:  # go for ids only, not for name or type.
-                    device_ids.append(curr_id)
+        device_ids = device.get_device_ids()
 
         try:
             for msg_entry in msg:
@@ -471,48 +593,55 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                         device_id = data["id"]
 
                     if device_id in device_ids:
+                        self.log_debug("In process_json, found data for own ID.")
+
                         if "on" in data:
                             is_on = bool(data["on"]["on"])
-                            self.set_output_value_sbc(self.PIN_O_BSTATUSONOFF, is_on)
+                            self.set_output_value_sbc(self.PIN_O_STATUS_ON_OFF, is_on)
 
-                        if "color" in data:
-                            color = data["color"]
-                            # todo calculate rgb
-
+                        bri = 0
                         if "dimming" in data:
                             dimming = data["dimming"]
-                            self.set_output_value_sbc(self.PIN_O_BRI, int(dimming["brightness"]))
+                            bri = dimming["brightness"]
+                            self.set_output_value_sbc(self.PIN_O_BRI, int(bri))
+
+                        color = self.get_val(data, color)
+                        xy = self.get_val(color, "xy")
+                        x = self.get_val(xy, "x")
+                        y = self.get_val(xy, "y")
+                        [r, g, b] = self.xy_bri_to_rgb(x, y, bri)
+                        self.set_output_value_sbc(self.PIN_O_R, r)
+                        self.set_output_value_sbc(self.PIN_O_G, g)
+                        self.set_output_value_sbc(self.PIN_O_B, b)
 
         except Exception as e:
-            self.log_msg("Error in 'process_json', '" + str(e) + "', with message '" + str(out) + "'")
+            self.log_msg("In process_json, '" + str(e) + "', with message '" + str(out) + "'")
 
-    def get_rig(self, service):
-        # type: (str) -> str
-        device_id = self._get_input_value(self.PIN_I_ITM_IDX)
-        if device_id not in self.devices:
-            self.log_msg("In 'get_rid', device id not yet registered in self.devices.")
-            return str()
-
-        if service not in self.devices[device_id]:
-            self.log_msg("In 'get_rid', service '" + service + "' not registered for device in self.devices.")
-            return str()
-
-        return self.devices[device_id][service]
-
-    def set_on(self, set_on):
-        # type: (bool) -> bool
-
+    def get_rid(self):
+        # type: () -> HueGroup_14100_14100.HueDevice
+        # self.log_debug("entering get_rid")
         rid = str(self._get_input_value(self.PIN_I_ITM_IDX))
         if not rid:
             self.log_msg("In set_on, rid for type 'light' not found.")
-            return False
+            return None
 
-        if rid not in self.devices:
-            self.log_msg("In set_on, rid not registered.")
-            return False
+        if rid not in self.devices.keys():
+            self.log_msg("In get_rid, rid not registered.")
+            return None
 
-        if "light" not in self.devices[rid]:
-            self.log_msg("In set_on, type 'light' not registered for " + rid + ".")
+        return self.devices[rid]
+
+    def set_on(self, set_on):
+        # type: (bool) -> bool
+        """
+        on / off
+        :param set_on: True / False
+        :return:
+        """
+        self.log_debug("entering set_on")
+        device = self.get_rid()
+        if not device:
+            self.log_msg("In set_on, device invalid")
             return False
 
         if set_on:
@@ -520,129 +649,277 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         else:
             payload = '{"on":{"on":false}}'
 
-        ret = self.http_put(self.devices[rid]["light"], "light", payload)
+        ret = self.http_put(device.light_id, device.get_light_type(), payload)
+        self.log_msg("In set_on, return code is " + str(ret["status"]))
         return ret["status"] == 200
 
-    def set_dimming(self, brightness):
-        # type: (int) -> bool
+    def set_bri(self, brightness):
+        # type: (float) -> bool
         """
         Brightness percentage. value cannot be 0, writing 0 changes it to the lowest possible brightness
 
+        :return:
         :param brightness: number – maximum: 100
         :return: True if successful, otherwise False
         """
-        rid = self.get_rig("light")
-        if not rid:
+        self.log_debug("entering set_bri")
+        device = self.get_rid()
+        if not device:
             return False
 
         payload = '{"dimming":{"brightness":' + str(brightness) + '}}'
-        ret = self.http_put(rid, "light", payload)
+        ret = self.http_put(device.light_id, device.get_light_type(), payload)
         return ret["status"] == 200
 
-    # def set_scene(self, scene):
-    #     payload = '{"scene":"' + scene + '"}'
-    #     ret = self.http_put(payload, scene)
-    #     return "success" in ret["data"]
-    #
-    # def set_effect(self, effect):
-    #     payload = '{"effect":"'
-    #
-    #     if effect:
-    #         payload = payload + 'colorloop"}'
-    #     else:
-    #         payload = payload + 'none"}'
-    #
-    #     rid = self.get_rig("light")
-    #     ret = self.http_put(payload, rid)
-    #     return "success" in ret["data"]
-    #
-    # def set_alert(self, alert):
-    #     payload = ""
-    #     if alert:
-    #         payload = '{"alert":"lselect"}'
-    #     else:
-    #         payload = '{"alert":"none"}'
-    #
-    #     rid = self.get_rig("light")
-    #     ret = self.http_put(payload, rid)
-    #     return "success" in ret["data"]
-    #
-    # def set_hue_color(self, hue_col):
-    #     payload = '{"hue":' + str(hue_col) + '}'
-    #     rid = self.get_rig("light")
-    #     ret = self.http_put(payload, rid)
-    #     return "success" in ret["data"]
-    #
-    # def set_sat(self, sat):
-    #     payload = '{"sat":' + str(sat) + '}'
-    #     rid = self.get_rig("light")
-    #     ret = self.http_put(payload, rid)
-    #     return "success" in ret["data"]
-    #
-    # def set_ct(self, ct):
-    #     payload = '{"ct":' + str(ct) + '}'
-    #     rid = self.get_rig("light")
-    #     ret = self.http_put(payload, rid)
-    #     return "success" in ret["data"]
-    #
-    # def prep_dim(self, val):
-    #     self.DEBUG.set_value("Dim cmd", str(val) + " " + str(type(val)))
-    #
-    #     if (type(val) is float) or (type(val) is int):
-    #         val = int(val)
-    #         val = chr(val)
-    #         val = bytearray(val)
-    #
-    #     if val[-1] == 0x00:
-    #         self.stop = True
-    #         self.timer = threading.Timer(1000, None)
-    #         print("abort")
-    #         return
-    #
-    #     sgn_bte = int((val[-1] & 0x08) >> 3)
-    #     val = int(val[-1] & 0x07)
-    #
-    #     self.interval = round(255.0 / pow(2, val - 1), 0)
-    #
-    #     if sgn_bte == 1:
-    #         pass
-    #     else:
-    #         self.interval = int(-1 * self.interval)
-    #
-    #     self.stop = False
-    #     self.do_dim()
-    #
-    # def do_dim(self):
-    #     if self.stop:
-    #         return
-    #
-    #     new_bri = int(self.curr_bri + self.interval)
-    #     if new_bri > 255:
-    #         new_bri = 255
-    #     elif new_bri < 1:
-    #         new_bri = 1
-    #
-    #     self.set_bri(new_bri)
-    #
-    #     duration = float(self._get_input_value(self.PIN_I_NDIMRAMP))
-    #     steps = 255 / abs(self.interval)
-    #     step = float(round(duration / steps, 4))
-    #
-    #     self.timer = threading.Timer(step, self.do_dim)
-    #     self.timer.start()
+    def set_color_rgb(self, r, g, b):
+        # type: (int, int, int) -> bool
+        """
+
+        :param r: 0-255
+        :param g: 0-255
+        :param b: 0-255
+        :return:
+        """
+
+        r = r / 100.0 * 255  # type: float
+        g = g / 100.0 * 255  # type: float
+        b = b / 100.0 * 255  # type: float
+
+        self.log_debug("entering set_color")
+        [x, y, bri] = self.rgb_to_xy_bri(r, g, b)
+        return self.set_color_xy_bri(x, y, bri)
+
+    def rgb_to_xy_bri(self, red, green, blue):
+        # type: (int, int, int) -> [float]
+        """
+        Convert rgb to xy
+        :param red: 0-255
+        :param green: 0-255
+        :param blue: 0-255
+        :return: [x (0.0-1.0), y (0.0-1.0), brightness (0-100%)]
+        """
+
+        # https://github.com/PhilipsHue/PhilipsHueSDK-iOS-OSX/blob/00187a3db88dedd640f5ddfa8a474458dff4e1db/ApplicationDesignNotes/RGB%20to%20xy%20Color%20conversion.md
+        # Get the RGB values from your color object and convert them to be between 0 and 1. So the RGB
+        # color(255, 0, 100)  becomes(1.0, 0.0, 0.39)
+
+        red = red / 255.0
+        green = green / 255.0
+        blue = blue / 255.0
+
+        # Apply a gamma correction to the RGB values, which makes the color more vivid and more the like the color
+        # displayed on the screen of your device. This gamma correction is also applied to the screen of your
+        # computer or phone, thus we need this to create the same color on the light as on screen.This is done
+        # by  the following formulas:
+        # float  red = (red > 0.04045f) ? pow((red + 0.055f) / (1.0f + 0.055f), 2.4f): (red / 12.92f)
+        # float green = (green > 0.04045f) ? pow((green + 0.055f) / (1.0f + 0.055f), 2.4f): (green / 12.92f)
+        # float blue = (blue > 0.04045f) ? pow((blue + 0.055f) / (1.0f + 0.055f), 2.4f): (blue / 12.92f)
+        #
+        # Convert the RGB values to XYZ using the Wide RGB D65 conversion formula
+        # The formulas used:
+
+        X = red * 0.649926 + green * 0.103455 + blue * 0.197109
+        Y = red * 0.234327 + green * 0.743075 + blue * 0.022598
+        Z = red * 0.0000000 + green * 0.053077 + blue * 1.035763
+
+        # Calculate the xy values from the XYZ values
+
+        x = X / (X + Y + Z)
+        y = Y / (X + Y + Z)
+
+        # Check if the found xy value is within the color gamut of the light, if not continue with step 6, otherwise
+        # step 7 When we sent a value which the light is not capable of, the resulting color might not be optimal.
+        # Therefor we try to only sent values which are inside the color gamut of the selected light.
+        #
+        # Calculate the closest point on the color gamut triangle and use that as xy value The closest
+        # value is calculated by making a perpendicular line to one of the lines the triangle consists of and when
+        # it is then still not inside the triangle, we choose the closest corner point of the triangle.
+        #
+        # Use the Y value of XYZ as brightness The Y value indicates the brightness of the converted color.
+
+        return [x, y, Y]
+
+    def set_color_xy_bri(self, x, y, bri):
+        # type: (float, float, float) -> bool
+        """
+        CIE XY gamut position
+        :param x: number – minimum: 0 – maximum: 1
+        :param y: number – minimum: 0 – maximum: 1
+        :param bri: 0-100%
+        :return:
+        """
+
+        payload = '{"color":{"xy":{"x":' + str(x) + ', "y":' + str(y) + '}}'
+        device = self.get_rid()
+        if not device:
+            return False
+        ret = self.http_put(device.light_id, device.get_light_type(), payload)
+        return (ret["status"] == 200) & self.set_bri(bri)
+
+    def xy_bri_to_rgb(self, x, y, bri):
+        """
+        Convert CIE XY gamut position to rgb
+        :param x: number – minimum: 0 – maximum: 1
+        :param y: number – minimum: 0 – maximum: 1
+        :param bri: 0-100%
+        :return: [r, g, b] each 0-100%
+        """
+        z = 1.0 - x - y
+        Y = bri / 255.0  # Brightness of lamp
+        X = (Y / y) * x
+        Z = (Y / y) * z
+        r = X * 1.612 - Y * 0.203 - Z * 0.302
+        g = -X * 0.509 + Y * 1.412 + Z * 0.066
+        b = X * 0.026 - Y * 0.072 + Z * 0.962
+
+        if r <= 0.0031308:
+            r = 12.92 * r
+        else:
+            r = (1.0 + 0.055) * pow(r, (1.0 / 2.4)) - 0.055
+
+        if g <= 0.0031308:
+            g = 12.92 * g
+        else:
+            g = (1.0 + 0.055) * pow(g, (1.0 / 2.4)) - 0.055
+
+        if b <= 0.0031308:
+            b = 12.92 * b
+        else:
+            b = (1.0 + 0.055) * pow(b, (1.0 / 2.4)) - 0.055
+
+        max_value = max(r, g, b)
+        r /= max_value
+        g /= max_value
+        b /= max_value
+        r = r * 255
+        if r < 0:
+            r = 255
+        g = g * 255
+        if g < 0:
+            g = 255
+        b = b * 255
+        if b < 0:
+            b = 255
+
+        r = r / 255.0 * 100
+        g = g / 255.0 * 100
+        b = b / 255.0 * 100
+
+        return [int(round(r)), int(round(g)), int(round(b))]
+
+    def prep_dim(self, val):
+        """
+
+        :param val:
+        :return:
+        """
+        self.log_msg("Dim cmd, str(val)" + " " + str(type(val)))
+
+        if (type(val) is float) or (type(val) is int):
+            val = int(val)
+            val = chr(val)
+            val = bytearray(val)
+
+        if val[-1] == 0x00:
+            self.stop = True
+            self.timer = threading.Timer(1000, None)
+            print("abort")
+            return
+
+        sgn_bte = int((val[-1] & 0x08) >> 3)
+        val = int(val[-1] & 0x07)
+
+        self.interval = round(255.0 / pow(2, val - 1), 0)
+
+        if sgn_bte == 1:
+            pass
+        else:
+            self.interval = int(-1 * self.interval)
+
+        self.stop = False
+        self.do_dim()
+
+    def do_dim(self):
+        """
+        Method to perform the dim
+        :return: None
+        """
+        if self.stop:
+            return
+
+        new_bri = int(self.curr_bri + self.interval)
+        if new_bri > 255:
+            new_bri = 255
+        elif new_bri < 1:
+            new_bri = 1
+
+        self.set_bri(new_bri)
+
+        duration = float(self._get_input_value(self.PIN_I_DIM_RAMP))
+        steps = 255 / abs(self.interval)
+        step = float(round(duration / steps, 4))
+
+        self.timer = threading.Timer(step, self.do_dim)
+        self.timer.start()
+
+    def stop_server(self):
+        """
+        Stop server which provides info page
+        """
+        if self.server:
+            try:
+                self.log_msg("Shutting down running server")
+                self.server.shutdown()
+                self.server.server_close()
+            except Exception as e:
+                self.log_msg(str(e))
+
+    def run_server(self, port):
+        # type: (int) -> None
+        """
+        Start the server providing the info page with Hue IDs.
+        :param port: Port used to provide the info page
+        :return: None
+        """
+        self.log_debug("entering run_server")
+        self.log_msg("Trying to start server")
+        server_address = ('', port)
+
+        self.stop_server()
+
+        try:
+            self.server = ThreadedTCPServer(server_address, self.http_request_handler, bind_and_activate=False)
+            self.server.allow_reuse_address = True
+            self.server.server_bind()
+            self.server.server_activate()
+        except Exception as e:
+            self.log_msg(str(e))
+            return
+
+        ip, port = self.server.server_address
+        self.t = threading.Thread(target=self.server.serve_forever)
+        self.t.setDaemon(True)
+        self.t.start()
+        self.log_msg("Server running on " + str(ip) + ":" + str(port))
 
     def on_init(self):
+        self.log_debug("entering on_init")
         self.DEBUG = self.FRAMEWORK.create_debug_section()
         self.g_out_sbc = {}  # type: {int, object}
         self.debug = False  # type: bool
-        self.eventstream_thread = 0  # type: int
 
-        if str(self._get_input_value(self.PIN_I_SHUEIP)):
-            self.bridge_ip = str(self._get_input_value(self.PIN_I_SHUEIP))
-            self.log_msg("Bridge IP (manual) is " + self.bridge_ip)
+        # server
+        self.server = ""
+        self.t = ""
+        self.http_request_handler = MyHttpRequestHandler
+        self.run_server(8080)
+        # self.run_server(self._get_input_value(self.PIN_I_SHUEIP))
 
-        self.eventstream_stop = False  # type: bool
-        self.devices = {}  # type: {str: {str: str}}
+        self.eventstream_thread = threading.Thread()  # type: threading.Thread
+        self.eventstream_running = threading.Event()
+        self.eventstream_running.set()
+
+        self.devices = {}  # type: {str, HueGroup_14100_14100.HueDevice}
 
         self.discover_hue()
         self.register_devices()
@@ -652,103 +929,64 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         # Process State
         itm_idx = str(self._get_input_value(self.PIN_I_ITM_IDX))
-        hue_state = {"data": str(self._get_input_value(self.PIN_I_STAT_JSON)), "status": 200}
-#        hue_ol = int(self._get_input_value(self.PIN_I_NHUE))
-#        sat = int(self._get_input_value(self.PIN_I_NSAT) / 100.0 * 255.0)
-#        ct = int(self._get_input_value(self.PIN_I_NCT))
 
         if self._get_input_value(self.PIN_I_HUE_KEY) == "":
             self.log_msg("Hue key not set. Abort processing.")
             return
 
         # If trigger == 1, get data via web request
-        if (self.PIN_I_BTRIGGER == index) and (bool(value)):
+        if (self.PIN_I_TRIGGER == index) and (bool(value)):
             item_types = {"device", "light", "room", "scene", "zone", "grouped_light"}
 
             for item_type in item_types:
-                self.get_data(item_type)
-
-        if self.PIN_I_STAT_JSON == index:
-            # todo implement
-            if hue_state["data"]:
-                if itm_idx:
-                    self.process_json(hue_state["data"])
-                    self.set_output_value_sbc(self.PIN_O_JSON, hue_state["data"])
+                data = self.get_data(item_type)
+                self.process_json(data)
 
         # Process set commands
-        if self.PIN_I_BONOFF == index:
+        if self.PIN_I_ON_OFF == index:
             self.set_on(bool(value))
 
         elif self.PIN_I_BRI == index:
             self.set_on(True)
-            self.set_dimming(int(value))
+            self.set_bri(int(value))
 
-        # # todo set scene
-        # elif self.PIN_I_SSCENE == index:
-        #     res = self.set_scene(value)
-        #     if res:
-        #         self.set_output_value_sbc(self.PIN_O_BSTATUSONOFF, True)
-        #
-        # # todo set hue
-        # elif self.PIN_I_NHUE == index:
-        #     self.set_on(True)
-        #     res = self.set_hue_color(hue_ol)
-        #     if res:
-        #         self.set_output_value_sbc(self.PIN_O_NHUE, hue_ol)
-        #
-        # # todo set sat
-        # elif self.PIN_I_NSAT == index:
-        #     self.set_on(True)
-        #     res = self.set_sat(sat)
-        #     if res:
-        #         self.set_output_value_sbc(self.PIN_O_NSAT, sat / 255.0 * 100)
-        #
-        # # todo set nct
-        # elif self.PIN_I_NCT == index:
-        #     self.set_on(True)
-        #     res = self.set_ct(ct)
-        #     if res:
-        #         self.set_output_value_sbc(self.PIN_O_NCT, ct)
-        #
         # # todo set rgb
-        # elif ((self.PIN_I_NR == index) or
-        #       (self.PIN_I_NG == index) or
-        #       (self.PIN_I_NB == index)):
-        #     self.set_on(True)
-        #
-        #     red = int(int(self._get_input_value(self.PIN_I_NR)) * 2.55)
-        #     green = int(int(self._get_input_value(self.PIN_I_NG)) * 2.55)
-        #     blue = int(int(self._get_input_value(self.PIN_I_NB)) * 2.55)
-        #     # h, s, v = self.rgb2hsv(r, g, b)
-        #     h, s, v = colorsys.rgb_to_hsv(r=(red / 255.0), g=(green / 255.0), b=(blue / 255.0))
-        #     h = int(360.0 * 182.04 * h)
-        #     s = int(s * 255)
-        #     v = int(v * 255)
-        #
-        #     ret1 = self.set_bri(v)
-        #     ret2 = self.set_hue_color(h)
-        #     ret3 = self.set_sat(s)
-        #
-        #     if ret1 and ret2 and ret3:
-        #         # set rgb as output
-        #         self.set_output_value_sbc(self.PIN_O_NR, red)
-        #         self.set_output_value_sbc(self.PIN_O_NG, green)
-        #         self.set_output_value_sbc(self.PIN_O_NB, blue)
-        #
-        # # todo set alert
-        # elif self.PIN_I_BALERT == index:
-        #     alert = int(self._get_input_value(self.PIN_I_BALERT))
-        #     self.set_alert(alert)
-        #     ###
-        #
-        # # todo set effect
-        # elif self.PIN_I_NEFFECT == index:
-        #     effect = int(self._get_input_value(self.PIN_I_NEFFECT))
-        #     self.set_effect(effect)
-        #
-        # # todo do relative dim
-        # elif self.PIN_I_NRELDIM == index:
-        #     self.prep_dim(value)
+        elif ((self.PIN_I_R == index) or
+              (self.PIN_I_G == index) or
+              (self.PIN_I_B == index)):
+
+            self.set_on(True)
+            r = int(int(self._get_input_value(self.PIN_I_R)))
+            g = int(int(self._get_input_value(self.PIN_I_G)))
+            b = int(int(self._get_input_value(self.PIN_I_B)))
+
+            self.set_color_rgb(r, g, b)
+
+
+        # todo do relative dim
+        elif self.PIN_I_REL_DIM == index:
+            self.prep_dim(value)
+
+
+class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+    pass
+
+
+# class MyHttpRequestHandler(SocketServer.BaseRequestHandler):
+class MyHttpRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+    data_lock = threading.RLock()
+
+    def on_init(self):
+        self.response_content_type = ""
+        self.response_data = ""
+
+    def do_GET(self):
+        with self.data_lock:
+            self.send_response(200)
+            self.send_header('Content-type', self.response_content_type)
+            self.end_headers()
+
+            self.wfile.write(self.response_data)
 
 
 ############################################
@@ -758,7 +996,7 @@ class UnitTests(unittest.TestCase):
 
     def setUp(self):
         print("\n### setUp")
-        with open("credentials.txt") as f:
+        with open("credentials.json") as f:
             self.cred = json.load(f)
 
         self.dummy = HueGroup_14100_14100(0)
@@ -767,31 +1005,28 @@ class UnitTests(unittest.TestCase):
         self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_device_id"]
         self.dummy.debug_rid = self.cred["hue_light_id"]
 
-        self.dummy.eventstream_stop = True
         self.dummy.on_init()
+        self.dummy.debug = True
 
     def tearDown(self):
         print("\n### tearDown")
 
     def test_get_rig(self):
         print("\n### test_get_rig")
-        ret = self.dummy.get_rig("light")
-        self.assertEqual(ret, self.dummy.debug_rid)
-        ret = self.dummy.get_rig("dummy")
-        self.assertEqual(ret, str())
+        self.assertTrue(False)
 
-    # def test_08_print_devices(self):
-    #     print("\n### ###test_08_print_devices")
-    #     res = self.dummy.register_devices()
-    #     self.assertTrue(res)
-    #
-    # def test_09_singleton_eventstream(self):
-    #     print("test_09_singleton_eventstream")
-    #     self.assertTrue(False, "Test not implemented")
-    #
-    # def test_10_eventstream_reconnect(self):
-    #     print("\n### test_10_eventstream_reconnect")
-    #     self.assertTrue(False, "Test not implemented")
+    def test_08_print_devices(self):
+        print("\n### ###test_08_print_devices")
+        res = self.dummy.register_devices()
+        self.assertTrue(res)
+
+    def test_09_singleton_eventstream(self):
+        print("test_09_singleton_eventstream")
+        self.assertTrue(False, "Test not implemented")
+
+    def test_10_eventstream_reconnect(self):
+        print("\n### test_10_eventstream_reconnect")
+        self.assertTrue(False, "Test not implemented")
 
     def test_11_discover(self):
         print("\n###test_11_discover")
@@ -801,73 +1036,110 @@ class UnitTests(unittest.TestCase):
 
         self.dummy.bridge_ip = None
 
-    def test_12_set_on(self):
-        print("\n### test_12_set_on")
+    def generic_on_off(self):
         self.assertTrue(self.dummy.set_on(False))
         time.sleep(2)
 
-        self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF] = False
-        self.dummy.on_input_value(self.dummy.PIN_I_BONOFF, True)
+        self.dummy.debug_output_value[self.dummy.PIN_O_STATUS_ON_OFF] = False
+        self.dummy.on_input_value(self.dummy.PIN_I_ON_OFF, True)
         time.sleep(2)
 
         self.dummy.stop_eventstream = True
-        self.assertTrue(self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF])
+        self.assertTrue(self.dummy.debug_output_value[self.dummy.PIN_O_STATUS_ON_OFF])
+
+    def test_12_set_on(self):
+        print("\n### test_12_set_on")
+        self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_light_id"]
+        self.generic_on_off()
 
     # def test_13_on_off_group(self):
-    #     print("\n### test_13_on_off_group")
-    #     self.assertTrue(False, "Test not implemented")
-    #
-    # def test_14_on_off_zone(self):
-    #     print("\n### test_14_on_off_zone")
-    #     self.assertTrue(False, "Test not implemented")
-    #
-    # def test_15_on_off_room(self):
-    #     print("\n### test_15_on_off_room")
-    #     self.assertTrue(False, "Test not implemented")
+    # print("\n### test_13_on_off_group")
+    # self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_zone_id"]
+    # self.generic_on_off()
+
+    def test_14_on_off_zone(self):
+        print("\n### test_14_on_off_zone")
+        self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_zone_id"]
+        self.generic_on_off()
+
+    def test_15_on_off_room(self):
+        print("\n### test_15_on_off_room")
+        self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_room_id"]
+        self.generic_on_off()
 
     def test_16_eventstream_on_off(self):
         print("\n### test_16_eventstream_on_off")
-        self.dummy.eventstream_stop = False
+        self.dummy.eventstream_running.set()
         self.dummy.register_eventstream()
-        self.dummy.on_input_value(self.dummy.PIN_I_BONOFF, False)
+        time.sleep(2)
+        self.dummy.on_input_value(self.dummy.PIN_I_ON_OFF, False)
         time.sleep(3)
-        self.dummy.on_input_value(self.dummy.PIN_I_BONOFF, True)
+        self.dummy.on_input_value(self.dummy.PIN_I_ON_OFF, True)
         time.sleep(3)
-        self.dummy.stop_eventstream = True
-        self.assertTrue(self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF])
+        self.dummy.eventstream_running.clear()
+        self.assertTrue(self.dummy.debug_output_value[self.dummy.PIN_O_STATUS_ON_OFF])
+        time.sleep(5)
+        print(str(time.time()) + " +++ End +++")
 
     def test_17_dimming(self):
         print("\n### test_17_dimming")
 
-        self.dummy.eventstream_stop = False
+        self.dummy.eventstream_running.clear()
         time.sleep(2)
         print("------ On")
         self.dummy.set_on(True)
         time.sleep(2)
         print("------ 70%")
-        res = self.dummy.set_dimming(70)
+        res = self.dummy.set_bri(70)
         self.assertTrue(res)
         time.sleep(2)
         print("------ 30%")
         self.dummy.on_input_value(self.dummy.PIN_I_BRI, 30)
         time.sleep(2)
         res = abs(30 - float(self.dummy.debug_output_value[self.dummy.PIN_O_BRI]))
-        self.assertTrue( res <= 1, res)
+        self.assertTrue(res <= 1, res)
         print("------ off")
-        self.dummy.eventstream_stop = True
+        self.dummy.eventstream_running.set()
         self.dummy.set_on(False)
         time.sleep(2)
 
     def test_18_get_data(self):
         print("\n### test_get_data")
-        self.dummy.eventstream_stop = True
-        self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF] = None
+        self.dummy.eventstream_running.set()
+        self.dummy.debug_output_value[self.dummy.PIN_O_STATUS_ON_OFF] = None
         self.dummy.g_out_sbc = {}
 
-        self.dummy.on_input_value(self.dummy.PIN_I_BTRIGGER, 1)
-        res = self.dummy.debug_output_value[self.dummy.PIN_O_BSTATUSONOFF]
+        self.dummy.on_input_value(self.dummy.PIN_I_TRIGGER, 1)
+        res = self.dummy.debug_output_value[self.dummy.PIN_O_STATUS_ON_OFF]
 
         self.assertTrue(bool == type(res))
+
+    def test_19_xy_to_rgb(self):
+        self.dummy.eventstream_running.set()
+        print("\n### test_19_xy_to_rgb")
+        [r, g, b] = self.dummy.xy_bri_to_rgb(0.640, 0.330, 1)
+        print([r, g, b])
+        self.assertEqual([255, 0, 0], [r, g, b])
+        [r, g, b] = self.dummy.xy_bri_to_rgb(0.640, 0.330, 0.1043)
+        print([r, g, b])
+        self.assertEqual([125, 0, 0], [r, g, b])
+
+    def test_19_set_color(self):
+        print("\n### test_19_set_color")
+        self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_light_id"]
+        self.dummy.debug_input_value[self.dummy.PIN_I_R] = 255
+        self.dummy.debug_input_value[self.dummy.PIN_I_G] = 0
+        self.dummy.debug_input_value[self.dummy.PIN_I_B] = 0
+
+        self.dummy.eventstream_running.set()
+        time.sleep(3)
+
+        self.dummy.on_input_value(self.dummy.PIN_I_R, 255)
+        time.sleep(3)
+        r = self.dummy.debug_output_value[self.dummy.PIN_O_R]
+        g = self.dummy.debug_output_value[self.dummy.PIN_O_G]
+        b = self.dummy.debug_output_value[self.dummy.PIN_O_B]
+        self.assertTrue((r == 255) and (g == 0) and (b == 0))
 
 #     def test_dim(self):
 #         self.dummy.debug = True

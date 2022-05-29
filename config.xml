@@ -3,36 +3,26 @@
     <modules>
         <module category="Datenaustausch" context="hsl20_3_Hue" id="14100" name="Hue Group (14100)" version="3.0">
             <inputs>
-                <input type="string" const_name="stat_json" init_value="">Json</input>
-				<input type="number" const_name="bTrigger" init_value="0">Get Status</input>				
-                <input type="string" const_name="sHueIp" init_value="">Hue Bridge IP</input>
+				<input type="number" const_name="trigger" init_value="0">Get Status</input>
                 <input type="string" const_name="hue_key" init_value="">Key</input>
+				<input type="number" const_name="port" init_value="0">Port info page</input>
 				<input type="number" const_name="itm_idx" init_value="0">Item Id</input>
-				<input type="number" const_name="bOnOff" init_value="0">On/Off (1/0)</input>
+				<input type="number" const_name="on_off" init_value="0">On/Off (1/0)</input>
                 <input type="number" const_name="bri" init_value="0">Brightness (%)</input>
-                <input type="number" const_name="nHue" init_value="0">Hue Color</input>
-				<input type="number" const_name="nR" init_value="0">r</input>
-				<input type="number" const_name="nG" init_value="0">g</input>
-				<input type="number" const_name="nB" init_value="0">b</input>				
-				<input type="string" const_name="sScene" init_value="">Hue Scene</input>
-				<input type="number" const_name="nTranstime" init_value="0">Transition Time</input>
-				<input type="number" const_name="bAlert" init_value="0">Alert Effect</input>
-				<input type="number" const_name="nEffect" init_value="0">Color Loop</input>
-				<input type="number" const_name="nRelDim" init_value="0">KNX rel. Dimm</input>
-				<input type="number" const_name="nDimRamp" init_value="0.5">KNX Dimm Rampe [s]</input>
+				<input type="number" const_name="r" init_value="0">r</input>
+				<input type="number" const_name="g" init_value="0">g</input>
+				<input type="number" const_name="b" init_value="0">b</input>
+				<input type="number" const_name="rel_Dim" init_value="0">KNX rel. Dimm</input>
+				<input type="number" const_name="dim_ramp" init_value="0.5">KNX Dimm Rampe [s]</input>
             </inputs>
             <outputs>
-				<output type="number" const_name="bStatusOnOff" init_value="0">RM On/Off (01)</output>
+				<output type="number" const_name="status_on_off" init_value="0">RM On/Off (01)</output>
 				<output type="number" const_name="bri" init_value="0">RM Brightness</output>
-				<output type="number" const_name="nHue" init_value="0">RM Hue Color</output>
-				<output type="number" const_name="nSat" init_value="0">RM Saturation</output>
-				<output type="number" const_name="nCt" init_value="0">RM Color Temp</output>				
-				<output type="number" const_name="nR" init_value="0">r</output>
-				<output type="number" const_name="nG" init_value="0">g</output>
-				<output type="number" const_name="nB" init_value="0">b</output>				
-				<output type="number" const_name="nReachable" init_value="0">Lght Reachable</output>
-				<output type="string" const_name="json" init_value="">Json</output>
-            </outputs>               
+				<output type="number" const_name="r" init_value="0">r</output>
+				<output type="number" const_name="g" init_value="0">g</output>
+				<output type="number" const_name="b" init_value="0">b</output>
+				<output type="number" const_name="reachable" init_value="0">Lght Reachable</output>
+            </outputs>
 			<remanent_variables>
             </remanent_variables>
             <imports>

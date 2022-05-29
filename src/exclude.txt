@@ -1,4 +1,4 @@
-.txt
+.json
 tst_Hue_Group.py
 .project
 .pydevproject
