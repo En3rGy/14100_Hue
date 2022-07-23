@@ -85,10 +85,10 @@ class hsl20_4:
             pass
 
         def set_value(self, cap, text):
-            print(str(time.time()) + " DEBUG value\t'" + str(cap) + "': " + str(text))
+            print(str(time.time()) + " Value:\t'" + str(cap) + "': " + str(text))
 
         def add_message(self, msg):
-            print(str(time.time()) + " Debug Msg\t" + str(msg))
+            print(str(time.time()) + " Msg:  \t" + str(msg))
 
     ############################################
 
@@ -134,10 +134,6 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         # type: (str, any) -> None
         self.DEBUG.set_value("14100: " + str(key), str(value))
 
-    def log_debug(self, msg):
-        pass
-        # print(str(time.time()) + " --- " + str(msg) + " ---")
-
     def set_output_value_sbc(self, pin, val):
         # type:  (int, any) -> None
         self.sbc_data_lock.acquire()
@@ -151,50 +147,34 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.g_out_sbc[pin] = val
         self.sbc_data_lock.release()
 
-    def hex2int(self, msg):
-        msg = bytearray(msg)
-        val = 0
-        val = val | msg[0]
-        for byte in msg[1:]:
-            val = val << 8
-            val = val | byte
-
-        return int(val)
-
     class HueDevice:
         def __init__(self):
             self.id = str()  # type: str
-            self.type = str()  # type: str
             self.name = str()  # type: str
-            self.linked_device = str()  # type: str
             self.light_id = str()  # type: str
-            self.service_id_dict = {}  # type {str: str}
+            self.zigbee_connectivity_id = str()  # type: str
+            self.room = str()  # type: str
+            self.zone = str()  # type: str
+            self.scenes = []  # type: [str]
+            self.grouped_lights = []  # type: [str]
 
         def __str__(self):
             return ("<tr>" +
-                    "<td>" + self.id.encode("ascii", "xmlcharrefreplace") + "</td>" +
-                    "<td>" + self.type.encode("ascii", "xmlcharrefreplace") + "</td>" +
                     "<td>" + self.name.encode("ascii", "xmlcharrefreplace") + "</td>" +
+                    "<td>" + self.id.encode("ascii", "xmlcharrefreplace") + "</td>" +
                     "<td>" + self.light_id.encode("ascii", "xmlcharrefreplace") + "</td>" +
-                    "<td>" + self.get_light_type().encode("ascii", "xmlcharrefreplace") + "</td>" +
-                    "<td>" + self.linked_device.encode("ascii", "xmlcharrefreplace") + "</td>" +
-                    "<td>" + str(self.service_id_dict).encode("ascii", "xmlcharrefreplace") + "</td>" +
+                    "<td>" + self.zigbee_connectivity_id.encode("ascii", "xmlcharrefreplace") + "</td>" +
+                    "<td>" + self.room.encode("ascii", "xmlcharrefreplace") + "</td>" +
+                    "<td>" + self.zone.encode("ascii", "xmlcharrefreplace") + "</td>" +
+                    "<td>" + str(self.scenes).encode("ascii", "xmlcharrefreplace") + "</td>" +
+                    "<td>" + str(self.grouped_lights).encode("ascii", "xmlcharrefreplace") + "</td>" +
                     "</tr>\n")
 
         def get_device_ids(self):
-            ret = [self.id, self.light_id, self.linked_device]  # type: [str]
-            for service_id in self.service_id_dict.keys():
-                ret.append(self.service_id_dict[service_id])
+            ret = [self.id, self.light_id, self.zigbee_connectivity_id,
+                   self.room, self.zone, self.scenes, self.grouped_lights]  # type: [str]
 
             return ret
-
-        def get_light_type(self):
-            if self.type == "room" or self.type == "zone":
-                return "grouped_light"
-            elif "light" in self.service_id_dict.keys():
-                return "light"
-            else:
-                return self.type
 
     def discover_hue(self):
         # type: () -> str
@@ -204,7 +184,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
-        sock.settimeout(1)
+        sock.settimeout(5)
 
         # best definition https://courses.cs.duke.edu/fall16/compsci356/DNS/DNS-primer.pdf
         msg_id = '\x00\x01'
@@ -233,14 +213,13 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             try:
                 data = sock.recv(1024)
                 sock.shutdown(socket.SHUT_RDWR)
-                sock.close()
 
                 # check reply for "additional records", Type A, class IN contains IP4 address
                 # header = data[:12]
-                # qd_count = self.hex2int(data[4:6])
-                # an_count = self.hex2int(data[6:8])
-                # ns_count = self.hex2int(data[8:10])
-                ar_count = self.hex2int(data[10:12])
+                # qd_count = hex2int(data[4:6])
+                # an_count = hex2int(data[6:8])
+                # ns_count = hex2int(data[8:10])
+                ar_count = hex2int(data[10:12])
 
                 ans_idx = 12 + len(search)
                 # ans_name = data[ans_idx:ans_idx + 2]
@@ -248,7 +227,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 # ans_class = data[ans_idx + 4:ans_idx + 6]
                 # ans_ttl = data[ans_idx + 6:ans_idx + 10]
                 ans_rd_length = data[ans_idx + 10:ans_idx + 12]
-                ans_rd_length = self.hex2int(ans_rd_length)
+                ans_rd_length = hex2int(ans_rd_length)
                 # ans_r_dara = data[ans_idx + 12:ans_idx + 12 + ans_rd_length]
 
                 # answers = data[ans_idx:ans_idx + 12 + ans_rd_length]
@@ -263,14 +242,14 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                     ar_type = add_records[ar_offset + 2:ar_offset + 4]
                     # print(":".join("{:02x}".format(ord(c)) for c in ar_type))
                     ar_length = add_records[ar_offset + 10: ar_offset + 12]
-                    ar_length = self.hex2int(ar_length)
+                    ar_length = hex2int(ar_length)
 
                     if ar_type == "\x00\x01":  # Type A, get IP & Port
                         ar_ip = add_records[ar_offset + 12:ar_offset + 12 + ar_length]
-                        ip1 = self.hex2int(ar_ip[0])
-                        ip2 = self.hex2int(ar_ip[1])
-                        ip3 = self.hex2int(ar_ip[2])
-                        ip4 = self.hex2int(ar_ip[3])
+                        ip1 = hex2int(ar_ip[0])
+                        ip2 = hex2int(ar_ip[1])
+                        ip3 = hex2int(ar_ip[2])
+                        ip4 = hex2int(ar_ip[3])
 
                         ip = str(ip1) + "." + str(ip2) + "." + str(ip3) + "." + str(ip4)
                         self.log_msg("Bridge IP (auto) is " + ip)
@@ -283,7 +262,6 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 self.log_msg("Discovery timeout")
                 break
 
-        sock.shutdown(socket.SHUT_RDWR)
         sock.close()
         return str()
 
@@ -292,7 +270,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         {'data': str(result), 'status': str(return code)}
         :rtype: {string, string}
         """
-        self.log_debug("entering get_data")
+        # log_debug("entering get_data")
         api_path = 'https://' + self.bridge_ip + '/clip/v2/resource/' + api_cmd
         url_parsed = urlparse.urlparse(api_path)
         headers = {'Host': url_parsed.hostname, "hue-application-key": self._get_input_value(self.PIN_I_HUE_KEY)}
@@ -301,19 +279,16 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         ctx = ssl._create_unverified_context()
 
         try:
-            if not self.debug:
-                # Build a http request and overwrite host header with the original hostname.
-                request = urllib2.Request(api_path, headers=headers)
-                # Open the URL and read the response.
-                response = urllib2.urlopen(request, data=None, timeout=5, context=ctx)
-                data = {'data': response.read(), 'status': str(response.getcode())}
-            else:
-                data = {'data': "debug", 'status': str(200)}
+            # Build a http request and overwrite host header with the original hostname.
+            request = urllib2.Request(api_path, headers=headers)
+            # Open the URL and read the response.
+            response = urllib2.urlopen(request, data=None, timeout=5, context=ctx)
+            data = {'data': response.read(), 'status': str(response.getcode())}
 
-            self.log_msg("In get_data, Hue bridge response code for '" + api_cmd + "' is " + data["status"])
+            self.log_msg("In get_data #288, Hue bridge response code for '" + api_cmd + "' is " + data["status"])
 
         except Exception as e:
-            self.log_msg("In get_data, " + str(e))
+            self.log_msg("In get_data #291, " + str(e))
             data = {'data': str(e), 'status': str(0)}
             print(data)
 
@@ -322,9 +297,9 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
     def http_put(self, device_rid, api_path, payload):
         # type: (str, str, str) -> {str, int}
 
-        self.log_debug("entering http_put with device_rid=" + device_rid +
-                       "; api_path=" + api_path +
-                       "; payload=" + str(payload))
+        log_debug("entering http_put with device_rid=" + device_rid +
+                  "; api_path=" + api_path +
+                  "; payload=" + str(payload))
 
         api_path = "https://" + self.bridge_ip + '/clip/v2/resource/' + api_path + "/" + device_rid
         url_parsed = urlparse.urlparse(api_path)
@@ -355,9 +330,9 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 json_data = json.loads(data["data"])
                 if "errors" in json_data:
                     for msg_error in json_data["errors"]:
-                        self.log_msg("In http_put, " + self.get_val(msg_error, "description"))
+                        self.log_msg("In http_put, " + get_val(msg_error, "description"))
             except Exception as e:
-                self.log_msg("In http_put, got an error from hue bridge but don't know which.")
+                self.log_msg("In http_put:357, " + str(e))
 
         if data["status"] == 207:
             data["status"] = 200
@@ -369,91 +344,166 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
     # -H 'hue-application-key: <appkey>' -H 'Content-Type: application/json'
     # --data-raw '{"recall": {"action": "dynamic_palette"}}'
 
-    def get_val(self, json_data, key, do_xmlcharrefreplace=True):
-        # type : (json, str, bool) -> Any
-
-        val = str()
-
-        if type(json_data) != dict:
-            return val
-
-        if key in json_data:
-            val = json_data[key]
-        if (type(val) == unicode) and do_xmlcharrefreplace:
-            val = val.encode("ascii", "xmlcharrefreplace")
-        return val
-
     def register_devices(self):
         # type: () -> bool
-        self.log_debug("entering register_devices")
-        item_types = {"light", "device", "room", "scene", "zone", "grouped_light"}  # "light" is intentionally missing
+        # log_debug("entering register_devices")
+        # item_types = {"device", "light", "scene", "room", "grouped_light", "zone"}
+        item_types = ["device", "room", "zone", "scene", "grouped_light"]
 
-        info_data = "<html>"
-        info_data = (info_data + '<table border="1">' +
+        info_data = "<html>\n"
+        info_data = (info_data + '<table border="1">\n' +
                      "<tr>" +
-                     "<th>id</th>" +
-                     "<th>type</th>" +
-                     "<th>name</th>" +
-                     "<th>light_id</th>" +
-                     "<th>light_type</th>" +
-                     "<th>linked_device</th>" +
-                     "<th>service_id_dict</th>" +
+                     "<th>Name</th>" +
+                     "<th>Device</th>" +
+                     "<th>Light</th>" +
+                     "<th>Zigbee Connectivity</th>" +
+                     "<th>Room</th>" +
+                     "<th>Zone</th>" +
+                     "<th>Scenes</th>" +
+                     "<th>Grouped Lights</th>" +
                      "</tr>\n")
 
         # start to store info of devices
         self.devices = {}
+        self.associated_rids = []
+        self.rid = str(self._get_input_value(self.PIN_I_ITM_IDX))  # type: str
 
         for item_type in item_types:
             # get data from bridge
-            data = self.get_val(self.get_data(item_type), "data")
+            data_raw = self.get_data(item_type)  # type: str
 
             # convert received data to json
             try:
-                data = json.loads(data)
+                data = json.loads(data_raw["data"])  # type: {}
             except Exception as e:
-                self.log_msg("In register_devices, " + str(e))
+                self.log_msg("In register_devices #377, " + str(e))
                 continue
 
-            # get data filed in json
-            data = self.get_val(data, "data")  # type: {}
-            if not data:
-                self.log_msg("In register_devices, no data field in '" + item_type + "' reply")
-                continue
+            data = get_val(data, "data")
 
-            for data_set in data:
-                device = self.HueDevice()
-                device.id = self.get_val(data_set, "id")
-                device.light_id = device.id
-                device.type = item_type
+            self.associated_rids.append(self.rid)
 
-                if item_type == "light" or item_type == "scene" or item_type == "room" or item_type == "zone":
-                    device.name = data_set["metadata"]["name"]
-                else:
-                    device.name = str()
+            if item_type == "device":
+                for item in data:
+                    item_id = get_val(item, "id")
+                    if self.rid == item_id:
+                        self.rtype = item_type
 
-                if item_type == "scene":
-                    device.linked_device = data_set["group"]["rid"]
+                    services = get_val(item, "services")
+                    device = self.HueDevice()
+                    device.id = item_id
+                    metadata = get_val(item, "metadata")
+                    device.name = get_val(metadata, "name")
 
-                if item_type == "grouped_light" or item_type == "scene":
-                    device.light_id = self.get_val(data_set, "id")
-                else:
-                    device_services = self.get_val(data_set, "services")
-                    for service in device_services:
-                        rtype = str(self.get_val(service, "rtype"))
-                        rid = str(self.get_val(service, "rid"))
-                        if rtype == "light" or rtype == "grouped_light":
+                    for service in services:
+                        rid = get_val(service, "rid")
+
+                        if self.rid == item_id:
+                            self.associated_rids.append(rid)
+
+                        rtype = get_val(service, "rtype")
+                        if rtype == "light":
                             device.light_id = rid
-                        device.service_id_dict[rtype] = rid
+                            if self.rid == device.light_id:
+                                self.rtype = rtype
+                        elif rtype == "zigbee_connectivity":
+                            device.zigbee_connectivity_id = rid
 
-                self.devices[device.id] = device
-                info_data = info_data + str(device).encode("ascii", "xmlcharrefreplace")
+                    self.devices[device.id] = device
 
-                # self.process_json(data)
+            elif item_type == "room":
+                for item in data:
+                    item_id = get_val(item, "id")
+                    if self.rid == item_id:
+                        self.rtype = item_type
+                    children = get_val(item, "children")
+                    for i in range(len(children)):
+                        rid = get_val(children[i], "rid")
+                        rtype = get_val(children[i], "rtype")
 
-        self.log_msg("In register_devices, registered " + str(len(self.devices)) + " devices")
-        info_data = info_data + "</table>"
-        info_data = info_data + "</html>"
-        # print(info_data)  # todo remove
+                        if self.rid == item_id:
+                            self.associated_rids.append(rid)
+
+                        if rtype == "device":
+                            if rid in self.devices:
+                                device = self.devices[rid]
+                                device.room = item_id
+                                self.devices[device.id] = device
+                            else:
+                                self.log_msg(
+                                    "In register_devices #414, device not registered as device but requested by "
+                                    "'room': '" + rid + "'")
+
+            elif item_type == "zone":
+                for item in data:
+                    item_id = get_val(item, "id")
+                    if self.rid == item_id:
+                        self.rtype = item_type
+                    children = get_val(item, "children")
+                    for i in range(len(children)):
+                        rid = get_val(children[i], "rid")
+                        rtype = get_val(children[i], "rtype")
+
+                        if self.rid == item_id:
+                            self.associated_rids.append(rid)
+
+                        if rtype == "light":
+                            for device in self.devices.values():
+                                if device.light_id == rid:
+                                    device.zone = item_id
+                                    self.devices[device.id] = device
+
+            elif item_type == "scene":
+                for item in data:
+                    item_id = get_val(item, "id")
+                    if self.rid == item_id:
+                        self.rtype = item_type
+                    group = get_val(item, "group")
+                    rid = get_val(group, "rid")
+                    rtype = get_val(group, "rtype")
+
+                    if self.rid == item_id:
+                        self.associated_rids.append(rid)
+
+                    if rtype == "zone":
+                        for device in self.devices.values():
+                            if device.zone == rid:
+                                device.scenes.append(item_id)
+                                self.devices[device.id] = device
+
+                    elif rtype == "room":
+                        for device in self.devices.values():
+                            if device.room == rid:
+                                device.scenes.append(item_id)
+                                self.devices[device.id] = device
+
+            elif item_type == "grouped_light":
+                for item in data:
+                    item_id = get_val(item, "id")
+                    if self.rid == item_id:
+                        self.rtype = item_type
+                    owner = get_val(item, "owner")
+                    rid = get_val(owner, "rid")
+                    rtype = get_val(owner, "rtype")
+
+                    if self.rid == item_id:
+                        self.associated_rids.append(rid)
+
+                    for device in self.devices.values():
+                        if rtype == "room":
+                            if device.room == rid:
+                                device.grouped_lights.append(item_id)
+                                self.devices[device.id] = device
+                        elif rtype == "zone":
+                            if device.zone == rid:
+                                device.grouped_lights.append(item_id)
+                                self.devices[device.id] = device
+
+        self.log_msg("In register_devices #466, registered " + str(len(self.devices)) + " devices")
+        for device in self.devices.values():
+            info_data = info_data + str(device)
+
+        info_data = info_data + "</table>\n</html>\n"
         self.set_html_content(info_data)
         return True
 
@@ -465,7 +515,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
     def get_eventstream_is_connected(self):
         # type: () -> bool
         self.eventstream_is_connected_lock.acquire()
-        ret = self.eventstream_is_connected  # tpye: bool
+        ret = self.eventstream_is_connected  # type: bool
         self.eventstream_is_connected_lock.release()
         return ret
 
@@ -477,14 +527,14 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         return is_connected
 
     def register_eventstream(self):
-        self.log_debug("entering register_eventstream")
+        log_debug("entering register_eventstream")
         if not self.get_eventstream_is_connected():
             self.eventstream_thread = threading.Thread(target=self.eventstream, args=(self.eventstream_running,))
             self.eventstream_thread.start()
 
     def eventstream(self, running):
         # type: (threading.Event) -> None
-        self.log_debug("Entering eventstream")
+        log_debug("Entering eventstream")
         self.set_eventstream_is_connected(True)
 
         msg_sep = "\n\n\r\n"
@@ -492,10 +542,10 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         sock = socket.socket()
 
         while running.is_set():
-            self.log_msg("In eventstream, connecting...")
+            self.log_msg("In eventstream #508, connecting...")
 
             while not self.bridge_ip:
-                self.log_msg("Waiting for Hue discovery to connect to eventstream.")
+                self.log_msg("In eventstream #511, waiting for Hue discovery to connect to eventstream.")
                 time.sleep(5)
 
             api_path = 'https://' + str(self.bridge_ip) + '/eventstream/clip/v2'
@@ -503,7 +553,6 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock = ssl.wrap_socket(sock, cert_reqs=ssl.CERT_NONE)
-            # sock.settimeout(3)
 
             try:
                 sock.bind(('', 0))
@@ -514,7 +563,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 sock.send("Accept: text/event-stream\r\n\r\n")
 
             except Exception as e:
-                self.log_msg("In eventstream, disconnecting due to " + str(e))
+                self.log_msg("In eventstream #529, disconnecting due to " + str(e))
                 sock.close()
                 time.sleep(5)
                 continue
@@ -529,21 +578,22 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                             break
 
                 except socket.error as e:
-                    self.log_msg("In eventstream, socket error " + str(e.errno) + " '" + str(e.message) + "'")
+                    self.log_msg("In eventstream #544, socket error " + str(e.errno) + " '" + str(e.message) + "'")
 
                 msgs = data.split(msg_sep)
 
-                self.log_debug("In eventstream, " + str(len(msgs)) + " messages received.")
+                log_debug("In eventstream #548, " + str(len(msgs)) + " messages received.")
                 for i in range(len(msgs)):
-                    if "data: " not in msgs[i]:
+                    if "data" not in msgs[i]:
                         continue
 
                     msg = msgs[i][msgs[i].find("data: ") + 6:]
                     try:
                         msg = json.loads(msg)
+                        log_debug("In eventstream #556, processing msg '" + json.dumps(msg) + "'.")
                         self.process_json(msg)
                     except Exception as e:
-                        self.log_msg("In eventstream, '" + str(e) + "'.")
+                        self.log_msg("In eventstream #559, '" + str(e) + "'.")
                         continue
                     else:
                         msgs[i] = str()  # remove successful processed msg
@@ -563,37 +613,30 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
     def process_json(self, msg):
         # type: (json) -> bool
-        self.log_debug("Entering process_json")
+        log_debug("Entering process_json")
         try:
             out = json.dumps(msg)
         except Exception as e:
-            self.log_msg("In process_json, " + str(e))
+            self.log_msg("In process_json #620, " + str(e))
             return False
 
         if type(msg) == dict:
             msg = [msg]
 
-        own_id = self._get_input_value(self.PIN_I_ITM_IDX)
-        device = self.get_val(self.devices, own_id)  # type: HueGroup_14100_14100.HueDevice
-        if not device:
-            self.log_debug("In process_json device not yet registered in global dictionary")
-            return False
-
-        device_ids = device.get_device_ids()
-
         try:
             for msg_entry in msg:
                 if "data" not in msg_entry:
+                    log_debug("In process_json #629, no 'data' field in '" + msg_entry + "'.")
                     continue
 
-                for data in msg_entry["data"]:
-                    if "owner" in data:
-                        device_id = data["owner"]["rid"]
-                    else:
-                        device_id = data["id"]
+                if type(msg_entry["data"]) == str:
+                    msg_entry["data"] = json.loads(msg_entry["data"])
 
-                    if device_id in device_ids:
-                        self.log_debug("In process_json, found data for own ID.")
+                for data in msg_entry["data"]:
+                    device_id = get_val(data, "id")
+
+                    if device_id in self.associated_rids:
+                        log_debug("In process_json #646, found data for own ID.")
 
                         if "on" in data:
                             is_on = bool(data["on"]["on"])
@@ -603,33 +646,41 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                         if "dimming" in data:
                             dimming = data["dimming"]
                             bri = dimming["brightness"]
+                            self.curr_bri = bri
                             self.set_output_value_sbc(self.PIN_O_BRI, int(bri))
 
-                        color = self.get_val(data, color)
-                        xy = self.get_val(color, "xy")
-                        x = self.get_val(xy, "x")
-                        y = self.get_val(xy, "y")
-                        [r, g, b] = self.xy_bri_to_rgb(x, y, bri)
-                        self.set_output_value_sbc(self.PIN_O_R, r)
-                        self.set_output_value_sbc(self.PIN_O_G, g)
-                        self.set_output_value_sbc(self.PIN_O_B, b)
+                        if "color" in data:
+                            color = get_val(data, "color")
+                            xy = get_val(color, "xy")
+                            x = get_val(xy, "x")
+                            y = get_val(xy, "y")
+                            [r, g, b] = self.xy_bri_to_rgb(x, y, bri)
+                            self.set_output_value_sbc(self.PIN_O_R, r)
+                            self.set_output_value_sbc(self.PIN_O_G, g)
+                            self.set_output_value_sbc(self.PIN_O_B, b)
+
+                    else:
+                        log_debug("In process_json #662, id " + device_id + " not found in associated ids" +
+                                  str(self.associated_rids))
 
         except Exception as e:
-            self.log_msg("In process_json, '" + str(e) + "', with message '" + str(out) + "'")
+            self.log_msg("In process_json #666, '" + str(e) + "', with message '" + str(out) + "'")
 
     def get_rid(self):
-        # type: () -> HueGroup_14100_14100.HueDevice
-        # self.log_debug("entering get_rid")
+        # type: () -> [HueGroup_14100_14100.HueDevice]
+        # Returns the device of the id given by the user to the module
+
         rid = str(self._get_input_value(self.PIN_I_ITM_IDX))
         if not rid:
-            self.log_msg("In set_on, rid for type 'light' not found.")
+            self.log_msg("In get_rid #652, ITM_ID not set.")
             return None
 
-        if rid not in self.devices.keys():
-            self.log_msg("In get_rid, rid not registered.")
-            return None
+        my_devices = []
+        for device in self.devices.values():
+            if rid in device.get_device_ids():
+                my_devices.append(device)
 
-        return self.devices[rid]
+        return my_devices
 
     def set_on(self, set_on):
         # type: (bool) -> bool
@@ -638,18 +689,15 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         :param set_on: True / False
         :return:
         """
-        self.log_debug("entering set_on")
-        device = self.get_rid()
-        if not device:
-            self.log_msg("In set_on, device invalid")
-            return False
+        log_debug("entering set_on")
+        rid = str(self._get_input_value(self.PIN_I_ITM_IDX))
 
         if set_on:
             payload = '{"on":{"on":true}}'
         else:
             payload = '{"on":{"on":false}}'
 
-        ret = self.http_put(device.light_id, device.get_light_type(), payload)
+        ret = self.http_put(rid, self.rtype, payload)
         self.log_msg("In set_on, return code is " + str(ret["status"]))
         return ret["status"] == 200
 
@@ -662,13 +710,12 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         :param brightness: number – maximum: 100
         :return: True if successful, otherwise False
         """
-        self.log_debug("entering set_bri")
-        device = self.get_rid()
-        if not device:
-            return False
+        log_debug("entering set_bri")
+        rid = str(self._get_input_value(self.PIN_I_ITM_IDX))
 
         payload = '{"dimming":{"brightness":' + str(brightness) + '}}'
-        ret = self.http_put(device.light_id, device.get_light_type(), payload)
+        ret = self.http_put(rid, self.rtype, payload)
+        self.curr_bri = brightness
         return ret["status"] == 200
 
     def set_color_rgb(self, r, g, b):
@@ -681,11 +728,11 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         :return:
         """
 
-        r = r / 100.0 * 255  # type: float
-        g = g / 100.0 * 255  # type: float
-        b = b / 100.0 * 255  # type: float
+        r = int(r / 100.0 * 255)  # type: int
+        g = int(g / 100.0 * 255)  # type: int
+        b = int(b / 100.0 * 255)  # type: int
 
-        self.log_debug("entering set_color")
+        log_debug("entering set_color")
         [x, y, bri] = self.rgb_to_xy_bri(r, g, b)
         return self.set_color_xy_bri(x, y, bri)
 
@@ -750,10 +797,9 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         """
 
         payload = '{"color":{"xy":{"x":' + str(x) + ', "y":' + str(y) + '}}'
-        device = self.get_rid()
-        if not device:
-            return False
-        ret = self.http_put(device.light_id, device.get_light_type(), payload)
+        rid = str(self._get_input_value(self.PIN_I_ITM_IDX))
+
+        ret = self.http_put(rid, self.rtype, payload)
         return (ret["status"] == 200) & self.set_bri(bri)
 
     def xy_bri_to_rgb(self, x, y, bri):
@@ -822,7 +868,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         if val[-1] == 0x00:
             self.stop = True
-            self.timer = threading.Timer(1000, None)
+            self.timer = None
             print("abort")
             return
 
@@ -881,7 +927,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         :param port: Port used to provide the info page
         :return: None
         """
-        self.log_debug("entering run_server")
+        log_debug("entering run_server")
         self.log_msg("Trying to start server")
         server_address = ('', port)
 
@@ -903,7 +949,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.log_msg("Server running on " + str(ip) + ":" + str(port))
 
     def on_init(self):
-        self.log_debug("entering on_init")
+        log_debug("entering on_init")
         self.DEBUG = self.FRAMEWORK.create_debug_section()
         self.g_out_sbc = {}  # type: {int, object}
         self.debug = False  # type: bool
@@ -920,15 +966,18 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.eventstream_running.set()
 
         self.devices = {}  # type: {str, HueGroup_14100_14100.HueDevice}
+        self.rid = str(self._get_input_value(self.PIN_I_ITM_IDX))  # type: str
+        self.associated_rids = []  # type: [str]
+        self.rtype = str()  # type: str
+        self.curr_bri = 0 # type: int
 
         self.discover_hue()
         self.register_devices()
         self.register_eventstream()
 
     def on_input_value(self, index, value):
-
         # Process State
-        itm_idx = str(self._get_input_value(self.PIN_I_ITM_IDX))
+        # itm_idx = str(self._get_input_value(self.PIN_I_ITM_IDX))
 
         if self._get_input_value(self.PIN_I_HUE_KEY) == "":
             self.log_msg("Hue key not set. Abort processing.")
@@ -950,6 +999,9 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             self.set_on(True)
             self.set_bri(int(value))
 
+        elif self.PIN_I_ITM_IDX == index:
+            self.register_devices()
+
         # # todo set rgb
         elif ((self.PIN_I_R == index) or
               (self.PIN_I_G == index) or
@@ -961,7 +1013,6 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             b = int(int(self._get_input_value(self.PIN_I_B)))
 
             self.set_color_rgb(r, g, b)
-
 
         # todo do relative dim
         elif self.PIN_I_REL_DIM == index:
@@ -976,7 +1027,10 @@ class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 class MyHttpRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     data_lock = threading.RLock()
 
-    def on_init(self):
+    def __init__(self):
+        BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, request=str(),
+                                                       client_address=(str(), 0),
+                                                       server=BaseHTTPServer.BaseHTTPRequestHandler())
         self.response_content_type = ""
         self.response_data = ""
 
@@ -987,6 +1041,36 @@ class MyHttpRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.end_headers()
 
             self.wfile.write(self.response_data)
+
+
+def hex2int(msg):
+    msg = bytearray(msg)
+    val = 0
+    val = val | msg[0]
+    for byte in msg[1:]:
+        val = val << 8
+        val = val | byte
+
+    return int(val)
+
+
+def log_debug(msg):
+    print(str(time.time()) + " Debug:\t" + str(msg) + " ---")
+
+
+def get_val(json_data, key, do_xmlcharrefreplace=True):
+    # type : (json, str, bool) -> Any
+
+    val = str()
+
+    if type(json_data) != dict:
+        return val
+
+    if key in json_data:
+        val = json_data[key]
+    if (type(val) == unicode) and do_xmlcharrefreplace:
+        val = val.encode("ascii", "xmlcharrefreplace")
+    return val
 
 
 ############################################
@@ -1002,22 +1086,30 @@ class UnitTests(unittest.TestCase):
         self.dummy = HueGroup_14100_14100(0)
 
         self.dummy.debug_input_value[self.dummy.PIN_I_HUE_KEY] = self.cred["PIN_I_SUSER"]
-        self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_device_id"]
-        self.dummy.debug_rid = self.cred["hue_light_id"]
+        self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_light_id"]
+        # self.dummy.debug_rid = self.cred["hue_light_id"]
 
-        self.dummy.on_init()
-        self.dummy.debug = True
+        # self.dummy.on_init()
+        self.dummy.DEBUG = self.dummy.FRAMEWORK.create_debug_section()
+        self.dummy.g_out_sbc = {}  # type: {int, object}
+        self.dummy.debug = False  # type: bool
+        self.dummy.bridge_ip = self.cred["PIN_I_SHUEIP"]
+        # self.dummy.debug = True
 
     def tearDown(self):
         print("\n### tearDown")
-
-    def test_get_rig(self):
-        print("\n### test_get_rig")
-        self.assertTrue(False)
+        # self.dummy.stop_server()
 
     def test_08_print_devices(self):
         print("\n### ###test_08_print_devices")
+        self.dummy.server = ""
+        self.dummy.t = ""
+        self.dummy.http_request_handler = MyHttpRequestHandler
+        # self.dummy.run_server(8080)
         res = self.dummy.register_devices()
+        print("\n\ntest_08_print_devices results:")
+        print(res)
+        print("\n\n")
         self.assertTrue(res)
 
     def test_09_singleton_eventstream(self):
@@ -1032,24 +1124,28 @@ class UnitTests(unittest.TestCase):
         print("\n###test_11_discover")
         self.dummy.bridge_ip = None
         self.dummy.discover_hue()
-        self.assertTrue("192" in self.dummy.bridge_ip)
-
-        self.dummy.bridge_ip = None
+        self.assertTrue("192" in self.dummy.bridge_ip, "### IP not discovered")
 
     def generic_on_off(self):
-        self.assertTrue(self.dummy.set_on(False))
+        print("\n### switch off ###")
+        self.assertTrue(self.dummy.set_on(False), "### should have been off")
         time.sleep(2)
 
         self.dummy.debug_output_value[self.dummy.PIN_O_STATUS_ON_OFF] = False
+
+        print("\n### switch on ###")
         self.dummy.on_input_value(self.dummy.PIN_I_ON_OFF, True)
         time.sleep(2)
 
         self.dummy.stop_eventstream = True
-        self.assertTrue(self.dummy.debug_output_value[self.dummy.PIN_O_STATUS_ON_OFF])
+        self.assertTrue(self.dummy.debug_output_value[self.dummy.PIN_O_STATUS_ON_OFF], "### should have been on")
 
     def test_12_set_on(self):
         print("\n### test_12_set_on")
+        self.dummy.on_init()
         self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_light_id"]
+
+        time.sleep(3)
         self.generic_on_off()
 
     # def test_13_on_off_group(self):
@@ -1059,6 +1155,7 @@ class UnitTests(unittest.TestCase):
 
     def test_14_on_off_zone(self):
         print("\n### test_14_on_off_zone")
+        self.dummy.on_init()
         self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_zone_id"]
         self.generic_on_off()
 
@@ -1069,8 +1166,8 @@ class UnitTests(unittest.TestCase):
 
     def test_16_eventstream_on_off(self):
         print("\n### test_16_eventstream_on_off")
-        self.dummy.eventstream_running.set()
-        self.dummy.register_eventstream()
+        self.dummy.on_init()
+
         time.sleep(2)
         self.dummy.on_input_value(self.dummy.PIN_I_ON_OFF, False)
         time.sleep(3)
@@ -1127,6 +1224,8 @@ class UnitTests(unittest.TestCase):
     def test_19_set_color(self):
         print("\n### test_19_set_color")
         self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_light_id"]
+
+        # red
         self.dummy.debug_input_value[self.dummy.PIN_I_R] = 255
         self.dummy.debug_input_value[self.dummy.PIN_I_G] = 0
         self.dummy.debug_input_value[self.dummy.PIN_I_B] = 0
@@ -1140,6 +1239,7 @@ class UnitTests(unittest.TestCase):
         g = self.dummy.debug_output_value[self.dummy.PIN_O_G]
         b = self.dummy.debug_output_value[self.dummy.PIN_O_B]
         self.assertTrue((r == 255) and (g == 0) and (b == 0))
+
 
 #     def test_dim(self):
 #         self.dummy.debug = True
