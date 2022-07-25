@@ -48,7 +48,7 @@ class hsl20_4:
         def _set_output_value(self, pin, value):
             # type: (int, any) -> None
             self.debug_output_value[int(pin)] = value
-            print (str(time.time()) + "# Out: pin " + str(pin) + " <- \t" + str(value))
+            print (str(time.time()) + "\t# Out: pin " + str(pin) + " <- \t" + str(value))
 
         def _set_input_value(self, pin, value):
             # type: (int, any) -> None
@@ -86,10 +86,10 @@ class hsl20_4:
             pass
 
         def set_value(self, cap, text):
-            print(str(time.time()) + " Value:\t'" + str(cap) + "': " + str(text))
+            print(str(time.time()) + "\tValue:\t'" + str(cap) + "': " + str(text))
 
         def add_message(self, msg):
-            print(str(time.time()) + " Msg:  \t" + str(msg))
+            print(str(time.time()) + "\tMsg:  \t" + str(msg))
 
     ############################################
 
@@ -140,7 +140,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.sbc_data_lock.acquire()
         if pin in self.g_out_sbc:
             if self.g_out_sbc[pin] == val:
-                print (str(time.time()) + " # SBC: pin " + str(pin) + " <- data not send / " + str(val).decode("utf-8"))
+                print (str(time.time()) + "\t# SBC: pin " + str(pin) + " <- data not send / " + str(val).decode("utf-8"))
                 self.sbc_data_lock.release()
                 return
 
@@ -540,7 +540,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         return is_connected
 
     def register_eventstream(self):
-        log_debug("entering register_eventstream")
+        log_debug("Entering register_eventstream")
         if not self.get_eventstream_is_connected():
             self.eventstream_thread = threading.Thread(target=self.eventstream, args=(self.eventstream_running,))
             self.eventstream_thread.start()
@@ -667,13 +667,13 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                             xy = get_val(color, "xy")
                             x = get_val(xy, "x")
                             y = get_val(xy, "y")
-                            [r, g, b] = self.xy_bri_to_rgb(x, y, bri)
+                            [r, g, b] = self.xy_bri_to_rgb(x, y, self.curr_bri)
                             self.set_output_value_sbc(self.PIN_O_R, r)
                             self.set_output_value_sbc(self.PIN_O_G, g)
                             self.set_output_value_sbc(self.PIN_O_B, b)
 
                     else:
-                        log_debug("In process_json #662, id " + device_id + " not found in associated ids" +
+                        log_debug("In process_json #662, id " + device_id + " not found in associated ids " +
                                   str(self.associated_rids))
 
         except Exception as e:
@@ -740,9 +740,9 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         :return:
         """
 
-        r = int(r / 100.0 * 255)  # type: int
-        g = int(g / 100.0 * 255)  # type: int
-        b = int(b / 100.0 * 255)  # type: int
+        r = int(r / 255.0)  # type: int
+        g = int(g / 255.0)  # type: int
+        b = int(b / 255.0)  # type: int
 
         log_debug("entering set_color")
         [x, y, bri] = self.rgb_to_xy_bri(r, g, b)
@@ -778,7 +778,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         ret = self.http_put(rid, self.rtype, payload)
         self.log_msg("In set_color_xy_bri #780, return code is " + str(ret["status"]))
-        return (ret["status"] == 200) & self.set_bri(bri)
+        return (ret["status"] == 200)  # & self.set_bri(bri)
 
     def xy_bri_to_rgb(self, x, y, bri):
         """
@@ -909,10 +909,19 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.associated_rids = []  # type: [str]
         self.rtype = str()  # type: str
         self.curr_bri = 0  # type: int
+        self.device = HueGroup_14100_14100.HueDevice()  # type: HueGroup_14100_14100.HueDevice
 
         self.discover_hue()
         self.register_devices()
         self.register_eventstream()
+
+        for device in self.devices.values():
+            if self.rid in device.get_device_ids():
+                self.device = device
+                break
+
+        data = self.get_data("light/" + self.device.light_id)
+        self.process_json(data)
 
     def on_input_value(self, index, value):
         # Process State
@@ -992,7 +1001,7 @@ def hex2int(msg):
 
 
 def log_debug(msg):
-    print(str(time.time()) + " Debug:\t" + str(msg) + " ---")
+    print(str(time.time()) + "\tDebug:\t" + str(msg) + " ---")
 
 
 def get_val(json_data, key, do_xmlcharrefreplace=True):
@@ -1116,7 +1125,7 @@ class UnitTests(unittest.TestCase):
         self.dummy.eventstream_running.clear()
         self.assertTrue(self.dummy.debug_output_value[self.dummy.PIN_O_STATUS_ON_OFF])
         time.sleep(5)
-        print(str(time.time()) + " +++ End +++")
+        print(str(time.time()) + "\t+++ End +++")
 
     def test_17_dimming(self):
         print("\n### test_17_dimming")
