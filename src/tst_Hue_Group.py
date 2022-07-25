@@ -8,6 +8,7 @@ import urlparse
 import socket
 import time
 import json
+import colorconvert
 # import colorsys
 # import thread
 import threading
@@ -317,14 +318,26 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             # Open the URL and read the response.
             response = urllib2.urlopen(request, data=payload, timeout=5, context=ctx)
             data = {'data': response.read(), 'status': response.getcode()}
+        except urllib2.HTTPError as e:
+            self.log_msg("In http_put #322, " + str(e) + " with " +
+                         "device_rid=" + device_rid +
+                         "; api_path=" + api_path +
+                         "; payload=" + str(payload))
+            data = {'data': str(e), 'status': 0}
+        except urllib2.URLError as e:
+            self.log_msg("In http_put #328, " + str(e) + " with " +
+                         "device_rid=" + device_rid +
+                         "; api_path=" + api_path +
+                         "; payload=" + str(payload))
+            data = {'data': str(e), 'status': 0}
         except Exception as e:
-            self.log_msg("In http_put, " + str(e) + " with " +
+            self.log_msg("In http_put #334, " + str(e) + " with " +
                          "device_rid=" + device_rid +
                          "; api_path=" + api_path +
                          "; payload=" + str(payload))
             data = {'data': str(e), 'status': 0}
 
-        self.log_msg("In http_put, hue bridge response code: " + str(data["status"]))
+        self.log_msg("In http_put #341, hue bridge response code: " + str(data["status"]))
         if data["status"] != 200:
             try:
                 json_data = json.loads(data["data"])
@@ -721,7 +734,6 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
     def set_color_rgb(self, r, g, b):
         # type: (int, int, int) -> bool
         """
-
         :param r: 0-255
         :param g: 0-255
         :param b: 0-255
@@ -746,45 +758,9 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         :return: [x (0.0-1.0), y (0.0-1.0), brightness (0-100%)]
         """
 
-        # https://github.com/PhilipsHue/PhilipsHueSDK-iOS-OSX/blob/00187a3db88dedd640f5ddfa8a474458dff4e1db/ApplicationDesignNotes/RGB%20to%20xy%20Color%20conversion.md
-        # Get the RGB values from your color object and convert them to be between 0 and 1. So the RGB
-        # color(255, 0, 100)  becomes(1.0, 0.0, 0.39)
-
-        red = red / 255.0
-        green = green / 255.0
-        blue = blue / 255.0
-
-        # Apply a gamma correction to the RGB values, which makes the color more vivid and more the like the color
-        # displayed on the screen of your device. This gamma correction is also applied to the screen of your
-        # computer or phone, thus we need this to create the same color on the light as on screen.This is done
-        # by  the following formulas:
-        # float  red = (red > 0.04045f) ? pow((red + 0.055f) / (1.0f + 0.055f), 2.4f): (red / 12.92f)
-        # float green = (green > 0.04045f) ? pow((green + 0.055f) / (1.0f + 0.055f), 2.4f): (green / 12.92f)
-        # float blue = (blue > 0.04045f) ? pow((blue + 0.055f) / (1.0f + 0.055f), 2.4f): (blue / 12.92f)
-        #
-        # Convert the RGB values to XYZ using the Wide RGB D65 conversion formula
-        # The formulas used:
-
-        X = red * 0.649926 + green * 0.103455 + blue * 0.197109
-        Y = red * 0.234327 + green * 0.743075 + blue * 0.022598
-        Z = red * 0.0000000 + green * 0.053077 + blue * 1.035763
-
-        # Calculate the xy values from the XYZ values
-
-        x = X / (X + Y + Z)
-        y = Y / (X + Y + Z)
-
-        # Check if the found xy value is within the color gamut of the light, if not continue with step 6, otherwise
-        # step 7 When we sent a value which the light is not capable of, the resulting color might not be optimal.
-        # Therefor we try to only sent values which are inside the color gamut of the selected light.
-        #
-        # Calculate the closest point on the color gamut triangle and use that as xy value The closest
-        # value is calculated by making a perpendicular line to one of the lines the triangle consists of and when
-        # it is then still not inside the triangle, we choose the closest corner point of the triangle.
-        #
-        # Use the Y value of XYZ as brightness The Y value indicates the brightness of the converted color.
-
-        return [x, y, Y]
+        color_conf = colorconvert.Converter()
+        x, y = color_conf.rgb_to_xy(red, green, blue)
+        return [x, y, 1]
 
     def set_color_xy_bri(self, x, y, bri):
         # type: (float, float, float) -> bool
@@ -795,11 +771,13 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         :param bri: 0-100%
         :return:
         """
+        log_debug("set_color_xy_bri")
 
-        payload = '{"color":{"xy":{"x":' + str(x) + ', "y":' + str(y) + '}}'
+        payload = '{"color":{"xy":{"x":' + str(x) + ', "y":' + str(y) + '}}}'
         rid = str(self._get_input_value(self.PIN_I_ITM_IDX))
 
         ret = self.http_put(rid, self.rtype, payload)
+        self.log_msg("In set_color_xy_bri #780, return code is " + str(ret["status"]))
         return (ret["status"] == 200) & self.set_bri(bri)
 
     def xy_bri_to_rgb(self, x, y, bri):
@@ -810,48 +788,9 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         :param bri: 0-100%
         :return: [r, g, b] each 0-100%
         """
-        z = 1.0 - x - y
-        Y = bri / 255.0  # Brightness of lamp
-        X = (Y / y) * x
-        Z = (Y / y) * z
-        r = X * 1.612 - Y * 0.203 - Z * 0.302
-        g = -X * 0.509 + Y * 1.412 + Z * 0.066
-        b = X * 0.026 - Y * 0.072 + Z * 0.962
 
-        if r <= 0.0031308:
-            r = 12.92 * r
-        else:
-            r = (1.0 + 0.055) * pow(r, (1.0 / 2.4)) - 0.055
-
-        if g <= 0.0031308:
-            g = 12.92 * g
-        else:
-            g = (1.0 + 0.055) * pow(g, (1.0 / 2.4)) - 0.055
-
-        if b <= 0.0031308:
-            b = 12.92 * b
-        else:
-            b = (1.0 + 0.055) * pow(b, (1.0 / 2.4)) - 0.055
-
-        max_value = max(r, g, b)
-        r /= max_value
-        g /= max_value
-        b /= max_value
-        r = r * 255
-        if r < 0:
-            r = 255
-        g = g * 255
-        if g < 0:
-            g = 255
-        b = b * 255
-        if b < 0:
-            b = 255
-
-        r = r / 255.0 * 100
-        g = g / 255.0 * 100
-        b = b / 255.0 * 100
-
-        return [int(round(r)), int(round(g)), int(round(b))]
+        color_conv = colorconvert.Converter()
+        return color_conv.xy_to_rgb(x, y, bri)
 
     def prep_dim(self, val):
         """
@@ -969,7 +908,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.rid = str(self._get_input_value(self.PIN_I_ITM_IDX))  # type: str
         self.associated_rids = []  # type: [str]
         self.rtype = str()  # type: str
-        self.curr_bri = 0 # type: int
+        self.curr_bri = 0  # type: int
 
         self.discover_hue()
         self.register_devices()
@@ -1027,10 +966,8 @@ class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
 class MyHttpRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     data_lock = threading.RLock()
 
-    def __init__(self):
-        BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, request=str(),
-                                                       client_address=(str(), 0),
-                                                       server=BaseHTTPServer.BaseHTTPRequestHandler())
+    def __init__(self, request, client_address, server):
+        BaseHTTPServer.BaseHTTPRequestHandler.__init__(self, request, client_address, server)
         self.response_content_type = ""
         self.response_data = ""
 
@@ -1107,10 +1044,13 @@ class UnitTests(unittest.TestCase):
         self.dummy.http_request_handler = MyHttpRequestHandler
         # self.dummy.run_server(8080)
         res = self.dummy.register_devices()
-        print("\n\ntest_08_print_devices results:")
-        print(res)
-        print("\n\n")
         self.assertTrue(res)
+
+    def test_08_server(self):
+        print("\n### ###test_08_server")
+        self.dummy.on_init()
+        time.sleep(19)
+        self.assertTrue(False, "Assert assignment not implemented")
 
     def test_09_singleton_eventstream(self):
         print("test_09_singleton_eventstream")
@@ -1212,33 +1152,38 @@ class UnitTests(unittest.TestCase):
         self.assertTrue(bool == type(res))
 
     def test_19_xy_to_rgb(self):
-        self.dummy.eventstream_running.set()
         print("\n### test_19_xy_to_rgb")
-        [r, g, b] = self.dummy.xy_bri_to_rgb(0.640, 0.330, 1)
-        print([r, g, b])
-        self.assertEqual([255, 0, 0], [r, g, b])
+        [r, g, b] = self.dummy.xy_bri_to_rgb(0.4849, 0.3476, 1)
+        self.assertEqual([255, 165, 135], [r, g, b], "#1217")
+
         [r, g, b] = self.dummy.xy_bri_to_rgb(0.640, 0.330, 0.1043)
-        print([r, g, b])
-        self.assertEqual([125, 0, 0], [r, g, b])
+        self.assertEqual([125, 0, 0], [r, g, b], "#1220")
+
+    def test_19_rgb_to_xy(self):
+        print("\n### test_19_rgb_to_xy")
+        [x, y, bri] = self.dummy.rgb_to_xy_bri(255, 0, 0)
+        self.assertEqual([0.675, 0.322, 1], [x, y, bri], "#1153")
 
     def test_19_set_color(self):
         print("\n### test_19_set_color")
-        self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_light_id"]
+        self.dummy.on_init()
+        time.sleep(3)
 
         # red
         self.dummy.debug_input_value[self.dummy.PIN_I_R] = 255
         self.dummy.debug_input_value[self.dummy.PIN_I_G] = 0
         self.dummy.debug_input_value[self.dummy.PIN_I_B] = 0
 
-        self.dummy.eventstream_running.set()
-        time.sleep(3)
-
         self.dummy.on_input_value(self.dummy.PIN_I_R, 255)
         time.sleep(3)
+
         r = self.dummy.debug_output_value[self.dummy.PIN_O_R]
         g = self.dummy.debug_output_value[self.dummy.PIN_O_G]
         b = self.dummy.debug_output_value[self.dummy.PIN_O_B]
-        self.assertTrue((r == 255) and (g == 0) and (b == 0))
+        print(str([r, g, b]))
+        self.assertEqual(255, r, "#1182")
+        self.assertEqual(0, g, "#1183")
+        self.assertEqual(0, b, "#1184")
 
 
 #     def test_dim(self):
