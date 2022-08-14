@@ -1,6 +1,5 @@
 # coding: utf8
-
-
+# import struct
 import unittest
 import ssl
 import urllib2
@@ -64,7 +63,7 @@ class hsl20_4:
 
     class Framework:
         def __init__(self):
-            pass
+            self.my_ip = "127.0.0.1"
 
         def _run_in_context_thread(self, a):
             pass
@@ -75,7 +74,7 @@ class hsl20_4:
 
         def get_homeserver_private_ip(self):
             # type: () -> str
-            return "127.0.0.1"
+            return self.my_ip
 
         def get_instance_by_id(self, id):
             # type: (int) -> str
@@ -180,13 +179,6 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
     def discover_hue(self):
         # type: () -> str
 
-        mcast_port = 5353
-        mcast_grp = '224.0.0.251'
-
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 255)
-        sock.settimeout(5)
-
         # best definition https://courses.cs.duke.edu/fall16/compsci356/DNS/DNS-primer.pdf
         msg_id = '\x00\x01'
         query = "\x01\x00"
@@ -194,7 +186,6 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         answers = "\x00\x00"
         authority = '\x00\x00'
         additional = '\x00\x00'
-        # search = '\x14Philips Hue - 7DE70D\x04_hue\x04_tcp\x05local\x00'
         search = '\x04_hue\x04_tcp\x05local\x00'
         # query_type = '\x00\x01'  # A = a host address, https://www.rfc-editor.org/rfc/rfc1035
         query_type = '\x00\xff'  # * = All data available
@@ -203,9 +194,34 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         search = search + query_type + query_class
         query_msg = query_header + search
 
+        # configure socket
+        mcast_port = 5353
+        mcast_grp = ('224.0.0.251', mcast_port)
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 8)
+
+        # try:
+        #     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # except AttributeError:
+        #     pass
+
+        # sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_LOOP, 1)
+
+        sock.settimeout(8)
+
+        sock.bind((self.FRAMEWORK.get_homeserver_private_ip(), 0))
+
+        # send data
         try:
-            sock.sendto(query_msg, (mcast_grp, mcast_port))
+            bytes_send = sock.sendto(query_msg, mcast_grp)
+            if bytes_send != len(query_msg):
+                print("Something wrong here")
         except socket.error as e:
+            self.log_data("Socket Error", "discover: " + str(e))
+            sock.shutdown(socket.SHUT_RDWR)
+            sock.close()
+        except Exception as e:
             self.log_data("Error", "discover: " + str(e))
             sock.shutdown(socket.SHUT_RDWR)
             sock.close()
@@ -518,6 +534,13 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         info_data = info_data + "</table>\n</html>\n"
         self.set_html_content(info_data)
+
+        # pick own device
+        for device in self.devices.values():
+            if self.rid in device.get_device_ids():
+                self.device = device
+                break
+
         return True
 
     def set_html_content(self, content):
@@ -555,10 +578,10 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         sock = socket.socket()
 
         while running.is_set():
-            self.log_msg("In eventstream #508, connecting...")
+            self.log_msg("In eventstream #581, connecting...")
 
             while not self.bridge_ip:
-                self.log_msg("In eventstream #511, waiting for Hue discovery to connect to eventstream.")
+                self.log_msg("In eventstream #584, waiting for Hue discovery to connect to eventstream.")
                 time.sleep(5)
 
             api_path = 'https://' + str(self.bridge_ip) + '/eventstream/clip/v2'
@@ -576,7 +599,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 sock.send("Accept: text/event-stream\r\n\r\n")
 
             except Exception as e:
-                self.log_msg("In eventstream #529, disconnecting due to " + str(e))
+                self.log_msg("In eventstream #602, disconnecting due to " + str(e))
                 sock.close()
                 time.sleep(5)
                 continue
@@ -591,11 +614,11 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                             break
 
                 except socket.error as e:
-                    self.log_msg("In eventstream #544, socket error " + str(e.errno) + " '" + str(e.message) + "'")
+                    self.log_msg("In eventstream #617, socket error " + str(e.errno) + " '" + str(e.message) + "'")
 
                 msgs = data.split(msg_sep)
 
-                log_debug("In eventstream #548, " + str(len(msgs)) + " messages received.")
+                log_debug("In eventstream #621, " + str(len(msgs)) + " messages received.")
                 for i in range(len(msgs)):
                     if "data" not in msgs[i]:
                         continue
@@ -603,10 +626,10 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                     msg = msgs[i][msgs[i].find("data: ") + 6:]
                     try:
                         msg = json.loads(msg)
-                        log_debug("In eventstream #556, processing msg '" + json.dumps(msg) + "'.")
+                        log_debug("In eventstream #629, processing msg '" + json.dumps(msg) + "'.")
                         self.process_json(msg)
                     except Exception as e:
-                        self.log_msg("In eventstream #559, '" + str(e) + "'.")
+                        self.log_msg("In eventstream #632, '" + str(e) + "'.")
                         continue
                     else:
                         msgs[i] = str()  # remove successful processed msg
@@ -618,10 +641,10 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         # gently disconnect and wait for re-connection
         sock.close()
-        self.log_msg("Disconnected from hue eventstream.")
+        self.log_msg("In eventstream #644, Disconnected from hue eventstream.")
         time.sleep(4)
 
-        self.log_msg("Exit eventstream. No further processing.")
+        self.log_msg("In eventstream #647, exit eventstream. No further processing.")
         self.set_eventstream_is_connected(False)
 
     def process_json(self, msg):
@@ -633,8 +656,15 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             self.log_msg("In process_json #620, " + str(e))
             return False
 
+        if "status" in msg and "data" in msg:
+            msg = msg["data"]
+
+        if type(msg) == str:
+            msg = json.loads(msg)
+
         if type(msg) == dict:
             msg = [msg]
+
 
         try:
             for msg_entry in msg:
@@ -887,23 +917,14 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.t.start()
         self.log_msg("Server running on " + str(ip) + ":" + str(port))
 
-    def on_init(self):
-        log_debug("entering on_init")
-        self.DEBUG = self.FRAMEWORK.create_debug_section()
-        self.g_out_sbc = {}  # type: {int, object}
-        self.debug = False  # type: bool
-
-        # server
+    def init_server(self):
         self.server = ""
         self.t = ""
         self.http_request_handler = MyHttpRequestHandler
         self.run_server(8080)
         # self.run_server(self._get_input_value(self.PIN_I_SHUEIP))
 
-        self.eventstream_thread = threading.Thread()  # type: threading.Thread
-        self.eventstream_running = threading.Event()
-        self.eventstream_running.set()
-
+    def init_device_list(self):
         self.devices = {}  # type: {str, HueGroup_14100_14100.HueDevice}
         self.rid = str(self._get_input_value(self.PIN_I_ITM_IDX))  # type: str
         self.associated_rids = []  # type: [str]
@@ -911,17 +932,35 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.curr_bri = 0  # type: int
         self.device = HueGroup_14100_14100.HueDevice()  # type: HueGroup_14100_14100.HueDevice
 
+    def on_init(self):
+
+        # debug
+        log_debug("entering on_init")
+        self.DEBUG = self.FRAMEWORK.create_debug_section()
+        self.g_out_sbc = {}  # type: {int, object}
+        self.debug = False  # type: bool
+
+        # server
+        self.init_server()
+
+        # eventstream
+        self.eventstream_thread = threading.Thread()  # type: threading.Thread
+        self.eventstream_running = threading.Event()
+        self.eventstream_running.set()
+
+        self.init_device_list()
+
         self.discover_hue()
         self.register_devices()
         self.register_eventstream()
 
-        for device in self.devices.values():
-            if self.rid in device.get_device_ids():
-                self.device = device
-                break
-
+        # get own lamp data if already registered
         data = self.get_data("light/" + self.device.light_id)
-        self.process_json(data)
+
+        if data["status"] == 200:
+            self.process_json(data)
+        else:
+            print("Could not retrieve data for master light id in on_init")
 
     def on_input_value(self, index, value):
         # Process State
@@ -948,7 +987,16 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             self.set_bri(int(value))
 
         elif self.PIN_I_ITM_IDX == index:
+            self.init_device_list()
             self.register_devices()
+
+            # get own lamp data if registered
+            data = self.get_data("light/" + self.device.light_id)
+
+            if data["status"] == 200:
+                self.process_json(data)
+            else:
+                print("Could not retrieve data for master light id in on_init")
 
         # # todo set rgb
         elif ((self.PIN_I_R == index) or
@@ -1040,11 +1088,18 @@ class UnitTests(unittest.TestCase):
         self.dummy.g_out_sbc = {}  # type: {int, object}
         self.dummy.debug = False  # type: bool
         self.dummy.bridge_ip = self.cred["PIN_I_SHUEIP"]
+
+        self.dummy.FRAMEWORK.my_ip = self.cred["my_ip"]
         # self.dummy.debug = True
 
     def tearDown(self):
         print("\n### tearDown")
-        # self.dummy.stop_server()
+        self.dummy.stop_server()
+
+        while self.dummy.eventstream_thread.is_alive():
+            print("Eventstream still living...")
+            self.dummy.eventstream_running.clear()
+            time.sleep(3)
 
     def test_08_print_devices(self):
         print("\n### ###test_08_print_devices")
@@ -1057,9 +1112,27 @@ class UnitTests(unittest.TestCase):
 
     def test_08_server(self):
         print("\n### ###test_08_server")
-        self.dummy.on_init()
-        time.sleep(19)
-        self.assertTrue(False, "Assert assignment not implemented")
+        self.dummy.init_server()
+        self.dummy.init_device_list()
+        self.dummy.register_devices()
+
+        time.sleep(5)
+
+        api_path = 'http://127.0.0.1:8080'
+        url_parsed = urlparse.urlparse(api_path)
+        headers = {'Host': url_parsed.hostname}
+
+        # Build a http request and overwrite host header with the original hostname.
+        request = urllib2.Request(api_path, headers=headers)
+        # Open the URL and read the response.
+        response = urllib2.urlopen(request, data=None, timeout=5)
+        data = response.read()
+        self.assertEqual(response.getcode(), 200)
+        self.assertGreater(len(data), 20)
+
+        with open("../tests/debug_server_return.html", 'w') as out_file:
+            out_file.write(data)
+
 
     def test_09_singleton_eventstream(self):
         print("test_09_singleton_eventstream")
@@ -1091,8 +1164,8 @@ class UnitTests(unittest.TestCase):
 
     def test_12_set_on(self):
         print("\n### test_12_set_on")
-        self.dummy.on_init()
         self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_light_id"]
+        self.dummy.on_init()
 
         time.sleep(3)
         self.generic_on_off()
@@ -1129,7 +1202,7 @@ class UnitTests(unittest.TestCase):
 
     def test_17_dimming(self):
         print("\n### test_17_dimming")
-
+        self.dummy.on_init()
         self.dummy.eventstream_running.clear()
         time.sleep(2)
         print("------ On")
@@ -1143,7 +1216,7 @@ class UnitTests(unittest.TestCase):
         self.dummy.on_input_value(self.dummy.PIN_I_BRI, 30)
         time.sleep(2)
         res = abs(30 - float(self.dummy.debug_output_value[self.dummy.PIN_O_BRI]))
-        self.assertTrue(res <= 1, res)
+        self.assertTrue(res <= 1, "#1153")
         print("------ off")
         self.dummy.eventstream_running.set()
         self.dummy.set_on(False)
@@ -1191,7 +1264,7 @@ class UnitTests(unittest.TestCase):
         b = self.dummy.debug_output_value[self.dummy.PIN_O_B]
         print(str([r, g, b]))
         self.assertEqual(255, r, "#1182")
-        self.assertEqual(0, g, "#1183")
+        self.assertEqual(75, g, "#1183")
         self.assertEqual(0, b, "#1184")
 
 
