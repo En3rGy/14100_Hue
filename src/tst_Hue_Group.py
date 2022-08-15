@@ -877,17 +877,34 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.timer = threading.Timer(step, self.do_dim)
         self.timer.start()
 
+    def stop_eventstream(self):
+        try:
+            while self.eventstream_thread.is_alive():
+                print("Eventstream still living...")
+                self.dummy.eventstream_running.clear()
+                time.sleep(3)
+        except AttributeError:
+            print("Error in stop_eventstream #889, eventstream not yet initiated (no worries)")
+        finally:
+            pass
+
+
     def stop_server(self):
         """
         Stop server which provides info page
         """
-        if self.server:
-            try:
-                self.log_msg("Shutting down running server")
-                self.server.shutdown()
-                self.server.server_close()
-            except Exception as e:
-                self.log_msg(str(e))
+        try:
+            if self.server:
+                try:
+                    self.log_msg("Shutting down running server")
+                    self.server.shutdown()
+                    self.server.server_close()
+                except Exception as e:
+                    self.log_msg(str(e))
+        except AttributeError:
+            print("Error in stop_server #893, server not yet initiated (no worries)")
+        finally:
+            pass
 
     def run_server(self, port):
         # type: (int) -> None
@@ -898,7 +915,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         """
         log_debug("entering run_server")
         self.log_msg("Trying to start server")
-        server_address = ('', port)
+        server_address = (self.FRAMEWORK.get_homeserver_private_ip(), port)
 
         self.stop_server()
 
@@ -957,7 +974,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         # get own lamp data if already registered
         data = self.get_data("light/" + self.device.light_id)
 
-        if data["status"] == 200:
+        if int(data["status"]) == 200:
             self.process_json(data)
         else:
             print("Could not retrieve data for master light id in on_init")
@@ -1094,12 +1111,14 @@ class UnitTests(unittest.TestCase):
 
     def tearDown(self):
         print("\n### tearDown")
-        self.dummy.stop_server()
-
-        while self.dummy.eventstream_thread.is_alive():
-            print("Eventstream still living...")
-            self.dummy.eventstream_running.clear()
-            time.sleep(3)
+        try:
+            self.dummy.stop_server()
+            self.dummy.stop_eventstream()
+            del self.dummy
+        except:
+            pass
+        finally:
+            pass
 
     def test_08_print_devices(self):
         print("\n### ###test_08_print_devices")
@@ -1118,7 +1137,7 @@ class UnitTests(unittest.TestCase):
 
         time.sleep(5)
 
-        api_path = 'http://127.0.0.1:8080'
+        api_path = 'http://' + self.dummy.FRAMEWORK.get_homeserver_private_ip() + ':8080'
         url_parsed = urlparse.urlparse(api_path)
         headers = {'Host': url_parsed.hostname}
 
@@ -1132,7 +1151,6 @@ class UnitTests(unittest.TestCase):
 
         with open("../tests/debug_server_return.html", 'w') as out_file:
             out_file.write(data)
-
 
     def test_09_singleton_eventstream(self):
         print("test_09_singleton_eventstream")
@@ -1169,11 +1187,6 @@ class UnitTests(unittest.TestCase):
 
         time.sleep(3)
         self.generic_on_off()
-
-    # def test_13_on_off_group(self):
-    # print("\n### test_13_on_off_group")
-    # self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_zone_id"]
-    # self.generic_on_off()
 
     def test_14_on_off_zone(self):
         print("\n### test_14_on_off_zone")
@@ -1224,7 +1237,7 @@ class UnitTests(unittest.TestCase):
 
     def test_18_get_data(self):
         print("\n### test_get_data")
-        self.dummy.eventstream_running.set()
+        self.dummy.on_init()
         self.dummy.debug_output_value[self.dummy.PIN_O_STATUS_ON_OFF] = None
         self.dummy.g_out_sbc = {}
 
