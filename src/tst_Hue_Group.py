@@ -733,6 +733,11 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         :return:
         """
         log_debug("entering set_on")
+
+        if self.rtype == "room" or self.rtype == "zone":
+            self.log_msg("In set_on #744, on/off not available for rooms or zones")
+            return False
+
         rid = str(self._get_input_value(self.PIN_I_ITM_IDX))
 
         if set_on:
@@ -741,7 +746,6 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             payload = '{"on":{"on":false}}'
 
         ret = self.http_put(rid, self.rtype, payload)
-        self.log_msg("In set_on, return code is " + str(ret["status"]))
         return ret["status"] == 200
 
     def set_bri(self, brightness):
@@ -1177,7 +1181,7 @@ class UnitTests(unittest.TestCase):
         self.dummy.on_input_value(self.dummy.PIN_I_ON_OFF, True)
         time.sleep(2)
 
-        self.dummy.stop_eventstream = True
+        self.dummy.stop_eventstream()
         self.assertTrue(self.dummy.debug_output_value[self.dummy.PIN_O_STATUS_ON_OFF], "### should have been on")
 
     def test_12_set_on(self):
@@ -1189,15 +1193,25 @@ class UnitTests(unittest.TestCase):
         self.generic_on_off()
 
     def test_14_on_off_zone(self):
+        # on / off not available for zones, so just chek that nothing happens
         print("\n### test_14_on_off_zone")
         self.dummy.on_init()
         self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_zone_id"]
-        self.generic_on_off()
+        self.dummy.on_init()
+
+        time.sleep(3)
+        ret = self.dummy.on_input_value(self.dummy.PIN_I_ON_OFF, True)
+        self.assertFalse(ret)
 
     def test_15_on_off_room(self):
+        # on / off not available for rooms, so just chek that nothing happens
         print("\n### test_15_on_off_room")
         self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_room_id"]
-        self.generic_on_off()
+        self.dummy.on_init()
+
+        time.sleep(3)
+        ret = self.dummy.on_input_value(self.dummy.PIN_I_ON_OFF, True)
+        self.assertFalse(ret)
 
     def test_16_eventstream_on_off(self):
         print("\n### test_16_eventstream_on_off")
