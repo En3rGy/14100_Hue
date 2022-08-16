@@ -8,11 +8,11 @@ import socket
 import time
 import json
 import colorconvert
-# import colorsys
-# import thread
 import threading
 import BaseHTTPServer
 import SocketServer
+
+import random
 
 
 class hsl20_4:
@@ -27,7 +27,7 @@ class hsl20_4:
         debug_input_value = {}  # type: {int: any}
 
         def __init__(self, a, b):
-            pass
+            self.module_id = 0
 
         def _get_framework(self):
             f = hsl20_4.Framework()
@@ -60,6 +60,12 @@ class hsl20_4:
                 return self.debug_input_value[pin]
             else:
                 return 0
+
+        def _get_module_id(self):
+            # type: () -> str
+            if self.module_id == 0:
+                self.module_id = random.randint(1, 1000)
+            return self.module_id
 
     class Framework:
         def __init__(self):
@@ -128,11 +134,11 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
     def log_msg(self, text):
         # type: (str) -> None
-        self.DEBUG.add_message("14100: " + str(text))
+        self.DEBUG.add_message("14100: Module ID " + str(self._get_module_id()) + ", " + str(text))
 
     def log_data(self, key, value):
         # type: (str, any) -> None
-        self.DEBUG.set_value("14100: " + str(key), str(value))
+        self.DEBUG.set_value("14100: Module ID " + str(self._get_module_id()) + ", " + str(key), str(value))
 
     def set_output_value_sbc(self, pin, val):
         # type:  (int, any) -> None
@@ -898,15 +904,13 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         Stop server which provides info page
         """
         try:
-            if self.server:
-                try:
-                    self.log_msg("Shutting down running server")
-                    self.server.shutdown()
-                    self.server.server_close()
-                except Exception as e:
-                    self.log_msg(str(e))
+            self.log_msg("Shutting down running server")
+            self.server.shutdown()
+            self.server.server_close()
         except AttributeError:
             print("Error in stop_server #893, server not yet initiated (no worries)")
+        except Exception as e:
+            self.log_msg(str(e))
         finally:
             pass
 
@@ -936,7 +940,8 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.t = threading.Thread(target=self.server.serve_forever)
         self.t.setDaemon(True)
         self.t.start()
-        self.log_msg("Server running on " + str(ip) + ":" + str(port))
+        server_url = "http://" + str(ip) + ":" + str(port)
+        self.log_msg('Server running on <a href="' + server_url + '">' + server_url + '</a>')
 
     def init_server(self):
         self.server = ""
