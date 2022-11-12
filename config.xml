@@ -26,7 +26,8 @@
 			<remanent_variables>
             </remanent_variables>
             <imports>
-            </imports>		
+				<import>libs/hue_lib</import>
+            </imports>			
         </module>			
     </modules>
 </config>
