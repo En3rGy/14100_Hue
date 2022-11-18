@@ -68,10 +68,16 @@ def get_val(json_data, key, do_xmlcharrefreplace=True):
 
 
 def get_data(ip, key, api_cmd):
-    # type: (str, str, str) -> {str, str}
     """
     {'data': str(result), 'status': str(return code)}
-    :rtype: {string, string}
+    :param api_cmd:
+    :type api_cmd: str
+    :param key:
+    :type key: str
+    :param ip:
+    :type ip: str
+    :return: {'data': Data received, 'status': html return code}
+    :rtype: {str, str}
     """
     # log_debug("entering get_data")
     api_path = 'https://' + ip + '/clip/v2/resource/' + api_cmd

@@ -9,7 +9,7 @@ import hue_lib.supp_fct as supp_fct
 import hue_lib.hue_item as hue_item
 
 
-def get_bridge_ip():
+def get_bridge_ip(host_ip):
     """
     Function to return the globally stored Hue bridge IP. Thread save.
     Triggers a discovery for the bridge, if IP not set before.
@@ -29,7 +29,7 @@ def get_bridge_ip():
 
     try:
         if bridge_ip == str():
-            msg, ip = discover_hue()
+            msg, ip = discover_hue(host_ip)
             bridge_ip = ip
     except NameError:
         bridge_ip = str()
@@ -178,7 +178,7 @@ class HueBridge:
     def __init__(self):
         self.rtype = str()
         self.rid = str()
-        self.device = hue_item.HueDevice
+        self.device = hue_item.HueDevice()
         self.devices = {}  # type: {str, hue_item.HueDevice}
 
     def get_html_device_list(self):
@@ -211,12 +211,11 @@ class HueBridge:
     def __register_device_type(self, data):
         for item in data:
             item_id = supp_fct.get_val(item, "id")
-            if self.rid == item_id:
-                self.rtype = "device"
 
             services = supp_fct.get_val(item, "services")
             device = hue_item.HueDevice()
             device.id = item_id
+            device.rtype = "device"
             metadata = supp_fct.get_val(item, "metadata")
             device.name = supp_fct.get_val(metadata, "name")
 
@@ -227,7 +226,7 @@ class HueBridge:
                 if rtype == "light":
                     device.light_id = rid
                     if self.rid == device.light_id:
-                        self.rtype = rtype
+                        self.rtype = "light"
                 elif rtype == "zigbee_connectivity":
                     device.zigbee_connectivity_id = rid
 
@@ -309,7 +308,7 @@ class HueBridge:
                         device.grouped_lights.append(item_id)
                         self.devices[device.id] = device
 
-    def register_devices(self, key, rid):
+    def register_devices(self, key, rid, host_ip):
         """
         Goal 1: Build html tabel containing all IDs and associated service IDs
         Goal 2: Build object list containing all hue devices and associated service infos / ISs
@@ -333,7 +332,7 @@ class HueBridge:
         for item_type in item_types:
 
             # 1. get all text data from each item type from bridge
-            data_raw = supp_fct.get_data(get_bridge_ip(), key, item_type)  # type: str
+            data_raw = supp_fct.get_data(get_bridge_ip(host_ip), key, item_type)  # type: str
 
             try:
                 data = json.loads(data_raw["data"])  # type: {}
@@ -378,11 +377,13 @@ class HueBridge:
             for device in self.devices.values():
                 if rid in device.get_device_ids():
                     self.device = device
+                    self.device.id = rid
                     break
 
+        if self.device is None:
+            supp_fct.log_debug("Requested device not found")
+
         return self.device
-
-
 
     def get_next_msg(self):
         """

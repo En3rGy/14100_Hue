@@ -1,9 +1,12 @@
 # coding=utf-8
 import hue_lib.supp_fct as supp_fct
+import threading
 
 
 class HueDevice:
+
     def __init__(self):
+        self.interval = 0  # type: int
         self.id = str()  # type: str
         self.name = str()  # type: str
         self.light_id = str()  # type: str
@@ -14,6 +17,11 @@ class HueDevice:
         self.grouped_lights = []  # type: [str]
         self.rtype = str()  # type: str
         self.curr_bri = 0  # type: int
+        self.stop = False  # type: bool
+        self.timer = None   # type: threading.Timer
+        self.ip = str()  # type: str
+        self.key = str()  # type: str
+        self.dim_ramp = 0  # type: int
 
     def __str__(self):
         return ("<tr>" +
@@ -57,7 +65,7 @@ class HueDevice:
         else:
             payload = '{"on":{"on":false}}'
 
-        ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload)
+        ret = supp_fct.http_put(ip, key, self.id, self.get_type_of_device(self.id), payload)
         return ret["status"] == 200
 
     def set_bri(self, ip, key, brightness):
@@ -76,7 +84,7 @@ class HueDevice:
         supp_fct.log_debug("entering set_bri")
 
         payload = '{"dimming":{"brightness":' + str(brightness) + '}}'
-        ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload)
+        ret = supp_fct.http_put(ip, key, self.id, self.get_type_of_device(self.id), payload)
         self.curr_bri = brightness
         return ret["status"] == 200
 
@@ -101,7 +109,7 @@ class HueDevice:
 
         payload = '{"color":{"xy":{"x":' + str(x) + ', "y":' + str(y) + '}}}'
 
-        ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload)
+        ret = supp_fct.http_put(ip, key, self.id, self.get_type_of_device(self.id), payload)
         supp_fct.log_debug("In set_color_xy_bri #780, return code is " + str(ret["status"]))
         return ret["status"] == 200  # & self.set_bri(bri)
 
@@ -153,3 +161,84 @@ class HueDevice:
         ret = supp_fct.http_put(ip, key, scene_id, "scene", payload)
         return ret["status"] == 200
 
+    def prep_dim(self, ip, key, val, dim_ramp):
+        """
+
+        :param dim_ramp: Time in [s] until next dim step is performed
+        :param key:
+        :param ip:
+        :param val:
+        :type dim_ramp: int
+        :type key: str
+        :type ip: str
+        :type val: int
+        :return:
+        """
+
+        supp_fct.log_debug("Dim cmd, str(val)" + " " + str(type(val)))
+
+        if (type(val) is float) or (type(val) is int):
+            val = int(val)
+            val = chr(val)
+            val = bytearray(val)
+
+        if val[-1] == 0x00:
+            self.stop = True
+            # self.timer.cancel()
+            self.timer = None
+            print("abort")
+            return
+
+        sgn_bte = int((val[-1] & 0x08) >> 3)
+        val = int(val[-1] & 0x07)
+
+        self.interval = round(255.0 / pow(2, val - 1), 0)
+
+        if sgn_bte == 1:
+            pass
+        else:
+            self.interval = int(-1 * self.interval)
+
+        self.stop = False
+        self.ip = ip
+        self.key = key
+        self.dim_ramp = dim_ramp
+        self.do_dim()
+
+    def do_dim(self):
+        """
+        Method to perform the dim
+
+        :return: None
+        """
+        if self.stop:
+            return
+
+        new_bri = int(self.curr_bri + self.interval)
+        if new_bri > 255:
+            new_bri = 255
+        elif new_bri < 1:
+            new_bri = 1
+
+        self.set_bri(self.ip, self.key, new_bri)
+
+        if new_bri == 255 or new_bri == 1:
+            return
+
+        steps = 255 / abs(self.interval)
+        step = float(round(self.dim_ramp / steps, 4))
+
+        self.timer = threading.Timer(step, self.do_dim)
+        self.timer.start()
+
+    def get_type_of_device(self, rid):
+        if rid in self.id:
+            return "device"
+        elif rid in self.room:
+            return "room"
+        elif rid in self.zone:
+            return "zone"
+        elif rid in self.scenes:
+            return "scene"
+        elif rid in self.grouped_lights:
+            return "grouped_light"
