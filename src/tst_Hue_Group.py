@@ -14,8 +14,6 @@ import time
 import json
 
 import threading
-import BaseHTTPServer
-import SocketServer
 
 import random
 
@@ -191,8 +189,12 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 for data in msg_entry["data"]:
                     device_id = supp_fct.get_val(data, "id")
 
-                    if device_id in hue_device.get_device_ids():
-                        supp_fct.log_debug("In process_json #646, found data for own ID.")
+                    if device_id not in hue_device.get_device_ids():
+                        pass
+                        # supp_fct.log_debug("In process_json #220, id " + device_id + " not found in associated ids")
+
+                    else:
+                        # supp_fct.log_debug("In process_json #195, found data for own ID.")
 
                         if "on" in data:
                             is_on = bool(data["on"]["on"])
@@ -211,12 +213,16 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                             x = supp_fct.get_val(xy, "x")
                             y = supp_fct.get_val(xy, "y")
                             [r, g, b] = supp_fct.xy_bri_to_rgb(x, y, self.curr_bri)
+                            r = int(r / 255.0 * 100)
+                            g = int(g / 255.0 * 100)
+                            b = int(b / 255.0 * 100)
                             self.set_output_value_sbc(self.PIN_O_R, r)
                             self.set_output_value_sbc(self.PIN_O_G, g)
                             self.set_output_value_sbc(self.PIN_O_B, b)
 
-                    else:
-                        supp_fct.log_debug("In process_json #662, id " + device_id + " not found in associated ids")
+                        if supp_fct.get_val(data, "type") == "zigbee_connectivity":
+                            if "status" in data:
+                                self.set_output_value_sbc(self.PIN_O_REACHABLE, data["status"] == "connected")
 
         except Exception as e:
             self.log_msg("In process_json #666, '" + str(e) + "', with message '" + str(out) + "'")
@@ -232,6 +238,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         if not get_eventstream_is_connected():
             self.eventstream_thread = threading.Thread(target=self.eventstream, args=(self.eventstream_running, key,))
             self.eventstream_thread.start()
+            self.eventstream_running.set()
 
     def eventstream(self, running, key):
         """
@@ -250,11 +257,10 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         sock = socket.socket()
 
-        while running.is_set():
-            supp_fct.log_debug("In eventstream #581, connecting...")
-
-            while not hue_bridge.get_bridge_ip(host_ip):
-                supp_fct.log_debug("In eventstream #584, waiting for Hue discovery to connect to eventstream.")
+        # get  connection loop
+        while self.eventstream_running.is_set():
+            while not hue_bridge.get_bridge_ip(host_ip) and self.eventstream_running.is_set():
+                supp_fct.log_debug("In eventstream #255, waiting for Hue discovery to connect to eventstream.")
                 time.sleep(5)
 
             api_path = 'https://' + hue_bridge.get_bridge_ip(host_ip) + '/eventstream/clip/v2'
@@ -273,7 +279,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 sock.send("Accept: text/event-stream\r\n\r\n")
 
             except Exception as e:
-                supp_fct.log_debug("In eventstream #602, disconnecting due to " + str(e))
+                supp_fct.log_debug("In eventstream #274, disconnecting due to " + str(e))
                 sock.close()
                 set_eventstream_is_connected(False)
                 time.sleep(5)
@@ -281,22 +287,23 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
             data = str()  # type: str
 
-            while running.is_set():
+            # receive data loop
+            while self.eventstream_running.is_set():
                 try:
-                    while running.is_set():
+                    while self.eventstream_running.is_set():
                         data = data + sock.recv()
                         if msg_sep in data:
                             break
 
                 except socket.error as e:
                     supp_fct.log_debug(
-                        "In eventstream #617, socket error " + str(e.errno) + " '" + str(e.message) + "'")
+                        "In eventstream #291, socket error " + str(e.errno) + " '" + str(e.message) + "'")
                     set_eventstream_is_connected(False)
                     break
 
                 msgs = data.split(msg_sep)
 
-                supp_fct.log_debug("In eventstream #621, " + str(len(msgs)) + " messages received.")
+                supp_fct.log_debug("In eventstream #297, " + str(len(msgs)) + " messages received.")
                 for i in range(len(msgs)):
                     if "data" not in msgs[i]:
                         continue
@@ -304,7 +311,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                     msg = msgs[i][msgs[i].find("data: ") + 6:]
                     try:
                         msg = json.loads(msg)
-                        supp_fct.log_debug("In eventstream #629, processing msg '" + json.dumps(msg) + "'.")
+                        # supp_fct.log_debug("In eventstream #306, processing msg '" + json.dumps(msg) + "'.")
 
                         # store received data / message
                         self.process_json(msg)
@@ -336,11 +343,11 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         """
         try:
             while self.eventstream_thread.is_alive():
-                print("Eventstream still living...")
+                supp_fct.log_debug("Eventstream still living...")
                 self.eventstream_running.clear()
                 time.sleep(3)
-        except AttributeError:
-            print("Error in stop_eventstream #889, eventstream not yet initiated (no worries)")
+        except AttributeError as e:
+            supp_fct.log_debug("Error in stop_eventstream #342 (no worries), " + e.message)
         finally:
             pass
 
@@ -353,6 +360,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.debug = False  # type: bool
 
         # global variables
+        supp_fct.log_debug("on_init: preparing global variables")
         global instances  # type: int
         try:
             instances = instances + 1
@@ -363,20 +371,22 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         key = self._get_input_value(self.PIN_I_HUE_KEY)
         device_id = self._get_input_value(self.PIN_I_ITM_IDX)
-        # hue_bridge.set_bridge_ip(self._get_input_value(self.PIN_I))
-        msg, ip = hue_bridge.discover_hue(self.FRAMEWORK.get_homeserver_private_ip())
 
         # Connections
+        msg, ip = hue_bridge.discover_hue(self.FRAMEWORK.get_homeserver_private_ip())
+        supp_fct.log_debug("on_init: establishing connections")
         self.bridge = hue_bridge.HueBridge()
         self.bridge.register_devices(key, device_id, self.FRAMEWORK.get_homeserver_private_ip())
         device = self.bridge.get_own_device(device_id)
 
         # server
+        supp_fct.log_debug("on_init: starting server")
         self.server = html_server.HtmlServer()
         self.server.run_server(self.FRAMEWORK.get_homeserver_private_ip(), 8080)
         self.server.set_html_content(self.bridge.get_html_device_list())
 
         # get own lamp data if already registered
+        supp_fct.log_debug("on_init: get own device data")
         data = supp_fct.get_data(ip, key, "light/" + device.light_id)
 
         if int(data["status"]) == 200:
@@ -384,10 +394,16 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         else:
             print("Could not retrieve data for master light id in on_init")
 
+        data = supp_fct.get_data(ip, key, "zigbee_connectivity/" + device.zigbee_connectivity_id)
+        if int(data["status"]) == 200:
+            self.process_json(data)
+        else:
+            print("Could not retrieve zigbee connectivity data for master light")
+
         # eventstream init & start
+        supp_fct.log_debug("on_init: connecting to eventstream")
         self.eventstream_thread = threading.Thread()  # type: threading.Thread
         self.eventstream_running = threading.Event()
-        self.eventstream_running.set()
         self.event_list = []
         self.eventstream_start(key)
 
@@ -435,11 +451,15 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
               (self.PIN_I_G == index) or
               (self.PIN_I_B == index)):
 
-            device.set_on(ip, key, True)
             r = int(int(self._get_input_value(self.PIN_I_R)))
             g = int(int(self._get_input_value(self.PIN_I_G)))
             b = int(int(self._get_input_value(self.PIN_I_B)))
 
+            if r == 0 and g == 0 and b == 0:
+                device.set_on(ip, key, False)
+                return
+
+            device.set_on(ip, key, True)
             device.set_color_rgb(ip, key, r, g, b)
 
         # todo do relative dim
@@ -682,12 +702,12 @@ class UnitTests(unittest.TestCase):
 
         self.dummy.curr_bri = 255
 
-        self.device.prep_dim(self.ip, self.key, 0x85, 0.2)
+        self.device.prep_dim(self.ip, self.key, 0x85, 5)
         self.assertEqual(-16, self.device.interval)
         # self.assertEqual(10, self.device.timer.interval)
         time.sleep(3)
-        self.device.prep_dim(self.ip, self.key, 0.0, 0.2)
-        self.device.prep_dim(self.ip, self.key, 0x8d, 0.2)
+        self.device.prep_dim(self.ip, self.key, 0.0, 5)
+        self.device.prep_dim(self.ip, self.key, 0x8d, 5)
         self.assertEqual(16, self.device.interval)
 
     def test_18_get_data(self):  # 2022-11-16 OK
@@ -726,8 +746,19 @@ class UnitTests(unittest.TestCase):
 
     def test_19_set_color(self):  # 2022-11-16 OK
         print("\n### test_19_set_color")
-        ret = self.device.set_color_rgb(self.ip, self.key, 255, 0, 0)
+        ret = self.device.set_color_rgb(self.ip, self.key, 100, 0, 0)
         self.assertTrue(ret)
+
+    def test_20_reachable(self):  # 2022-11-18 OK
+        print("\n### test_20_reacable")
+        ret = supp_fct.get_data(self.ip, self.key, "zigbee_connectivity/" + self.cred["hue_zigbee_studio"])
+        self.assertTrue("data" in ret)
+        data = ret["data"]
+        data = json.loads(data)
+        data = data["data"][0]
+        self.assertTrue("status" in data)
+        status = data["status"]
+        self.assertEqual("connected", status)
 
     def test_dynamic_scene(self):  # 2022-11-16 OK
         print("\n### test_dynamic_scene")
@@ -743,34 +774,56 @@ class UnitTests(unittest.TestCase):
 
         self.dummy.on_init()
         time.sleep(5)
-        print("\nPIN_I_ON_OFF ################################################\n\n")
+        print("\n\nPIN_I_ON_OFF ################################################\n\n")
 
         self.dummy.on_input_value(self.dummy.PIN_I_ON_OFF, 0)
         self.dummy.on_input_value(self.dummy.PIN_I_ON_OFF, 1)
         time.sleep(2)
-        self.assertEqual(True, self.dummy.debug_output_value[self.dummy.PIN_I_ON_OFF])
+        self.assertEqual(True, self.dummy.debug_output_value[self.dummy.PIN_O_STATUS_ON_OFF])
 
-        print("\nPIN_I_TRIGGER ################################################\n\n")
+        print("\n\nPIN_I_TRIGGER ################################################\n\n")
 
         self.dummy.on_input_value(self.dummy.PIN_I_ON_OFF, 0)
+        self.dummy.set_output_value_sbc(self.dummy.PIN_O_STATUS_ON_OFF, True)
         self.dummy.on_input_value(self.dummy.PIN_I_TRIGGER, 1)
         time.sleep(2)
-        self.assertEqual(True, self.dummy.debug_output_value[self.dummy.PIN_I_ON_OFF])
+        self.assertEqual(False, self.dummy.debug_output_value[self.dummy.PIN_O_STATUS_ON_OFF])
 
-        print("\n################################################\n\n")
+        print("\n\nPIN_I_BRI ################################################\n\n")
+        self.dummy.on_input_value(self.dummy.PIN_I_BRI, 50)
+        time.sleep(2)
+        self.assertEqual(50, self.dummy.debug_output_value[self.dummy.PIN_O_BRI])
+
+        print("\n\nPIN_I_R / G / B ################################################\n\n")
+        self.dummy.debug_input_value[self.dummy.PIN_I_R] = 100
+        self.dummy.on_input_value(self.dummy.PIN_I_R, 100)
+        time.sleep(2)
+        self.assertEqual(100, self.dummy.debug_output_value[self.dummy.PIN_O_R])
+        print("..................")
+
+        self.dummy.debug_input_value[self.dummy.PIN_I_G] = 100
+        self.dummy.on_input_value(self.dummy.PIN_I_G, 100)
+        time.sleep(2)
+        self.assertEqual(100, self.dummy.debug_output_value[self.dummy.PIN_O_G])
+        print("..................")
+
+        self.dummy.debug_input_value[self.dummy.PIN_I_B] = 100
+        self.dummy.on_input_value(self.dummy.PIN_I_B, 100)
+        time.sleep(2)
+        self.assertEqual(100, self.dummy.debug_output_value[self.dummy.PIN_O_B])
+
+        print("\n\nPIN_I_REL_DIM ################################################\n\n")
+
+        self.dummy.debug_input_value[self.dummy.PIN_I_REL_DIM] = 0x85
+        self.dummy.debug_input_value[self.dummy.PIN_I_DIM_RAMP] = 10
+        self.dummy.on_input_value(self.dummy.PIN_I_REL_DIM, 0x85)
+        time.sleep(2)
+        self.assertEqual(1, self.dummy.debug_output_value[self.dummy.PIN_O_BRI])
 
         """
-        self.dummy.on_input_value(self.PIN_I_TRIGGER, 0)
-        self.dummy.PIN_I_TRIGGER = 1
         self.dummy.PIN_I_HUE_KEY = 2
         self.dummy.PIN_I_PORT = 3
         self.dummy.PIN_I_ITM_IDX = 4
-        self.dummy.PIN_I_ON_OFF = 5
-        self.dummy.PIN_I_BRI = 6
-        self.dummy.PIN_I_R = 7
-        self.dummy.PIN_I_G = 8
-        self.dummy.PIN_I_B = 9
-        self.dummy.PIN_I_REL_DIM = 10
         self.dummy.PIN_I_DIM_RAMP = 11
         """
 

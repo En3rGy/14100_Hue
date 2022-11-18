@@ -3,6 +3,8 @@ import threading
 import BaseHTTPServer
 import SocketServer
 
+import supp_fct
+
 
 class HtmlServer:
 
@@ -23,8 +25,7 @@ class HtmlServer:
         :rtype: None
         :return: No implemented
         """
-        supp_fcn.log_debug("entering run_server")
-        supp_fcn.log_debug("Trying to start server")
+        supp_fcn.log_debug("entering run_server, ip = " + str(ip) + ", port = " + str(port))
         server_address = (ip, port)
 
         self.stop_server()
@@ -49,14 +50,14 @@ class HtmlServer:
         """
         Stop server which provides info page
         """
+        supp_fct.log_debug("Entering html_server.HTMLServer.stop_server")
         try:
-            self.log_msg("Shutting down running server")
             self.server.shutdown()
             self.server.server_close()
         except AttributeError:
-            print("Error in stop_server #893, server not yet initiated (no worries)")
+            pass
         except Exception as e:
-            self.log_msg(str(e))
+            supp_fcn.log_debug("html_server.HTMLServer.stop_server: " + str(e))
         finally:
             pass
 

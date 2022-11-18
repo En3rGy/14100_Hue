@@ -70,6 +70,7 @@ def discover_hue(host_ip):
     :param host_ip: IP of machine, hosting the logic module.
     :return: str, str
     """
+    supp_fct.log_debug("entering hue_bridge.discover_hue, host_ip = " + host_ip)
 
     err_msg = str()
 
@@ -176,7 +177,6 @@ class HueBridge:
 
     # methods
     def __init__(self):
-        self.rtype = str()
         self.rid = str()
         self.device = hue_item.HueDevice()
         self.devices = {}  # type: {str, hue_item.HueDevice}
@@ -214,8 +214,7 @@ class HueBridge:
 
             services = supp_fct.get_val(item, "services")
             device = hue_item.HueDevice()
-            device.id = item_id
-            device.rtype = "device"
+            device.device_id = item_id
             metadata = supp_fct.get_val(item, "metadata")
             device.name = supp_fct.get_val(metadata, "name")
 
@@ -225,18 +224,14 @@ class HueBridge:
                 rtype = supp_fct.get_val(service, "rtype")
                 if rtype == "light":
                     device.light_id = rid
-                    if self.rid == device.light_id:
-                        self.rtype = "light"
                 elif rtype == "zigbee_connectivity":
                     device.zigbee_connectivity_id = rid
 
-            self.devices[device.id] = device
+            self.devices[device.device_id] = device
 
     def __register_room_type(self, data):
         for item in data:
             item_id = supp_fct.get_val(item, "id")
-            if self.rid == item_id:
-                self.rtype = "room"
             children = supp_fct.get_val(item, "children")
             for i in range(len(children)):
                 rid = supp_fct.get_val(children[i], "rid")
@@ -246,7 +241,7 @@ class HueBridge:
                     if rid in self.devices:
                         device = self.devices[rid]
                         device.room = item_id
-                        self.devices[device.id] = device
+                        self.devices[device.device_id] = device
                     else:
                         supp_fct.log_debug(
                             "In register_devices #414, device not registered as device but requested by "
@@ -255,8 +250,6 @@ class HueBridge:
     def __register_zone_type(self, data):
         for item in data:
             item_id = supp_fct.get_val(item, "id")
-            if self.rid == item_id:
-                self.rtype = "zone"
             children = supp_fct.get_val(item, "children")
             for i in range(len(children)):
                 rid = supp_fct.get_val(children[i], "rid")
@@ -266,13 +259,11 @@ class HueBridge:
                     for device in self.devices.values():
                         if device.light_id == rid:
                             device.zone = item_id
-                            self.devices[device.id] = device
+                            self.devices[device.device_id] = device
 
     def __register_scene_type(self, data):
         for item in data:
             item_id = supp_fct.get_val(item, "id")
-            if self.rid == item_id:
-                self.rtype = "scene"
             group = supp_fct.get_val(item, "group")
             rid = supp_fct.get_val(group, "rid")
             rtype = supp_fct.get_val(group, "rtype")
@@ -281,19 +272,17 @@ class HueBridge:
                 for device in self.devices.values():
                     if device.zone == rid:
                         device.scenes.append(item_id)
-                        self.devices[device.id] = device
+                        self.devices[device.device_id] = device
 
             elif rtype == "room":
                 for device in self.devices.values():
                     if device.room == rid:
                         device.scenes.append(item_id)
-                        self.devices[device.id] = device
+                        self.devices[device.device_id] = device
 
     def __register_grouped_light_type(self, data):
         for item in data:
             item_id = supp_fct.get_val(item, "id")
-            if self.rid == item_id:
-                self.rtype = "grouped_light"
             owner = supp_fct.get_val(item, "owner")
             rid = supp_fct.get_val(owner, "rid")
             rtype = supp_fct.get_val(owner, "rtype")
@@ -302,11 +291,11 @@ class HueBridge:
                 if rtype == "room":
                     if device.room == rid:
                         device.grouped_lights.append(item_id)
-                        self.devices[device.id] = device
+                        self.devices[device.device_id] = device
                 elif rtype == "zone":
                     if device.zone == rid:
                         device.grouped_lights.append(item_id)
-                        self.devices[device.id] = device
+                        self.devices[device.device_id] = device
 
     def register_devices(self, key, rid, host_ip):
         """
@@ -316,6 +305,8 @@ class HueBridge:
 
         Returns the number of registered devices
 
+        :param host_ip:
+        :type host_ip: str
         :type key: str
         :param key: Hue bridge access key
         :type rid: str
@@ -364,12 +355,15 @@ class HueBridge:
         :type rid: str
         :param rid:
         :rtype: hue_item.HueDevice
-        :return:
+        :return: Device
         """
         # pick own device
 
         # check if identified before
         if rid in self.device.get_device_ids():
+            if rid != self.device.id:
+                self.device.id = rid
+                self.device.get_type_of_device()
             return self.device
 
         # search and store own device if not identified before
@@ -378,6 +372,7 @@ class HueBridge:
                 if rid in device.get_device_ids():
                     self.device = device
                     self.device.id = rid
+                    self.device.get_type_of_device()
                     break
 
         if self.device is None:

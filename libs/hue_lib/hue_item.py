@@ -9,6 +9,7 @@ class HueDevice:
         self.interval = 0  # type: int
         self.id = str()  # type: str
         self.name = str()  # type: str
+        self.device_id = str()  # type: str
         self.light_id = str()  # type: str
         self.zigbee_connectivity_id = str()  # type: str
         self.room = str()  # type: str
@@ -26,7 +27,7 @@ class HueDevice:
     def __str__(self):
         return ("<tr>" +
                 "<td>" + self.name.encode("ascii", "xmlcharrefreplace") + "</td>" +
-                "<td>" + self.id.encode("ascii", "xmlcharrefreplace") + "</td>" +
+                "<td>" + self.device_id.encode("ascii", "xmlcharrefreplace") + "</td>" +
                 "<td>" + self.light_id.encode("ascii", "xmlcharrefreplace") + "</td>" +
                 "<td>" + self.zigbee_connectivity_id.encode("ascii", "xmlcharrefreplace") + "</td>" +
                 "<td>" + self.room.encode("ascii", "xmlcharrefreplace") + "</td>" +
@@ -36,8 +37,9 @@ class HueDevice:
                 "</tr>\n")
 
     def get_device_ids(self):
-        ret = [self.id, self.light_id, self.zigbee_connectivity_id,
-               self.room, self.zone, self.scenes, self.grouped_lights]  # type: [str]
+        ret = [self.device_id, self.light_id, self.zigbee_connectivity_id, self.room, self.zone]   # type: [str]
+        ret.extend(self.scenes)
+        ret.extend(self.grouped_lights)
 
         return ret
 
@@ -65,7 +67,7 @@ class HueDevice:
         else:
             payload = '{"on":{"on":false}}'
 
-        ret = supp_fct.http_put(ip, key, self.id, self.get_type_of_device(self.id), payload)
+        ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload)
         return ret["status"] == 200
 
     def set_bri(self, ip, key, brightness):
@@ -84,7 +86,7 @@ class HueDevice:
         supp_fct.log_debug("entering set_bri")
 
         payload = '{"dimming":{"brightness":' + str(brightness) + '}}'
-        ret = supp_fct.http_put(ip, key, self.id, self.get_type_of_device(self.id), payload)
+        ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload)
         self.curr_bri = brightness
         return ret["status"] == 200
 
@@ -109,7 +111,7 @@ class HueDevice:
 
         payload = '{"color":{"xy":{"x":' + str(x) + ', "y":' + str(y) + '}}}'
 
-        ret = supp_fct.http_put(ip, key, self.id, self.get_type_of_device(self.id), payload)
+        ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload)
         supp_fct.log_debug("In set_color_xy_bri #780, return code is " + str(ret["status"]))
         return ret["status"] == 200  # & self.set_bri(bri)
 
@@ -123,16 +125,16 @@ class HueDevice:
         :type r: int
         :type g: int
         :type b: int
-        :param r: 0-255
-        :param g: 0-255
-        :param b: 0-255
+        :param r: 0-100 prct
+        :param g: 0-100 prct
+        :param b: 0-100 prct
         :rtype: bool
         :return:
         """
 
-        r = int(r / 255.0)  # type: int
-        g = int(g / 255.0)  # type: int
-        b = int(b / 255.0)  # type: int
+        r = int(r * 2.55)  # type: int
+        g = int(g * 2.55)  # type: int
+        b = int(b * 2.55)  # type: int
 
         supp_fct.log_debug("entering set_color")
         [x, y, bri] = supp_fct.rgb_to_xy_bri(r, g, b)
@@ -231,14 +233,18 @@ class HueDevice:
         self.timer = threading.Timer(step, self.do_dim)
         self.timer.start()
 
-    def get_type_of_device(self, rid):
-        if rid in self.id:
-            return "device"
-        elif rid in self.room:
-            return "room"
-        elif rid in self.zone:
-            return "zone"
-        elif rid in self.scenes:
-            return "scene"
-        elif rid in self.grouped_lights:
-            return "grouped_light"
+    def get_type_of_device(self):
+        if self.id in self.device_id:
+            self.rtype = "device"
+        elif self.id in self.room:
+            self.rtype = "room"
+        elif self.id in self.zone:
+            self.rtype = "zone"
+        elif self.id in self.scenes:
+            self.rtype = "scene"
+        elif self.id in self.grouped_lights:
+            self.rtype = "grouped_light"
+        elif self.id in self.light_id:
+            self.rtype = "light"
+
+        return self.rtype

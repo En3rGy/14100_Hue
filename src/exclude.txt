@@ -1,5 +1,7 @@
 .json
 tst_Hue_Group.py
+colorconvert.py
+.txt
 .project
 .pydevproject
 .pyc

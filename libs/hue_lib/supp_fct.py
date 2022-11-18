@@ -49,7 +49,7 @@ def hex2int(msg):
 
 
 def log_debug(msg):
-    print(str(time.time()) + "\tDebug:\t" + str(msg) + " ---")
+    print(str(time.time()) + "\tDebug:\t" + str(msg))
 
 
 def get_val(json_data, key, do_xmlcharrefreplace=True):
@@ -94,13 +94,12 @@ def get_data(ip, key, api_cmd):
         response = urllib2.urlopen(request, data=None, timeout=5, context=ctx)
         data = {'data': response.read(), 'status': str(response.getcode())}
 
-        print("In get_data #288, Hue bridge response code for '" + api_cmd + "' is " + data["status"])
+        if int(data["status"]) != 200:
+            log_debug("In supp_dct.get_data #97, Hue bridge response code for '" + api_cmd + "' is " + data["status"])
 
     except Exception as e:
-        print("In get_data #291, " + str(e))
         data = {'data': str(e), 'status': str(0)}
-        print(data)
-
+        log_debug("In get_data #291, " + str(e) + ", data: " + str(data))
     return data
 
 
