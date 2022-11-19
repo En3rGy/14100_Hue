@@ -140,6 +140,23 @@ class HueDevice:
         [x, y, bri] = supp_fct.rgb_to_xy_bri(r, g, b)
         return self.set_color_xy_bri(ip, key, x, y, bri)
 
+    def set_scene(self, ip, key, scene_id):
+        """
+
+        :param key:
+        :type key: str
+        :param scene_id:
+        :type scene_id: str
+        :param ip:
+        :type ip: str
+        :rtype: bool
+        :return:
+        """
+        supp_fct.log_debug("Entering set_scene")
+        payload = '{"recall":{"action": "active"}}'
+        ret = supp_fct.http_put(ip, key, scene_id, "scene", payload)
+        return ret["status"] == 200
+
     def set_dynamic_scene(self, ip, key, scene_id):
         """
 
@@ -153,13 +170,7 @@ class HueDevice:
         :return:
         """
         supp_fct.log_debug("Entering set_dynamic_scene")
-
-        # if not self.rtype == "scene":
-        #     supp_fct.log_debug("In set_dynamic_scene #818, dynamic scenes only work with scenes")
-        #     return False
-
         payload = '{"recall": {"action": "dynamic_palette"}, "speed": 0.7}'
-
         ret = supp_fct.http_put(ip, key, scene_id, "scene", payload)
         return ret["status"] == 200
 

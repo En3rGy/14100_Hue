@@ -28,13 +28,14 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.PIN_I_HUE_KEY=2
         self.PIN_I_PORT=3
         self.PIN_I_ITM_IDX=4
-        self.PIN_I_ON_OFF=5
-        self.PIN_I_BRI=6
-        self.PIN_I_R=7
-        self.PIN_I_G=8
-        self.PIN_I_B=9
-        self.PIN_I_REL_DIM=10
-        self.PIN_I_DIM_RAMP=11
+        self.PIN_I_SCENE=5
+        self.PIN_I_ON_OFF=6
+        self.PIN_I_BRI=7
+        self.PIN_I_R=8
+        self.PIN_I_G=9
+        self.PIN_I_B=10
+        self.PIN_I_REL_DIM=11
+        self.PIN_I_DIM_RAMP=12
         self.PIN_O_STATUS_ON_OFF=1
         self.PIN_O_BRI=2
         self.PIN_O_R=3
@@ -46,7 +47,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 #### Own written code can be placed after this commentblock . Do not change or delete commentblock! ####
 ###################################################################################################!!!##
 
-    global eventstream_is_connected  # type: bool
+   global eventstream_is_connected  # type: bool
 
     sbc_data_lock = threading.Lock()
 
@@ -297,7 +298,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             self.log_data("Hue devices", amount)
 
             # server
-            server_port = 8080
+            server_port = self._get_input_value(self.PIN_I_PORT)
             self.server.run_server(self.FRAMEWORK.get_homeserver_private_ip(), server_port)
             self.server.set_html_content(self.bridge.get_html_device_list())
             self.log_data("Info-Server", self.FRAMEWORK.get_homeserver_private_ip() + ":" + str(server_port))
@@ -363,6 +364,12 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         # Process set commands
         if self.PIN_I_ON_OFF == index:
             device.set_on(ip, key, bool(value))
+
+        elif self.PIN_I_SCENE == index:
+            scene = hue_item.HueDevice()
+            scene.id = value
+            scene.rtype = "scene"
+            scene.set_scene(ip, key, value)
 
         elif self.PIN_I_BRI == index:
             device.set_on(ip, key, True)
@@ -435,4 +442,3 @@ def set_eventstream_is_connected(is_connected):
     eventstream_is_connected = is_connected
     eventstream_is_connected_lock.release()
     return is_connected
-

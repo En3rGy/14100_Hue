@@ -5,8 +5,9 @@
             <inputs>
 				<input type="number" const_name="trigger" init_value="0">Get Status</input>
                 <input type="string" const_name="hue_key" init_value="">Key</input>
-				<input type="number" const_name="port" init_value="0">Port info page</input>
-				<input type="number" const_name="itm_idx" init_value="0">Item Id</input>
+				<input type="number" const_name="port" init_value="8080">Port info page</input>
+				<input type="string" const_name="itm_idx" init_value="">Item Id</input>
+				<input type="string" const_name="scene" init_value="">Scene Id</input>
 				<input type="number" const_name="on_off" init_value="0">On/Off (1/0)</input>
                 <input type="number" const_name="bri" init_value="0">Brightness (%)</input>
 				<input type="number" const_name="r" init_value="0">r</input>

@@ -1,5 +1,6 @@
 # coding: utf8
 # import struct
+import hue_item
 import hue_lib.hue_bridge
 import hue_lib.hue_bridge as hue_bridge
 import hue_lib.supp_fct as supp_fct
@@ -120,24 +121,25 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
     def __init__(self, homeserver_context):
         hsl20_4.BaseModule.__init__(self, homeserver_context, "hsl20_3_Hue")
         self.FRAMEWORK = self._get_framework()
-        self.LOGGER = self._get_logger(hsl20_4.LOGGING_NONE, ())
-        self.PIN_I_TRIGGER = 1
-        self.PIN_I_HUE_KEY = 2
-        self.PIN_I_PORT = 3
-        self.PIN_I_ITM_IDX = 4
-        self.PIN_I_ON_OFF = 5
-        self.PIN_I_BRI = 6
-        self.PIN_I_R = 7
-        self.PIN_I_G = 8
-        self.PIN_I_B = 9
-        self.PIN_I_REL_DIM = 10
-        self.PIN_I_DIM_RAMP = 11
-        self.PIN_O_STATUS_ON_OFF = 1
-        self.PIN_O_BRI = 2
-        self.PIN_O_R = 3
-        self.PIN_O_G = 4
-        self.PIN_O_B = 5
-        self.PIN_O_REACHABLE = 6
+        self.LOGGER = self._get_logger(hsl20_4.LOGGING_NONE,())
+        self.PIN_I_TRIGGER=1
+        self.PIN_I_HUE_KEY=2
+        self.PIN_I_PORT=3
+        self.PIN_I_ITM_IDX=4
+        self.PIN_I_SCENE=5
+        self.PIN_I_ON_OFF=6
+        self.PIN_I_BRI=7
+        self.PIN_I_R=8
+        self.PIN_I_G=9
+        self.PIN_I_B=10
+        self.PIN_I_REL_DIM=11
+        self.PIN_I_DIM_RAMP=12
+        self.PIN_O_STATUS_ON_OFF=1
+        self.PIN_O_BRI=2
+        self.PIN_O_R=3
+        self.PIN_O_G=4
+        self.PIN_O_B=5
+        self.PIN_O_REACHABLE=6
 
     ########################################################################################################
     #### Own written code can be placed after this commentblock . Do not change or delete commentblock! ####
@@ -394,7 +396,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             self.log_data("Hue devices", amount)
 
             # server
-            server_port = 8080
+            server_port = self._get_input_value(self.PIN_I_PORT)
             self.server.run_server(self.FRAMEWORK.get_homeserver_private_ip(), server_port)
             self.server.set_html_content(self.bridge.get_html_device_list())
             self.log_data("Info-Server", self.FRAMEWORK.get_homeserver_private_ip() + ":" + str(server_port))
@@ -460,6 +462,12 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         # Process set commands
         if self.PIN_I_ON_OFF == index:
             device.set_on(ip, key, bool(value))
+
+        elif self.PIN_I_SCENE == index:
+            scene = hue_item.HueDevice()
+            scene.id = value
+            scene.rtype = "scene"
+            scene.set_scene(ip, key, value)
 
         elif self.PIN_I_BRI == index:
             device.set_on(ip, key, True)
@@ -708,6 +716,11 @@ class UnitTests(unittest.TestCase):
         ret = device.set_on(self.ip, self.key, "error")
         self.assertFalse(ret)
 
+    def test_21_scene(self):
+        scene_id = self.cred["hue_scene_id"]
+        ret = self.device.set_scene(self.ip, self.key, scene_id)
+        self.assertTrue(ret)
+
     def test_15_on_off_room(self):
         # on / off not available for rooms, so just chek that nothing happens
         print("\n### test_15_on_off_room")
@@ -847,6 +860,9 @@ class UnitTests(unittest.TestCase):
         self.dummy.on_input_value(self.dummy.PIN_I_REL_DIM, 0x85)
         time.sleep(2)
         self.assertEqual(1, self.dummy.debug_output_value[self.dummy.PIN_O_BRI])
+
+        print("\n\nPIN_I_SCENE ################################################\n\n")
+        self.dummy.on_input_value(self.dummy.PIN_I_SCENE, self.cred["hue_scene_id"])
 
         """
         self.dummy.PIN_I_HUE_KEY = 2
