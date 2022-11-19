@@ -1,10 +1,6 @@
 import socket
 import threading
 import json
-import time
-import ssl
-import urlparse
-
 import hue_lib.supp_fct as supp_fct
 import hue_lib.hue_item as hue_item
 
@@ -171,15 +167,18 @@ def discover_hue(host_ip):
     return err_msg, str()
 
 
-
-
 class HueBridge:
 
     # methods
     def __init__(self):
         self.rid = str()
         self.device = hue_item.HueDevice()
-        self.devices = {}  # type: {str, hue_item.HueDevice}
+        global devices
+        try:
+            len(devices)
+        except NameError:
+            devices = {}  # type: {str, hue_item.HueDevice}
+
 
     def get_html_device_list(self):
         """
@@ -201,7 +200,9 @@ class HueBridge:
                      "<th>Grouped Lights</th>" +
                      "</tr>\n")
 
-        for device in self.devices.values():
+        global devices
+
+        for device in devices.values():
             info_data = info_data + str(device)
 
         info_data = info_data + "</table>\n</html>\n"
@@ -209,6 +210,7 @@ class HueBridge:
         return info_data
 
     def __register_device_type(self, data):
+        global devices
         for item in data:
             item_id = supp_fct.get_val(item, "id")
 
@@ -227,9 +229,10 @@ class HueBridge:
                 elif rtype == "zigbee_connectivity":
                     device.zigbee_connectivity_id = rid
 
-            self.devices[device.device_id] = device
+            devices[device.device_id] = device
 
     def __register_room_type(self, data):
+        global devices
         for item in data:
             item_id = supp_fct.get_val(item, "id")
             children = supp_fct.get_val(item, "children")
@@ -238,16 +241,17 @@ class HueBridge:
                 rtype = supp_fct.get_val(children[i], "rtype")
 
                 if rtype == "device":
-                    if rid in self.devices:
-                        device = self.devices[rid]
+                    if rid in devices:
+                        device = devices[rid]
                         device.room = item_id
-                        self.devices[device.device_id] = device
+                        devices[device.device_id] = device
                     else:
                         supp_fct.log_debug(
                             "In register_devices #414, device not registered as device but requested by "
                             "'room': '" + rid + "'")
 
     def __register_zone_type(self, data):
+        global devices
         for item in data:
             item_id = supp_fct.get_val(item, "id")
             children = supp_fct.get_val(item, "children")
@@ -256,12 +260,13 @@ class HueBridge:
                 rtype = supp_fct.get_val(children[i], "rtype")
 
                 if rtype == "light":
-                    for device in self.devices.values():
+                    for device in devices.values():
                         if device.light_id == rid:
                             device.zone = item_id
-                            self.devices[device.device_id] = device
+                            devices[device.device_id] = device
 
     def __register_scene_type(self, data):
+        global devices
         for item in data:
             item_id = supp_fct.get_val(item, "id")
             group = supp_fct.get_val(item, "group")
@@ -269,33 +274,34 @@ class HueBridge:
             rtype = supp_fct.get_val(group, "rtype")
 
             if rtype == "zone":
-                for device in self.devices.values():
+                for device in devices.values():
                     if device.zone == rid:
                         device.scenes.append(item_id)
-                        self.devices[device.device_id] = device
+                        devices[device.device_id] = device
 
             elif rtype == "room":
-                for device in self.devices.values():
+                for device in devices.values():
                     if device.room == rid:
                         device.scenes.append(item_id)
-                        self.devices[device.device_id] = device
+                        devices[device.device_id] = device
 
     def __register_grouped_light_type(self, data):
+        global devices
         for item in data:
             item_id = supp_fct.get_val(item, "id")
             owner = supp_fct.get_val(item, "owner")
             rid = supp_fct.get_val(owner, "rid")
             rtype = supp_fct.get_val(owner, "rtype")
 
-            for device in self.devices.values():
+            for device in devices.values():
                 if rtype == "room":
                     if device.room == rid:
                         device.grouped_lights.append(item_id)
-                        self.devices[device.device_id] = device
+                        devices[device.device_id] = device
                 elif rtype == "zone":
                     if device.zone == rid:
                         device.grouped_lights.append(item_id)
-                        self.devices[device.device_id] = device
+                        devices[device.device_id] = device
 
     def register_devices(self, key, rid, host_ip):
         """
@@ -317,7 +323,8 @@ class HueBridge:
         item_types = ["device", "room", "zone", "scene", "grouped_light"]
 
         # start to store info of devices
-        self.devices = {}
+        global devices
+        devices = {}
         self.rid = rid  # type: str
 
         for item_type in item_types:
@@ -344,9 +351,9 @@ class HueBridge:
             elif item_type == "grouped_light":
                 self.__register_grouped_light_type(data)
 
-        supp_fct.log_debug("In register_devices #466, registered " + str(len(self.devices)) + " devices")
+        supp_fct.log_debug("In register_devices #466, registered " + str(len(devices)) + " devices")
 
-        return len(self.devices)
+        return len(devices)
 
     def get_own_device(self, rid):
         """
@@ -357,7 +364,7 @@ class HueBridge:
         :rtype: hue_item.HueDevice
         :return: Device
         """
-        # pick own device
+        global devices
 
         # check if identified before
         if rid in self.device.get_device_ids():
@@ -368,7 +375,7 @@ class HueBridge:
 
         # search and store own device if not identified before
         else:
-            for device in self.devices.values():
+            for device in devices.values():
                 if rid in device.get_device_ids():
                     self.device = device
                     self.device.id = rid
@@ -379,16 +386,3 @@ class HueBridge:
             supp_fct.log_debug("Requested device not found")
 
         return self.device
-
-    def get_next_msg(self):
-        """
-        Gets the first / the oldest record of the eventstream and removes the event from the list.
-
-        @todo Make thread safe
-
-        :rtype: str
-        :return: First / the oldest recorded by the eventstream
-        """
-        if len(self.event_list) > 0:
-            return self.event_list.pop(0)
-        return str()

@@ -10,6 +10,8 @@ Bausteine als Kaskade geschaltet werden.
 
 Der Baustein erkennt selbständig die Hue-Bridge im Netzwerk und verbindet sich mit dieser.
 
+!Wenn sich die IP der Bridge ändert, ist ein Neustart des HS notwendig!
+
 Der Baustein nutzt die [Hue API v2](https://developers.meethue.com/develop/hue-api-v2/).
 
 ## Eingänge
@@ -102,13 +104,24 @@ Der Code des Bausteins befindet sich in der hslz Datei oder auf [github](https:/
 - Automatisches re-connect mit Hue-Bridge bei Verbindungsabbruch [#10](https://github.com/En3rGy/14100_Hue/issues/10)
 - Bei mehreren Bausteininstanzen verbindet sich nur einer mit der Hue Bridge und teilt die erhaltenen Informatione [#9](https://github.com/En3rGy/14100_Hue/issues/9)
 - Bereitstellen einer Web-Seite mit Informationen zu Hue-IDs [#8](https://github.com/En3rGy/14100_Hue/issues/8)
+- Soll den HS nicht blockieren [#23](https://github.com/En3rGy/14100_Hue/issues/23)
 
 ## Software Design Description
+Das Modul ist so weit möglich objektorientiert entwickelt.
+Hierbei gibt es vor allem zwei Objekte:
+- Bridge Objekt<br>Zur Kommunikation mit der Hue Bridge, incl. Bridge Discovery
+- Hue Item Objekt<br>Zur Kommandierung der Hue-Objekte, wie Lampen, Räume, Szenen, etc.
+Wesentliches Element der Hue API v2 ist der *Eventstream*. Programme können sich für dieses registrieren und erhalten von der Hue Bridge quasi unmittelbar Statusänderungen.
+
+Bei mehreren Hue-Logikbausteinen verbindet sich nur einer der Bausteine mit dem Eventstream und leitet eingehende Meldungen an alle anderen Hue-Bausteine weiter. 
+Dies geschieht über den gemeinsamen Scope, eine Verbindung der Bausteine über iKO ist *nicht* notwendig. 
+
+Außerdem:
 - Lampen / Szenen / Zonen / Räume / Gruppen werden über die Id unterschieden; Abfrage des Typs via /resource {data{id, type}}
 - Abh. von der Aktion wird die jew. rid über die Device id herausgesucht
-- Der Status wird über den Event Stream ausgelesen
 - Nur ein Baustein verbindet sich mit der Hue Bridge, die übrigen nutzen diese Verbindung über [HS Instanzen](http://127.0.0.1/doc_extra/de/commloginst.html)
 - Die eventstream Verbindung läuft in einem eigenen Thread in einer `While true`-Schleife
+- Wenn zur Initialisierungszeit keine Netzwerkverbindung besteht, wird bei Signalen auf den Bausteineingängen versucht, eine Verbindung zur Bridge herzustellen. 
 
 ## Validation & Verification
 - Unit tests are performed.

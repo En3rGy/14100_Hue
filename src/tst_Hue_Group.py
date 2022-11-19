@@ -4,6 +4,7 @@ import hue_lib.hue_bridge
 import hue_lib.hue_bridge as hue_bridge
 import hue_lib.supp_fct as supp_fct
 import hue_lib.html_server as html_server
+import hue_lib.singleton as singlet
 
 import unittest
 import ssl
@@ -22,7 +23,17 @@ class hsl20_4:
     LOGGING_NONE = 0
 
     def __init__(self):
+        self.module_id = random.randint(1, 1000)
         pass
+
+    def _get_module_id(self):
+        """
+        Helper function to get ID of module.
+
+        :return: Module ID
+        :rtype: str
+        """
+        return self.module_id
 
     class BaseModule:
         debug_output_value = {}  # type: {int, any}
@@ -65,7 +76,11 @@ class hsl20_4:
                 return 0
 
         def _get_module_id(self):
-            # type: () -> int
+            """
+
+            :return: module id
+            :rtype: int
+            """
             if self.module_id == 0:
                 self.module_id = random.randint(1, 1000)
             return self.module_id
@@ -86,8 +101,8 @@ class hsl20_4:
             return self.my_ip
 
         def get_instance_by_id(self, id):
-            # type: (int) -> str
-            return ""
+            # type: (int) -> HueGroup_14100_14100
+            return HueGroup_14100_14100(0)
 
     class DebugHelper:
         def __init__(self):
@@ -131,25 +146,23 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
     ###################################################################################################!!!##
 
     global eventstream_is_connected  # type: bool
-    global instances  # type: int
 
     sbc_data_lock = threading.Lock()
 
     def log_msg(self, text):
         # type: (str) -> None
-        self.DEBUG.add_message("14100: Module ID " + str(self._get_module_id()) + ", " + str(text))
+        self.DEBUG.add_message("14100 Module ID " + str(self._get_module_id()) + ": " + str(text))
 
     def log_data(self, key, value):
         # type: (str, any) -> None
-        self.DEBUG.set_value("14100: Module ID " + str(self._get_module_id()) + ", " + str(key), str(value))
+        self.DEBUG.set_value("14100 Module ID " + str(self._get_module_id()) + ": " + str(key), str(value))
 
     def set_output_value_sbc(self, pin, val):
         # type:  (int, any) -> None
         self.sbc_data_lock.acquire()
         if pin in self.g_out_sbc:
             if self.g_out_sbc[pin] == val:
-                print (str(time.time()) + "\t# SBC: pin " + str(pin) + " <- data not send / " + str(val).decode(
-                    "utf-8"))
+                supp_fct.log_debug("SBC: pin " + str(pin) + " <- data not send / " + str(val).decode("utf-8"))
                 self.sbc_data_lock.release()
                 return
 
@@ -180,7 +193,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
             for msg_entry in msg:
                 if "data" not in msg_entry:
-                    supp_fct.log_debug("In process_json #183, no 'data' field in '" + msg_entry + "'.")
+                    self.log_data("In process_json #183, no 'data' field",  msg_entry)
                     continue
 
                 if type(msg_entry["data"]) == str:
@@ -191,11 +204,8 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
                     if device_id not in hue_device.get_device_ids():
                         pass
-                        # supp_fct.log_debug("In process_json #220, id " + device_id + " not found in associated ids")
 
                     else:
-                        # supp_fct.log_debug("In process_json #195, found data for own ID.")
-
                         if "on" in data:
                             is_on = bool(data["on"]["on"])
                             self.set_output_value_sbc(self.PIN_O_STATUS_ON_OFF, is_on)
@@ -225,7 +235,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                                 self.set_output_value_sbc(self.PIN_O_REACHABLE, data["status"] == "connected")
 
         except Exception as e:
-            self.log_msg("In process_json #666, '" + str(e) + "', with message '" + str(out) + "'")
+            self.log_data("Error in process_json #239", str(e) + " with\n\n" + str(out))
 
     def eventstream_start(self, key):
         """
@@ -260,7 +270,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         # get  connection loop
         while self.eventstream_running.is_set():
             while not hue_bridge.get_bridge_ip(host_ip) and self.eventstream_running.is_set():
-                supp_fct.log_debug("In eventstream #255, waiting for Hue discovery to connect to eventstream.")
+                self.log_msg("In eventstream #277, waiting for Hue discovery to connect to eventstream.")
                 time.sleep(5)
 
             api_path = 'https://' + hue_bridge.get_bridge_ip(host_ip) + '/eventstream/clip/v2'
@@ -279,13 +289,14 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 sock.send("Accept: text/event-stream\r\n\r\n")
 
             except Exception as e:
-                supp_fct.log_debug("In eventstream #274, disconnecting due to " + str(e))
+                self.log_msg("In eventstream #274, disconnecting due to " + str(e))
                 sock.close()
                 set_eventstream_is_connected(False)
                 time.sleep(5)
                 continue
 
             data = str()  # type: str
+            self.log_msg("Connected to eventstream")
 
             # receive data loop
             while self.eventstream_running.is_set():
@@ -296,7 +307,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                             break
 
                 except socket.error as e:
-                    supp_fct.log_debug(
+                    self.log_msg(
                         "In eventstream #291, socket error " + str(e.errno) + " '" + str(e.message) + "'")
                     set_eventstream_is_connected(False)
                     break
@@ -314,10 +325,17 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                         # supp_fct.log_debug("In eventstream #306, processing msg '" + json.dumps(msg) + "'.")
 
                         # store received data / message
+                        modules = singlet.get_module_register()
+                        for module_id in modules:
+                            if module_id == self._get_module_id():
+                                continue
+                            module_instance = self.FRAMEWORK.get_instance_by_id(module_id)
+                            module_instance.process_json(msg)
+
                         self.process_json(msg)
 
                     except Exception as e:
-                        supp_fct.log_debug("In eventstream #632, '" + str(e) + "'.")
+                        self.log_msg("In eventstream #342, '" + str(e) + "'.")
                         continue
                     else:
                         msgs[i] = str()  # remove successful processed msg
@@ -329,10 +347,8 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         # gently disconnect and wait for re-connection
         sock.close()
-        supp_fct.log_debug("In eventstream #395, Disconnected from hue eventstream.")
+        self.log_msg("In eventstream #395, Disconnected from hue eventstream.")
         time.sleep(4)
-
-        supp_fct.log_debug("In eventstream #398, exit eventstream. No further processing.")
         set_eventstream_is_connected(False)
 
     def stop_eventstream(self):
@@ -351,72 +367,82 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         finally:
             pass
 
-    def on_init(self):
+    def do_init(self):
+        """
 
-        # debug
-        supp_fct.log_debug("entering on_init")
-        self.DEBUG = self.FRAMEWORK.create_debug_section()
-        self.g_out_sbc = {}  # type: {int, object}
-        self.debug = False  # type: bool
-
-        # global variables
-        supp_fct.log_debug("on_init: preparing global variables")
-        global instances  # type: int
-        try:
-            instances = instances + 1
-        except NameError:
-            instances = 1
-        finally:
-            self.DEBUG.set_value("Instances", instances)
-
+        :return: False if errors occur
+        :rtype: bool
+        """
         key = self._get_input_value(self.PIN_I_HUE_KEY)
         device_id = self._get_input_value(self.PIN_I_ITM_IDX)
+        self.bridge = hue_bridge.HueBridge()
+        self.server = html_server.HtmlServer()
+        self.singleton = singlet.Singleton(self._get_module_id())
 
         # Connections
-        msg, ip = hue_bridge.discover_hue(self.FRAMEWORK.get_homeserver_private_ip())
-        supp_fct.log_debug("on_init: establishing connections")
-        self.bridge = hue_bridge.HueBridge()
-        self.bridge.register_devices(key, device_id, self.FRAMEWORK.get_homeserver_private_ip())
-        device = self.bridge.get_own_device(device_id)
+        ip = hue_bridge.get_bridge_ip(self.FRAMEWORK.get_homeserver_private_ip())
+        if ip == str():
+            self.log_msg("No connection to bridge available.")
+            return False
 
-        # server
-        supp_fct.log_debug("on_init: starting server")
-        self.server = html_server.HtmlServer()
-        self.server.run_server(self.FRAMEWORK.get_homeserver_private_ip(), 8080)
-        self.server.set_html_content(self.bridge.get_html_device_list())
+        if self.singleton.is_master():
+            amount = self.bridge.register_devices(key, device_id, self.FRAMEWORK.get_homeserver_private_ip())
+            self.log_data("Hue devices", amount)
+
+            # server
+            server_port = 8080
+            self.server.run_server(self.FRAMEWORK.get_homeserver_private_ip(), server_port)
+            self.server.set_html_content(self.bridge.get_html_device_list())
+            self.log_data("Info-Server", self.FRAMEWORK.get_homeserver_private_ip() + ":" + str(server_port))
 
         # get own lamp data if already registered
-        supp_fct.log_debug("on_init: get own device data")
+        device = self.bridge.get_own_device(device_id)
         data = supp_fct.get_data(ip, key, "light/" + device.light_id)
 
         if int(data["status"]) == 200:
             self.process_json(data)
         else:
-            print("Could not retrieve data for master light id in on_init")
+            self.log_msg("Could not retrieve data for master light id in on_init")
 
         data = supp_fct.get_data(ip, key, "zigbee_connectivity/" + device.zigbee_connectivity_id)
         if int(data["status"]) == 200:
             self.process_json(data)
         else:
-            print("Could not retrieve zigbee connectivity data for master light")
+            self.log_msg("Could not retrieve zigbee connectivity data for master light")
 
-        # eventstream init & start
-        supp_fct.log_debug("on_init: connecting to eventstream")
-        self.eventstream_thread = threading.Thread()  # type: threading.Thread
-        self.eventstream_running = threading.Event()
-        self.event_list = []
-        self.eventstream_start(key)
+        if self.singleton.is_master():
+            # eventstream init & start
+            self.eventstream_thread = threading.Thread()  # type: threading.Thread
+            self.eventstream_running = threading.Event()
+            self.event_list = []
+            self.eventstream_start(key)
+
+        return True
+
+    def on_init(self):
+        # debug
+        supp_fct.log_debug("Entering on_init")
+        self.DEBUG = self.FRAMEWORK.create_debug_section()
+        self.g_out_sbc = {}  # type: {int, object}
+        self.debug = False  # type: bool
+
+        self.do_init()
+        supp_fct.log_debug("Leaving on_init")
 
     def on_input_value(self, index, value):
         # Process State
         # itm_idx = str(self._get_input_value(self.PIN_I_ITM_IDX))
 
-        device = self.bridge.get_own_device(self._get_input_value(self.PIN_I_ITM_IDX))
         ip = hue_bridge.get_bridge_ip(self.FRAMEWORK.get_homeserver_private_ip())
+        if ip == str():
+            if not self.do_init():
+                return
+
+        device = self.bridge.get_own_device(self._get_input_value(self.PIN_I_ITM_IDX))
         key = self._get_input_value(self.PIN_I_HUE_KEY)
 
         if self._get_input_value(self.PIN_I_HUE_KEY) == "":
-            self.log_msg("Hue key not set. Abort processing.")
+            self.log_msg("Hue key not set. Abort processing updated input.")
             return
 
         # If trigger == 1, get data via web request
@@ -462,7 +488,6 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             device.set_on(ip, key, True)
             device.set_color_rgb(ip, key, r, g, b)
 
-        # todo do relative dim
         elif self.PIN_I_REL_DIM == index:
             device.prep_dim(ip, key, value, self._get_input_value(self.PIN_I_DIM_RAMP))
 
@@ -706,7 +731,6 @@ class UnitTests(unittest.TestCase):
         self.assertEqual(-16, self.device.interval)
         # self.assertEqual(10, self.device.timer.interval)
         time.sleep(3)
-        self.device.prep_dim(self.ip, self.key, 0.0, 5)
         self.device.prep_dim(self.ip, self.key, 0x8d, 5)
         self.assertEqual(16, self.device.interval)
 
@@ -826,6 +850,21 @@ class UnitTests(unittest.TestCase):
         self.dummy.PIN_I_ITM_IDX = 4
         self.dummy.PIN_I_DIM_RAMP = 11
         """
+    def test_23_non_blocking(self):
+        print("\n### test_23_non_blocking")
+
+        supp_fct.log_debug("Disconnect network")
+        time.sleep(10)
+        supp_fct.log_debug("continue...")
+
+        del self.device
+        del self.ip
+        del self.key
+        hue_bridge.set_bridge_ip(str())
+
+        self.dummy.on_init()
+
+        self.assertTrue(True)
 
 
 if __name__ == '__main__':
