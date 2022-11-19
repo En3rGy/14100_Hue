@@ -13,9 +13,7 @@ import urlparse
 import socket
 import time
 import json
-
 import threading
-
 import random
 
 
@@ -330,7 +328,10 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                             if module_id == self._get_module_id():
                                 continue
                             module_instance = self.FRAMEWORK.get_instance_by_id(module_id)
-                            module_instance.process_json(msg)
+                            try:
+                                module_instance.process_json(msg)
+                            except Exception as e:
+                                self.log_msg("In eventstream #336, calling remote modules, '" + str(e) + "'.")
 
                         self.process_json(msg)
 
@@ -381,9 +382,12 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         # Connections
         ip = hue_bridge.get_bridge_ip(self.FRAMEWORK.get_homeserver_private_ip())
+
         if ip == str():
             self.log_msg("No connection to bridge available.")
             return False
+        else:
+            self.log_data("Hue bridge IP", str(ip))
 
         if self.singleton.is_master():
             amount = self.bridge.register_devices(key, device_id, self.FRAMEWORK.get_homeserver_private_ip())

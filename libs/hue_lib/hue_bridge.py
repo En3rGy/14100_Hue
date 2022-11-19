@@ -1,6 +1,8 @@
 import socket
 import threading
 import json
+import time
+
 import hue_lib.supp_fct as supp_fct
 import hue_lib.hue_item as hue_item
 
@@ -23,15 +25,16 @@ def get_bridge_ip(host_ip):
     finally:
         bridge_ip_lock.acquire()
 
-    try:
-        if bridge_ip == str():
-            msg, ip = discover_hue(host_ip)
-            bridge_ip = ip
-    except NameError:
-        bridge_ip = str()
+    if not bridge_ip:
+        try:
+            bridge_ip_lock.release()
+            discover_hue(host_ip)
+        except NameError:
+            bridge_ip = str()
 
     ip = bridge_ip
-    bridge_ip_lock.release()
+    if bridge_ip_lock.locked():
+        bridge_ip_lock.release()
     return ip
 
 
@@ -51,7 +54,16 @@ def set_bridge_ip(ip):
     except NameError:
         bridge_ip_lock = threading.Lock()
     finally:
-        bridge_ip_lock.acquire()
+        loop = 0
+        while True:
+            if not bridge_ip_lock.locked():
+                bridge_ip_lock.acquire()
+                break
+            else:
+                time.sleep(2)
+            loop = loop + 1
+            if loop > 2:
+                return
 
     bridge_ip = ip
     bridge_ip_lock.release()
