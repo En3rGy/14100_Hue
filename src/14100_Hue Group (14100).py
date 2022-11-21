@@ -48,7 +48,6 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 #### Own written code can be placed after this commentblock . Do not change or delete commentblock! ####
 ###################################################################################################!!!##
 
-
     global eventstream_is_connected  # type: bool
 
     sbc_data_lock = threading.Lock()
@@ -166,7 +165,6 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         :param key:
         :type running: threading.Event
         :param running:
-
         """
         self.log_msg("Starting to connect to eventstream.")
         host_ip = self.FRAMEWORK.get_homeserver_private_ip()
@@ -174,9 +172,13 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         if not self.eventstream_keep_running.is_set():
             self.log_msg("Tried to connect to eventstream but self.eventstream_keep_running not set.")
 
-        msg_sep = "\n\n\r\n"
+        # msg_sep = "\n\n\r\n"
+        msg_sep = "\n"
 
         sock = socket.socket()
+
+        # in_file = open("../tests/eventstream_in.txt", 'w')
+        # pro_file = open("../tests/eventstream_pro.txt", 'w')
 
         # get  connection loop
         while self.eventstream_keep_running.is_set():
@@ -206,15 +208,19 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 time.sleep(5)
                 continue
 
-            data = str()  # type: str
             self.log_msg("Connected to eventstream")
 
             # receive data loop
             while self.eventstream_keep_running.is_set():
+                data = str()  # type: str
                 try:
                     while self.eventstream_keep_running.is_set():
-                        data = data + sock.recv()
-                        if msg_sep in data:
+                        new_data = sock.recv()
+                        data = data + new_data
+                        # in_file.write("|<>|" + new_data)
+
+                        # Received at least 1 complete msg
+                        if data[-1] == msg_sep:
                             break
 
                 except socket.error as e:
@@ -224,16 +230,16 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                     break
 
                 msgs = data.split(msg_sep)
+                supp_fct.log_debug("In eventstream #297, " + str(len(msgs)) + " lines received.")
 
-                supp_fct.log_debug("In eventstream #297, " + str(len(msgs)) + " messages received.")
-                for i in range(len(msgs)):
-                    if "data" not in msgs[i]:
+                for msg in msgs:
+                    if msg[:6] != "data: ":
                         continue
 
-                    msg = msgs[i][msgs[i].find("data: ") + 6:]
+                    msg = msg[6:]
                     try:
+                        # pro_file.write(msg + "\n")
                         msg = json.loads(msg)
-                        # supp_fct.log_debug("In eventstream #306, processing msg '" + json.dumps(msg) + "'.")
 
                         # store received data / message
                         modules = singlet.get_module_register()
@@ -249,22 +255,9 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                         self.process_json(msg)
 
                     except Exception as e:
-                        e_msg = "'Unterminated string starting"
-                        if e.message[:len(e_msg)] == e_msg:
-                            self.log_msg("Eventstream #342, '" + e.message[:len(e_msg)] + "'.")
-                        else:
-                            self.log_msg("Eventstream #342, '" + str(e) + "'.")
+                        self.log_msg("Eventstream #342, error with '" + e.message[:len(e_msg)] + "'.")
                         self.log_data("Eventstream #342 error msg", str(e))
                         self.log_data("Eventstream #342 erroneous str", msg)
-
-                        continue
-                    else:
-                        msgs[i] = str()  # remove successful processed msg
-
-                last_msg = msgs[-1]
-                if msg_sep in last_msg:
-                    index = last_msg.rfind(msg_sep)
-                    data = last_msg[index:]  # keep not yet finished messages
 
         # gently disconnect and wait for re-connection
         sock.close()
