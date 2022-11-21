@@ -4,7 +4,7 @@ import ssl
 import urllib2
 import json
 import time
-import colorconvert
+import hue_lib.colorconvert as colorconvert
 
 
 def rgb_to_xy_bri(red, green, blue):

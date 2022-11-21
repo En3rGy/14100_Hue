@@ -25,6 +25,12 @@ def get_bridge_ip(host_ip):
     finally:
         bridge_ip_lock.acquire()
 
+    try:
+        if bridge_ip:
+            pass
+    except NameError:
+        bridge_ip = str()
+
     if not bridge_ip:
         try:
             bridge_ip_lock.release()
@@ -125,7 +131,7 @@ def discover_hue(host_ip):
     while True:
         try:
             data = sock.recv(1024)
-            sock.shutdown(socket.SHUT_RDWR)
+            # sock.shutdown(socket.SHUT_RDWR)
 
             # check reply for "additional records", Type A, class IN contains IP4 address
             # header = data[:12]
@@ -200,16 +206,21 @@ class HueBridge:
         :return: str
         """
         info_data = "<html>\n"
+        info_data = info_data + "<style>"
+        info_data = info_data + get_css() + "</style>"
+        info_data = info_data + "<title>Hue devices and associated IDs</title>"
+        info_data = info_data + "<h1>Hue devices and associated IDs</h1>"
         info_data = (info_data + '<table border="1">\n' +
                      "<tr>" +
+                     "<th>Room Name</th>" +
                      "<th>Name</th>" +
                      "<th>Device</th>" +
                      "<th>Light</th>" +
+                     "<th>Grouped Lights</th>" +
                      "<th>Zigbee Connectivity</th>" +
                      "<th>Room</th>" +
                      "<th>Zone</th>" +
                      "<th>Scenes</th>" +
-                     "<th>Grouped Lights</th>" +
                      "</tr>\n")
 
         global devices
@@ -248,6 +259,8 @@ class HueBridge:
         for item in data:
             item_id = supp_fct.get_val(item, "id")
             children = supp_fct.get_val(item, "children")
+            metadata = supp_fct.get_val(item, "metadata")
+            room_name = supp_fct.get_val(metadata, "name")
             for i in range(len(children)):
                 rid = supp_fct.get_val(children[i], "rid")
                 rtype = supp_fct.get_val(children[i], "rtype")
@@ -256,6 +269,7 @@ class HueBridge:
                     if rid in devices:
                         device = devices[rid]
                         device.room = item_id
+                        device.room_name = room_name
                         devices[device.device_id] = device
                     else:
                         supp_fct.log_debug(
@@ -284,17 +298,21 @@ class HueBridge:
             group = supp_fct.get_val(item, "group")
             rid = supp_fct.get_val(group, "rid")
             rtype = supp_fct.get_val(group, "rtype")
+            metadata = supp_fct.get_val(item, "metadata")
+            scene_name = supp_fct.get_val(metadata, "name")
 
             if rtype == "zone":
                 for device in devices.values():
                     if device.zone == rid:
-                        device.scenes.append(item_id)
+                        scene_entry = {"name": scene_name, "id": item_id}
+                        device.scenes.append(scene_entry)
                         devices[device.device_id] = device
 
             elif rtype == "room":
                 for device in devices.values():
                     if device.room == rid:
-                        device.scenes.append(item_id)
+                        scene_entry = {"name": scene_name, "id": item_id}
+                        device.scenes.append(scene_entry)
                         devices[device.device_id] = device
 
     def __register_grouped_light_type(self, data):
@@ -398,3 +416,212 @@ class HueBridge:
             supp_fct.log_debug("Requested device not found")
 
         return self.device
+
+def get_css():
+    css = '''/*** *********************** ***/
+    /*** ***** ALLGEMEINES ***** ***/
+    /*** *********************** ***/
+    body { width:97%; max-width:950px;
+           font-size:1.0em; font-weight:normal; font-family:Verdana, Arial; padding-left:8px;
+           background: url(company.png) no-repeat; background-position: 1em 1em;
+         }
+    .mono { font-family: monospace }
+    /*** Text-Formatierungen ***/
+    .small    { font-size:0.7em; }
+    .normal   { font-size:1.0em; }
+    .big      { font-size:1.3em; }
+    .center   { text-align:center; }
+    .left     { text-align:left; }
+    .right    { text-align:right; }
+    /*** Links ***/
+    a:link    { color:#0000ff; }
+    a:visited { color:#990099; }
+    a:hover   { color:#ff0000; }
+    /*** *********************** ***/
+    /*** ***** Klappmenues ***** ***/
+    /*** *********************** ***/
+    .xcheckbox { display: none; }
+    .button-simu { color: #0060f6; cursor: pointer;  }
+    label:hover { color: #ffb400; }
+    .folded div a { text-decoration: none; }
+    .folded div a:hover { color: #ffb400; }
+    .vanish-block-4 { display: none; }
+    input[type="checkbox"]:checked ~ .vanish-block-4 { display: block; margin-bottom: 20px; margin-left: 27px; }
+    .vanish-block-5 { display: none; }
+    input[type="checkbox"]:checked ~ .vanish-block-5 { display: block; margin-bottom: 20px; margin-left: 27px; }
+    .vanish-block-6 { display: none; }
+    input[type="checkbox"]:checked ~ .vanish-block-6 { display: block; margin-bottom: 20px; margin-left: 27px; }
+    .vanish-block-7 { display: none; }
+    input[type="checkbox"]:checked ~ .vanish-block-7 { display: block; margin-bottom: 20px; margin-left: 27px; }
+    .vanish-block-8 { display: none; }
+    input[type="checkbox"]:checked ~ .vanish-block-8 { display: block; margin-bottom: 20px; margin-left: 27px; }
+    .vanish-block-1 { display: block; margin-bottom: 20px; margin-left: 27px; }
+    input[type="checkbox"]:checked ~ .vanish-block-1 { display: none; }
+    .vanish-block-2 { display: block; margin-bottom: 20px; margin-left: 27px; }
+    input[type="checkbox"]:checked ~ .vanish-block-2 { display: none; }
+    .vanish-block-3 { display: block; margin-bottom: 20px; margin-left: 27px;  }
+    input[type="checkbox"]:checked ~ .vanish-block-3 { display: none; }
+    /*** ************************************* ***/
+    /*** ***** Spezielles fuer Dokumente ***** ***/
+    /*** ************************************* ***/
+    /*** Layout der "ersten Seite" mit Hintergrund-Bild ***/
+    .fp-layout { width:100%; max-width:950px;
+                 background: url(company_doc.png) no-repeat; background-position: 100% 50%;
+               }
+    /*** Farben fuer Texte ***/
+    .green  { color:#00FF21; }
+    .darkgreen  { color:#009900; }
+    .orange { color:#FF6A00; }
+    .red    { color:#FF0000; }
+    .blue   { color:#0000FF; }
+    .yellow { color:#FFD800; }
+    /*** Farben fuer Hintergruende ***/
+    .bg-yellow { background-color:yellow;  }
+    .bg-green  { background-color:#e8fde9; }
+    .bg-orange { background-color:#ffb27f; }
+    .bg-red    { background-color:#ff7f7f; }
+    .bg-blue   { background-color:#ebfdfe; }
+    /*** ************************** ***/
+    /*** ***** UEBERSCHRIFTEN ***** ***/
+    /*** ************************** ***/
+    /*** Ueberschriften ***/
+    h1, h2, h3, h4, h5, h6 { margin-left:0px; font-weight:bold; }
+    h1 { font-size:1.5em; margin-top:0.8em; margin-bottom:0.5em; }
+    h2 { font-size:1.2em; margin-top:0.7em; margin-bottom:0.4em; }
+    h3 { font-size:1.2em; margin-top:0.6em; margin-bottom:0.3em; font-style:italic; }
+    h4 { font-size:1.2em; margin-top:0.6em; margin-bottom:0.3em; font-style:italic; font-weight:normal; }
+    h5 { font-size:1.2em; margin-top:0.5em; margin-bottom:0.2em; font-style:italic; font-weight:normal; color:#707070; }
+    h6 { font-size:1.0em; margin-top:0.5em; margin-bottom:0.2em; font-style:italic; font-weight:normal; color:#707070; }
+    /*** ************************* ***/
+    /*** ***** TEXT-ELEMENTE ***** ***/
+    /*** ************************* ***/
+    /*** Titel des Dokuments ***/
+    .top-title     { margin-bottom:10px; margin-top:11px; margin-right:0.7em;  margin-left:100px;
+                     text-align:right; font-size:1.0em;  font-size:1.5em; font-weight:bold; }
+    /*** Navigations-Zeile ***/
+    .nav           { margin-bottom:0.5em; }
+    /*** Inhaltsverzeichnis ***/
+    .index         { margin-top:1em; margin-bottom:1.5em;  font-size: 1.2em; }
+    .index-title   { margin-bottom: 1em; font-weight: bold; }
+    /*** Zeilen im Inhaltsverzeichnis / Ueberschriften-Elemente ***/
+    .t-line        {  margin-bottom: 0.3em; }
+    .t-chapter     { float:left; min-width:60px; padding-right:0.7em; }
+    .t-text        {  }
+    /*** Den Inhalt (Alles ab dem Inhaltsverzeichnis (exkl.) umschliessende Container <div>  ***/
+    .content       {  }
+    /*** Container fuer Bereiche ***/
+    .topic         {  }
+    /*** Description (Einleitungstext) ***/
+    .descr         { margin-bottom:1.0em; margin-top:1.5em; }
+    .descr-no-tit  { margin-bottom:1.5em; margin-top:1.5em; }
+    /*** Field ***/
+    .field           { margin-bottom:1.5em; }
+    .field-title     { font-style:normal; font-size:0.8em; font-weight: bold; }
+    .field-title-red { font-style:normal; font-size:0.8em; font-weight: bold; color:red; }
+    .xhtml         {  }
+    /*** ************************** ***/
+    /*** ***** MELDUNGS-BOXEN ***** ***/
+    /*** ************************** ***/
+    .alert-box     { font-size: 1.0em; font-weight: normal;
+                     padding-top: 0.5em; padding-left: 0.2em;
+                     margin-bottom: 1.0em; margin-top: 1.0em;
+                     border-spacing:0; border-collapse: collapse;
+                     border: 2px solid #BABABA;
+                     width:100%; max-width:950px; background-color:#ffff00; }
+    .ibox-hint     { background: url(ibox-h.png) no-repeat; background-position: 0.4em 0.4em; }
+    .ibox-note     { background: url(ibox-n.png) no-repeat; background-position: 0.4em 0.4em; }
+    .ibox-warn     { background: url(ibox-w.png) no-repeat; background-position: 0.4em 0.4em; }
+    .box-title     { font-weight:bold;
+                     padding-left:2.5em; padding-bottom:0px;
+                     margin-left:1em; margin-bottom:20px; margin-top:10px;
+                   }
+    .box-text      { clear:both; padding-bottom:0.5em; padding-top:0px; margin-top:0px; }
+    .box-text .descr { margin-top:12px; }
+    /*** ******************************** ***/
+    /*** ****** SPRACH-AUSWAHL-BOX ****** ***/
+    /*** ******************************** ***/
+    .sel_lbl      {  }
+    .sel_box      { padding-left:1em; margin-left:1em; }
+    /*** ******************** ***/
+    /*** ****** LISTEN ****** ***/
+    /*** ******************** ***/
+    /*** Liste mit groesseren Abstaenden zwischen den Listeneintraegen ***/
+    .big-list li   {margin-bottom: 0.3em; margin-top: 0.3em; }
+    /*** Nummerierte Listen ***/
+    ol.lalpha       {list-style-type: lower-alpha; }
+    ol.ualpha       {list-style-type: upper-alpha; }
+    /*** ******************** ***/
+    /*** ***** TABELLEN ***** ***/
+    /*** ******************** ***/
+    .small-rows td  {padding:0px; }
+    /*** ********** Tabellen, allgemein ********** ***/
+    table              { border-spacing:0; border-collapse:collapse;
+                         padding-left:8px; margin-top:0.5em; margin-bottom:0.5em;
+                         font-size:1.0em;
+                         width:100%; max-width:950px; }
+    table td, table th { border:1px solid #aaa; vertical-align:top; text-align:left; font-size:0.9em; padding:10px; }
+    table th           { font-weight:bold;  background-color:#eee; font-size:0.9em; }
+    /*** ********** Spezielle Tabellen-Formatierungen ********** ***/
+    .table-no-border         { padding-bottom:0em; padding-top:0em; margin-bottom:0em; margin-top:0em; }
+    .table-standard          { background-color:white }
+    .table-green             { background-color:#e8fde9; }
+    .table-blue              { background-color:#ebfdfe; }
+    /*** *** Tabelle OHNE Rahmen! (z.B. Logikbaustein Sonstiges) *** ***/
+    .table-no-border td  { border:0px; }
+    .table-no-border th  { border:0px;  background-color:transparent; }
+    /*** ************************************************************** ***/
+    /*** ********** EINGAENGE und AUSGAENGE (Logikbausteine) ********** ***/
+    /*** ************************************************************** ***/
+    /*** Tabellen fuer Eingaenge und Ausgaenge der Logik-Bausteine ***/
+    .table-in  {  }
+    .table-out {  }
+    /*** Farben fuer Eingaenge und Ausgaenge, wie im GLE. Eigener Style, weil es evtl. mal OHNE Tabelle gebraucht werden koennte ***/
+    .input       { background-color:#80ff80; }
+    .output      { background-color:#ff8080; }
+    .string      { background-color:#E0E0E0; }
+    /*** Spalten der Eingangs- und Ausgangs- Tabellen ***/
+    .io-nr       { width:30px; }
+    .io-name     { width:150px; max-width:150px; word-wrap:break-word; }
+    .io-init     { width:100px; max-width:100px; word-wrap:break-word; }
+    .o-sbc       { width:49px; }
+    /*** Formatierungen fuer die einzelnen Spalten der Eingangs-Tabellen ***/
+    /*** Header ***/
+    .table-in  th.io-nr      {  }
+    .table-in  th.io-name    {  }
+    .table-in  th.io-init    {  }
+    .table-in  th.io-descr   {  }
+    /*** Zellen ***/
+    .table-in  td.io-nr      {  }
+    .table-in  td.io-name    {  }
+    .table-in  td.io-init    {  }
+    .table-in  td.io-descr   {  }
+    .table-in  .descr        { margin-bottom:0px; margin-top:0px; }
+    /*** Formatierungen fuer die einzelnen Spalten der Ausgangs-Tabellen ***/
+    /*** Header ***/
+    .table-out  th.io-nr     {  }
+    .table-out  th.io-name   {  }
+    .table-out  th.io-init   {  }
+    .table-out  th.o-sbc     {  }
+    .table-out  th.io-descr  {  }
+    /*** Zellen ***/
+    .table-out td.io-nr      {  }
+    .table-out td.io-name    {  }
+    .table-out td.io-init    {  }
+    .table-out td.o-sbc      {  }
+    .table-out td.io-descr   {  }
+    .table-out .descr        { margin-bottom:0px; margin-top:0px; }
+    /*** ************************************** ***/
+    /*** ***** SONSTIGES (Logikbausteine) ***** ***/
+    /*** ************************************** ***/
+    .table-logic-info        { padding-bottom:0em; padding-top:0em; margin-bottom:0em; margin-top:0em; }
+    .table-logic-info th     { border:0px; font-weight:normal; background-color:white; width:200px; }
+    .table-logic-info td     { border:0px;  }
+    /*** ************************************************* ***/
+    /*** ***** AEHNLICHE FUNKTIONEN (Logikbausteine) ***** ***/
+    /*** ************************************************* ***/
+    .t-sim-func   {  }
+    .t-sf-grptit  { font-weight:bold; margin-top:1.5em; margin-bottom:0.3em; }
+    .t-sf-grpitm  { font-size:0.9em; }
+    '''
+
+    return css

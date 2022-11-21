@@ -9,6 +9,7 @@ class HueDevice:
         self.interval = 0  # type: int
         self.id = str()  # type: str
         self.name = str()  # type: str
+        self.room_name = str()  # type: str
         self.device_id = str()  # type: str
         self.light_id = str()  # type: str
         self.zigbee_connectivity_id = str()  # type: str
@@ -26,19 +27,21 @@ class HueDevice:
 
     def __str__(self):
         return ("<tr>" +
+                "<td>" + self.room_name.encode("ascii", "xmlcharrefreplace") + "</td>" +
                 "<td>" + self.name.encode("ascii", "xmlcharrefreplace") + "</td>" +
                 "<td>" + self.device_id.encode("ascii", "xmlcharrefreplace") + "</td>" +
                 "<td>" + self.light_id.encode("ascii", "xmlcharrefreplace") + "</td>" +
+                "<td>" + str(self.grouped_lights).encode("ascii", "xmlcharrefreplace") + "</td>" +
                 "<td>" + self.zigbee_connectivity_id.encode("ascii", "xmlcharrefreplace") + "</td>" +
                 "<td>" + self.room.encode("ascii", "xmlcharrefreplace") + "</td>" +
                 "<td>" + self.zone.encode("ascii", "xmlcharrefreplace") + "</td>" +
                 "<td>" + str(self.scenes).encode("ascii", "xmlcharrefreplace") + "</td>" +
-                "<td>" + str(self.grouped_lights).encode("ascii", "xmlcharrefreplace") + "</td>" +
                 "</tr>\n")
 
     def get_device_ids(self):
         ret = [self.device_id, self.light_id, self.zigbee_connectivity_id, self.room, self.zone]   # type: [str]
-        ret.extend(self.scenes)
+        for scene in self.scenes:
+            ret.extend(scene["id"])
         ret.extend(self.grouped_lights)
 
         return ret

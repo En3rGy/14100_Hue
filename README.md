@@ -1,47 +1,54 @@
 # 14100 Hue Group
 
-## Beschreibung 
+## Description 
 
-Der Baustein stellt eine Schnittstelle zu einzelnen Leuchten / Gruppen / Räumen / Zonen 
-eines Hue-Systems dar. D.h. die angesprochenen Geräte lassen sich steuern und deren Status wird ausgegeben.
-Hierzu meldet sich der Baustein bei der Hue-Bridge an und erhält so direkt von dieser Informationen zu 
-Statusänderungen. Um die Netzwerklast zu verringern, können mehrere 
-Bausteine als Kaskade geschaltet werden.
+The logic module provides an interface to specific Hue lights, groups, rooms, zones, etc. Registered devices can be 
+controlled and the device status is provided via the modules output. The module registers itself at the hue bridge 
+using the Hue [Hue API v2](https://developers.meethue.com/develop/hue-api-v2/) and the _eventstream_ function. Using 
+multiple instances of the logic module, just one will register for the _eventstream_ and provides received date to the 
+other ones.
 
-Der Baustein erkennt selbständig die Hue-Bridge im Netzwerk und verbindet sich mit dieser.
+One module provides an auto discovery on the Hue bridge in order to receive the bridges IP address. A HS reboot is
+necessary, if the bridge IP chances!
 
-!Wenn sich die IP der Bridge ändert, ist ein Neustart des HS notwendig!
+### Useage
+- [Hue API v2](https://developers.meethue.com/develop/hue-api-v2/) addresses each device using a non-readable ID.<br>
+This ID must be provided to the logic module instance of the corresponding Hue device.<br>
+In oder to identintify the Hue ID of a specific device, one logic module creates a webpage showing the IDs and the 
+corresponding rooms and device names. The link to this page is shown on the debug page in the logic modules section 
+within the _HSL 2.0_ section.<br>
+**Create at least one instance of the logic module and identify the Hue IDs of the devices you would like to control.**
+- Set up an instance of the logic module for each hue item you would like to control or monitor the status.<br>
+**In general, use the `light` or `grouped light` ID.**
 
-Der Baustein nutzt die [Hue API v2](https://developers.meethue.com/develop/hue-api-v2/).
+## Inputs
 
-## Eingänge
+| Nr. | Name           | Init. | Description                                                                                                                                            |
+|-----|----------------|-------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1   | Get Status     |       | A value =1 reads (manually) the full status of the device from the bridge                                                                              |
+| 2   | Key            |       | Hue Bridge User Key                                                                                                                                    |
+| 3   | Port Info Page | 0     | Der Bautein erzeugt eine Webseite, mit den IDs der Hue leuchten, Räume usw. Die seite kann aufgerufen werden über http://<HS-IP>:<Port>                |
+| 4   | Item Id        | 0     | Abh. von Eingang 6, die Id der auszuwertenden Hue Gruppe oder Lampe, vgl. http://hue-ip/api/hue-user/lights                                            |
+| 5   | On/Off (1/0)   | 0     | Schaltet die Lampe / Gruppe ein (1) / aus (0).                                                                                                         |
+| 6   | Brightness (%) | 0     | Helligkeit für die Hue Lampe / Gruppe in 0-100% <br/> Wird der Wert gesetzt, wird die Gruppe eingeschaltet.                                            |
+| 7   | r              | 0     | RGB Rotwert 0-100%                                                                                                                                     |
+| 8   | g              | 0     | RGB Grünwert 0-100%                                                                                                                                    |
+| 9   | b              | 0     | RGB Blauwert 0-100%                                                                                                                                    |
+| 10  | KNX rel. Dimm  | 0     | Eingang für das Dimm-Signal. Der zugh. Taster muss wie folgt parametrisiert werden:<br/>Relatives dimmen mit Stopp-Signal, ohne Telegramm-Wiederholung |
+| 11  | KNX Dimm Ramp  | 0.5   | KNX Dimm Rampe [s]; Zeit in Sekunden, in der der Dimmschritt wiederholt wird, bis ein Stopp-Signal empfangen wird.                                     |
 
-| Nr. | Name           | Initialisierung | Beschreibung                                                                                                                                           |
-|-----|----------------|-----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 1   | Get Status     |                 | Ein Wert =1 triggert den Status-Abruf über die Hue-Bridge.                                                                                             |
-| 2   | Key            |                 | Hue Bridge User Key                                                                                                                                    |
-| 3   | Port Info Page | 0               | Der Bautein erzeugt eine Webseite, mit den IDs der Hue leuchten, Räume usw. Die seite kann aufgerufen werden über http://<HS-IP>:<Port>                |
-| 4   | Item Id        | 0               | Abh. von Eingang 6, die Id der auszuwertenden Hue Gruppe oder Lampe, vgl. http://hue-ip/api/hue-user/lights                                            |
-| 5   | On/Off (1/0)   | 0               | Schaltet die Lampe / Gruppe ein (1) / aus (0).                                                                                                         |
-| 6   | Brightness (%) | 0               | Helligkeit für die Hue Lampe / Gruppe in 0-100% <br/> Wird der Wert gesetzt, wird die Gruppe eingeschaltet.                                            |
-| 7   | r              | 0               | RGB Rotwert 0-100%                                                                                                                                     |
-| 8   | g              | 0               | RGB Grünwert 0-100%                                                                                                                                    |
-| 9   | b              | 0               | RGB Blauwert 0-100%                                                                                                                                    |
-| 10  | KNX rel. Dimm  | 0               | Eingang für das Dimm-Signal. Der zugh. Taster muss wie folgt parametrisiert werden:<br/>Relatives dimmen mit Stopp-Signal, ohne Telegramm-Wiederholung |
-| 11  | KNX Dimm Ramp  | 0.5             | KNX Dimm Rampe [s]; Zeit in Sekunden, in der der Dimmschritt wiederholt wird, bis ein Stopp-Signal empfangen wird.                                     |
+## Outputs
 
-## Ausgänge
+| Nr. | Name            | Init. | Description                                                                                       |
+|-----|-----------------|-------|---------------------------------------------------------------------------------------------------|
+| 1   | RM On/Off       | 0     | Ein/Aus Status (1/0)                                                                              |
+| 2   | RM Brightness   | 0     | Aktuelle Helligkeit 0-100%                                                                        | 
+| 3   | r               | 0     | RGB Rotwert 0-100%                                                                                |
+| 4   | g               | 0     | RGB Grünwert 0-100%                                                                               |
+| 5   | b               | 0     | RGB Blauwert 0-100%                                                                               |
+| 6   | Light Reachable | 0     | Erreichbarkeit der Lampe (*nicht aktiv bei Gruppen-Steuerung!*); 0=nicht erreichbar, 1=erreichbar |
 
-| Nr. | Name            | Initialisierung | Beschreibung                                                                                                                                                                                                                                             |
-|-----|-----------------|-----------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 1   | RM On/Off       | 0               | Ein/Aus Status (1/0)                                                                                                                                                                                                                                     |
-| 2   | RM Brightness   | 0               | Aktuelle Helligkeit 0-100%                                                                                                                                                                                                                               | 
-| 3   | r               | 0               | RGB Rotwert 0-100%                                                                                                                                                                                                                                       |
-| 4   | g               | 0               | RGB Grünwert 0-100%                                                                                                                                                                                                                                      |
-| 5   | b               | 0               | RGB Blauwert 0-100%                                                                                                                                                                                                                                      |
-| 6   | Light Reachable | 0               | Erreichbarkeit der Lampe (*nicht aktiv bei Gruppen-Steuerung!*); 0=nicht erreichbar, 1=erreichbar                                                                                                                                                        |
-
-## Beispielwerte
+## Examples
 
 | Eingang | Ausgang |
 |---------|---------|
@@ -70,7 +77,7 @@ Der Baustein nutzt die [Hue API v2](https://developers.meethue.com/develop/hue-a
 
 ### Open Issues / Know Bugs
 
-- keine
+- see [issue](https://github.com/En3rGy/14100_Hue/issues)
 
 ### Support
 
