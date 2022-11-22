@@ -160,9 +160,11 @@ class HueDevice:
         ret = supp_fct.http_put(ip, key, scene_id, "scene", payload)
         return ret["status"] == 200
 
-    def set_dynamic_scene(self, ip, key, scene_id):
+    def set_dynamic_scene(self, ip, key, scene_id, speed):
         """
 
+        :param speed: Speed of dynamic palette for this scene (0-1)
+        :type speed: float
         :param key:
         :type key: str
         :param scene_id:
@@ -173,7 +175,7 @@ class HueDevice:
         :return:
         """
         supp_fct.log_debug("Entering set_dynamic_scene")
-        payload = '{"recall": {"action": "dynamic_palette"}, "speed": 0.7}'
+        payload = '{"recall": {"action": "dynamic_palette"}, "speed": ' + str(speed) + '}'
         ret = supp_fct.http_put(ip, key, scene_id, "scene", payload)
         return ret["status"] == 200
 

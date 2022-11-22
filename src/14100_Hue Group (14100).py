@@ -30,13 +30,15 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.PIN_I_PORT=3
         self.PIN_I_ITM_IDX=4
         self.PIN_I_SCENE=5
-        self.PIN_I_ON_OFF=6
-        self.PIN_I_BRI=7
-        self.PIN_I_R=8
-        self.PIN_I_G=9
-        self.PIN_I_B=10
-        self.PIN_I_REL_DIM=11
-        self.PIN_I_DIM_RAMP=12
+        self.PIN_I_DYN_SCENE=6
+        self.PIN_I_DYN_SC_SPEED=7
+        self.PIN_I_ON_OFF=8
+        self.PIN_I_BRI=9
+        self.PIN_I_R=10
+        self.PIN_I_G=11
+        self.PIN_I_B=12
+        self.PIN_I_REL_DIM=13
+        self.PIN_I_DIM_RAMP=14
         self.PIN_O_STATUS_ON_OFF=1
         self.PIN_O_BRI=2
         self.PIN_O_R=3
@@ -255,7 +257,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                         self.process_json(msg)
 
                     except Exception as e:
-                        self.log_msg("Eventstream #342, error with '" + e.message[:len(e_msg)] + "'.")
+                        self.log_msg("Eventstream #342, error with '" + e.message[:len(e.message)] + "'.")
                         self.log_data("Eventstream #342 error msg", str(e))
                         self.log_data("Eventstream #342 erroneous str", msg)
 
@@ -388,6 +390,18 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             scene.id = value
             scene.rtype = "scene"
             scene.set_scene(ip, key, value)
+
+        elif index == self.PIN_I_DYN_SCENE or index == self.PIN_I_DYN_SC_SPEED:
+            dynamic_scene = self._get_input_value(self.PIN_I_DYN_SCENE)  # type: str
+            speed = self._get_input_value(self.PIN_I_DYN_SC_SPEED)
+            if not dynamic_scene:
+                return
+
+            if speed <= 0 or speed > 1:
+                self.log_msg("Call of dynamic scene erroneous, speed shall be 0-1")
+                return
+
+            device.set_dynamic_scene(ip, key, dynamic_scene, speed)
 
         elif self.PIN_I_BRI == index:
             self.log_msg("Received Bri input.")
