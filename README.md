@@ -70,16 +70,8 @@ within the _HSL 2.0_ section.<br>
 
 ### Change Log
 
-- v3.0
-    - Refactoring & Hue API v2
-- v2.0
-    - Keine Änderung zu v1.6
-- v1.6
-    - Bug fixing	
-- v1.5
-    - Refactoring w.r.t. warnings
-    - Light control
-- v1.4
+- v3.1: Update of documentation
+- v3.0: Refactoring & Hue API v2
 
 ### Open Issues / Know Bugs
 
