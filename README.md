@@ -45,33 +45,33 @@ within the _HSL 2.0_ section.<br>
 
 ## Outputs
 
-| Nr. | Name            | Init. | Description                                                                                       |
-|-----|-----------------|-------|---------------------------------------------------------------------------------------------------|
-| 1   | RM On/Off       | 0     | Ein/Aus Status (1/0)                                                                              |
-| 2   | RM Brightness   | 0     | Aktuelle Helligkeit 0-100%                                                                        | 
-| 3   | r               | 0     | RGB Rotwert 0-100%                                                                                |
-| 4   | g               | 0     | RGB Grünwert 0-100%                                                                               |
-| 5   | b               | 0     | RGB Blauwert 0-100%                                                                               |
-| 6   | Light Reachable | 0     | Erreichbarkeit der Lampe (*nicht aktiv bei Gruppen-Steuerung!*); 0=nicht erreichbar, 1=erreichbar |
+| Nr. | Name            | Init. | Description                                                  |
+|-----|-----------------|-------|--------------------------------------------------------------|
+| 1   | RM On/Off       | 0     | On/Off Status (1/0)                                          |
+| 2   | RM Brightness   | 0     | Current Brightness 0-100%                                    | 
+| 3   | r               | 0     | RGB red 0-100%                                               |
+| 4   | g               | 0     | RGB green 0-100%                                             |
+| 5   | b               | 0     | RGB blue 0-100%                                              |
+| 6   | Light Reachable | 0     | Status is light is connected<br>0=not reachable, 1=reachable |
 
 ## Examples
 
-| Eingang | Ausgang |
-|---------|---------|
-| -       | -       |
+| Input | Output |
+|-------|--------|
+| -     | -      |
 
 
 ## Other
 
-- Neuberechnung beim Start: Nein
-- Baustein ist remanent: nein
-- Interne Bezeichnung: 14100
-- Kategorie: Datenaustausch
+- Calculation on start: Nein
+- Module is remanent: nein
+- Internal number: 14100
+- Category: Datenaustausch
 
 ### Change Log
 
 - v3.0
-    - Refactoring & Umstellung auf Hue API v2
+    - Refactoring & Hue API v2
 - v2.0
     - Keine Änderung zu v1.6
 - v1.6
@@ -92,7 +92,7 @@ Questions can be addressed as new threads at the [knx-user-forum.de](https://knx
 
 ### Code
 
-Der Code des Bausteins befindet sich in der hslz Datei oder auf [github](https://github.com/En3rGy/14100_Hue).
+The code of the module can be found within the hslz file or at [github](https://github.com/En3rGy/14100_Hue).
 
 ### Development Environment
 
@@ -103,45 +103,45 @@ Der Code des Bausteins befindet sich in der hslz Datei oder auf [github](https:/
 
 
 ## Requirements
-- Pairing mit Hue Bridge über Logikmodul durchführen, s. [API v2 Getting started](https://developers.meethue.com/develop/hue-api-v2/getting-started/)
-- Lampen ein/ausschalten [#12](https://github.com/En3rGy/14100_Hue/issues/12)
-- Ein/aus-Status ausgeben [#16](https://github.com/En3rGy/14100_Hue/issues/16)
-- Lampen dimmen und Dimmwert ausgeben [#17](https://github.com/En3rGy/14100_Hue/issues/17)
-- Farbe bei Lampen vorgeben und ausgeben [#19](https://github.com/En3rGy/14100_Hue/issues/19)
-- Erreichbar-Status / Verbunden-Status ausgeben [#20](https://github.com/En3rGy/14100_Hue/issues/20)
-- Starten von Szenen [#21](https://github.com/En3rGy/14100_Hue/issues/21)
-- Abspielen von dynamischen Szenen [#22](https://github.com/En3rGy/14100_Hue/issues/22)
-- Auch für Zonen [#14](https://github.com/En3rGy/14100_Hue/issues/14) / Räume [#15](https://github.com/En3rGy/14100_Hue/issues/15) / Gruppen [#13](https://github.com/En3rGy/14100_Hue/issues/13)
-- Manuelles Abrufen des Status der Leuchten [#18](https://github.com/En3rGy/14100_Hue/issues/18)
-- Selbständiges finden & verbinden mit der Hue-Bridge [#11](https://github.com/En3rGy/14100_Hue/issues/11)
-- Automatisches re-connect mit Hue-Bridge bei Verbindungsabbruch [#10](https://github.com/En3rGy/14100_Hue/issues/10)
-- Bei mehreren Bausteininstanzen verbindet sich nur einer mit der Hue Bridge und teilt die erhaltenen Informatione [#9](https://github.com/En3rGy/14100_Hue/issues/9)
-- Bereitstellen einer Web-Seite mit Informationen zu Hue-IDs [#8](https://github.com/En3rGy/14100_Hue/issues/8)
-- Soll den HS nicht blockieren [#23](https://github.com/En3rGy/14100_Hue/issues/23)
+- Pairing of Hue Bridge via module, s. [API v2 Getting started](https://developers.meethue.com/develop/hue-api-v2/getting-started/)
+- Light on/off [#12](https://github.com/En3rGy/14100_Hue/issues/12)
+- Provide on/off status [#16](https://github.com/En3rGy/14100_Hue/issues/16)
+- Dimming of lights and provision of status [#17](https://github.com/En3rGy/14100_Hue/issues/17)
+- Set color and provide light color status  [#19](https://github.com/En3rGy/14100_Hue/issues/19)
+- Provide connection status [#20](https://github.com/En3rGy/14100_Hue/issues/20)
+- Start of scenes [#21](https://github.com/En3rGy/14100_Hue/issues/21)
+- Play dynamic scenes [#22](https://github.com/En3rGy/14100_Hue/issues/22)
+- All for zones [#14](https://github.com/En3rGy/14100_Hue/issues/14) / Räume [#15](https://github.com/En3rGy/14100_Hue/issues/15) / Gruppen [#13](https://github.com/En3rGy/14100_Hue/issues/13)
+- Manual trigger of requesting status data [#18](https://github.com/En3rGy/14100_Hue/issues/18)
+- Auto-detect Hue Bridge [#11](https://github.com/En3rGy/14100_Hue/issues/11)
+- Auto re-connect with Hue Bridge [#10](https://github.com/En3rGy/14100_Hue/issues/10)
+- Using multiple module instances, just one shall connect to Hue Bridge [#9](https://github.com/En3rGy/14100_Hue/issues/9)
+- Provision of web page with info regarding Hue IDs [#8](https://github.com/En3rGy/14100_Hue/issues/8)
+- Shall not block the HS [#23](https://github.com/En3rGy/14100_Hue/issues/23)
 
 ## Software Design Description
-Das Modul ist so weit möglich objektorientiert entwickelt.
-Hierbei gibt es vor allem zwei Objekte:
-- Bridge Objekt<br>Zur Kommunikation mit der Hue Bridge, incl. Bridge Discovery
-- Hue Item Objekt<br>Zur Kommandierung der Hue-Objekte, wie Lampen, Räume, Szenen, etc.
-Wesentliches Element der Hue API v2 ist der *Eventstream*. Programme können sich für dieses registrieren und erhalten von der Hue Bridge quasi unmittelbar Statusänderungen.
+As far as possible, the module is developed object orientated.
+Two major objects exist:
+- Bridge Objekt<br>For communication with Hue Bridge, incl. Bridge Discovery
+- Hue Item Objekt<br>For commanding Hue-Objects, e.g. lights, rooms, scenes, etc.
+An essential element of the Hue API v2 is the *Eventstream*. Programmes can register for this and receive status changes from the Hue Bridge almost immediately.
 
-Bei mehreren Hue-Logikbausteinen verbindet sich nur einer der Bausteine mit dem Eventstream und leitet eingehende Meldungen an alle anderen Hue-Bausteine weiter. 
-Dies geschieht über den gemeinsamen Scope, eine Verbindung der Bausteine über iKO ist *nicht* notwendig. 
+With several Hue logic devices, only one of the devices connects to the event stream and forwards incoming messages to all other Hue devices. 
+This is done via the common scope, a connection of the devices via iKO is *not* necessary.
 
-Außerdem:
-- Lampen / Szenen / Zonen / Räume / Gruppen werden über die Id unterschieden; Abfrage des Typs via /resource {data{id, type}}
-- Abh. von der Aktion wird die jew. rid über die Device id herausgesucht
-- Nur ein Baustein verbindet sich mit der Hue Bridge, die übrigen nutzen diese Verbindung über [HS Instanzen](http://127.0.0.1/doc_extra/de/commloginst.html)
-- Die eventstream Verbindung läuft in einem eigenen Thread in einer `While true`-Schleife
-- Wenn zur Initialisierungszeit keine Netzwerkverbindung besteht, wird bei Signalen auf den Bausteineingängen versucht, eine Verbindung zur Bridge herzustellen. 
+In addition:
+- Lamps / Scenes / Zones / Rooms / Groups are distinguished via the Id; query of the type via /resource {data{id, type}}.
+- Depending on the action, the respective rid is searched for via the device id.
+- Only one device connects to the Hue Bridge, the others use this connection via [HS Instances](http://127.0.0.1/doc_extra/de/commloginst.html)
+- The eventstream connection runs in a separate thread in a `while true` loop
+- If there is no network connection at initialisation time, signals on the device inputs will attempt to connect to the bridge. 
 
 ## Validation & Verification
 - Unit tests are performed.
 
 ## Licence
 
-Copyright 2021 T. Paul
+Copyright 2022 T. Paul
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
