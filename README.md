@@ -33,7 +33,7 @@ within the _HSL 2.0_ section.<br>
 | 3   | Port Info Page       | 0     | Port of Information Website: Website containing all Hue devices and the corresponding or associated Hue IDs. The web site is provided at `http://<HS-IP>:<Port>` |
 | 4   | Item Id              | 0     | ID of Hue device to be controlled. The device ID can be identified via the Information Website described in the description / Usage section                      |
 | 5   | Scene ID             |       | ID of the scene to be called. Providing a valid scene ID on this input will switch on the device also.                                                           | 
-| 6   | Dynamic scene On/Off | 0     | Activates the scene of Input 5 as "dynamic scene"                                                                                                                |
+| 6   | Dynamic scene On/Off | 0     | True/False. Activates the scene of Input 5 as "dynamic scene"                                                                                                    |
 | 7   | Dyn. scene speed     | 0.7   | Speed of dynamic palette for the sceen given on input 5 and activated as "dynamic" on input 6 (0-1)                                                              |
 | 5   | On/Off (1/0)         | 0     | Switches on (1) / off (0) the Hue device.                                                                                                                        |
 | 6   | Brightness (%)       | 0     | Brightness in 0-100% <br/> Device will be switched on if value is set                                                                                            |
@@ -70,6 +70,7 @@ within the _HSL 2.0_ section.<br>
 
 ### Change Log
 
+- v3.2: Fixed Bug [#25](https://github.com/En3rGy/14100_Hue/issues/25)
 - v3.1: Update of documentation
 - v3.0: Refactoring & Hue API v2
 

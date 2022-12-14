@@ -391,8 +391,8 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             scene.rtype = "scene"
             scene.set_scene(ip, key, value)
 
-        elif index == self.PIN_I_DYN_SCENE or index == self.PIN_I_DYN_SC_SPEED:
-            dynamic_scene = self._get_input_value(self.PIN_I_DYN_SCENE)  # type: str
+        elif index == self.PIN_I_DYN_SCENE and bool(value):
+            dynamic_scene = self._get_input_value(self.PIN_I_SCENE)  # type: str
             speed = self._get_input_value(self.PIN_I_DYN_SC_SPEED)
             if not dynamic_scene:
                 return
