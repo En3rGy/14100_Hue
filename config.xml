@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <config>
     <modules>
-        <module category="Datenaustausch" context="14100_Hue" id="14100" name="Hue Group (14100)" version="3.2">
+        <module category="Datenaustausch" context="14100_Hue" id="14100" name="Hue Group (14100)" version="3.3">
             <inputs>
 				<input type="number" const_name="trigger" init_value="0">Get Status</input>
                 <input type="string" const_name="hue_key" init_value="">Key</input>

@@ -70,6 +70,7 @@ within the _HSL 2.0_ section.<br>
 
 ### Change Log
 
+- v3.3: Detecting broken connections to Hue Bridge
 - v3.2: Fixed Bug [#25](https://github.com/En3rGy/14100_Hue/issues/25)
 - v3.1: Update of documentation
 - v3.0: Refactoring & Hue API v2
