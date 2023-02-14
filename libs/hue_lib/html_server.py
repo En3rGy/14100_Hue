@@ -2,6 +2,7 @@ import hue_lib.supp_fct as supp_fcn
 import threading
 import BaseHTTPServer
 import SocketServer
+import logging
 
 import supp_fct
 
@@ -9,10 +10,11 @@ import supp_fct
 class HtmlServer:
 
     # methods
-    def __init__(self):
+    def __init__(self, logger):
         self.server = ""
         self.t = ""
         self.http_request_handler = MyHttpRequestHandler
+        self.logger = logger
 
     def run_server(self, ip, port):
         """
@@ -25,7 +27,7 @@ class HtmlServer:
         :rtype: None
         :return: No implemented
         """
-        supp_fcn.log_debug("entering run_server, ip = " + str(ip) + ", port = " + str(port))
+        self.logger.debug("entering run_server, ip = " + str(ip) + ", port = " + str(port))
         server_address = (ip, port)
 
         self.stop_server()
@@ -36,7 +38,7 @@ class HtmlServer:
             self.server.server_bind()
             self.server.server_activate()
         except Exception as e:
-            supp_fcn.log_debug(str(e))
+            self.logger.error(str(e))
             return
 
         ip, port = self.server.server_address
@@ -44,20 +46,20 @@ class HtmlServer:
         self.t.setDaemon(True)
         self.t.start()
         server_url = "http://" + str(ip) + ":" + str(port)
-        supp_fcn.log_debug('Server running on <a href="' + server_url + '">' + server_url + '</a>')
+        self.logger.info('Server running on <a href="' + server_url + '">' + server_url + '</a>')
 
     def stop_server(self):
         """
         Stop server which provides info page
         """
-        supp_fct.log_debug("Entering html_server.HTMLServer.stop_server")
+        self.logger.debug("Entering html_server.HTMLServer.stop_server")
         try:
             self.server.shutdown()
             self.server.server_close()
         except AttributeError:
             pass
         except Exception as e:
-            supp_fcn.log_debug("html_server.HTMLServer.stop_server: " + str(e))
+            self.logger.error("html_server.HTMLServer.stop_server: " + str(e))
         finally:
             pass
 

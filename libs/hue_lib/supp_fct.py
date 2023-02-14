@@ -3,8 +3,18 @@ import urlparse
 import ssl
 import urllib2
 import json
-import time
 import hue_lib.colorconvert as colorconvert
+import inspect
+
+
+class TraceLog:
+    # Usage e.g. tracelog = supp_fct.TraceLog(self.logger)
+    def __init__(self, logger):
+        self.logger = logger
+        self.logger.trace("Entering {}".format(inspect.stack()[1][3]))
+
+    def __del__(self):
+        self.logger.trace("Leaving {}".format(inspect.stack()[1][3]))
 
 
 def rgb_to_xy_bri(red, green, blue):
@@ -48,8 +58,8 @@ def hex2int(msg):
     return int(val)
 
 
-def log_debug(msg):
-    print(str(time.time()) + "\tDebug:\t" + str(msg))
+# def log_debug(msg):
+#     print(str(time.time()) + "\tDebug:\t" + str(msg))
 
 
 def get_val(json_data, key, do_xmlcharrefreplace=True):
@@ -67,7 +77,7 @@ def get_val(json_data, key, do_xmlcharrefreplace=True):
     return val
 
 
-def get_data(ip, key, api_cmd):
+def get_data(ip, key, api_cmd, logger):
     """
     {'data': str(result), 'status': str(return code)}
     :param api_cmd:
@@ -95,15 +105,15 @@ def get_data(ip, key, api_cmd):
         data = {'data': response.read(), 'status': str(response.getcode())}
 
         if int(data["status"]) != 200:
-            log_debug("In supp_dct.get_data #97, Hue bridge response code for '" + api_cmd + "' is " + data["status"])
+            logger.warning("In supp_dct.get_data #99, Hue bridge response code for '{cmd}' is {status}".format(cmd=api_cmd, status=data["status"]))
 
     except Exception as e:
         data = {'data': str(e), 'status': str(0)}
-        log_debug("In get_data #291, " + str(e) + ", data: " + str(data))
+        logger.error("In get_data #291, {error}, data: {data}".format(error=e, data=data))
     return data
 
 
-def http_put(ip, key, device_rid, api_path, payload):
+def http_put(ip, key, device_rid, api_path, payload, logger):
     # type: (str, str, str, str, str) -> {str, int}
 
     api_path = "https://" + ip + '/clip/v2/resource/' + api_path + "/" + device_rid
@@ -123,32 +133,32 @@ def http_put(ip, key, device_rid, api_path, payload):
         response = urllib2.urlopen(request, data=payload, timeout=5, context=ctx)
         data = {'data': response.read(), 'status': response.getcode()}
     except urllib2.HTTPError as e:
-        print("In http_put #322, " + str(e) + " with " + "device_rid=" + device_rid +
+        logger.error("In http_put #322, " + str(e) + " with " + "device_rid=" + device_rid +
               "; api_path=" + api_path +
               "; payload=" + str(payload))
         data = {'data': str(e), 'status': 0}
     except urllib2.URLError as e:
-        print("In http_put #328, " + str(e) + " with " +
+        logger.error("In http_put #328, " + str(e) + " with " +
               "device_rid=" + device_rid +
               "; api_path=" + api_path +
               "; payload=" + str(payload))
         data = {'data': str(e), 'status': 0}
     except Exception as e:
-        print("In http_put #334, " + str(e) + " with " +
+        logger.error("In http_put #334, " + str(e) + " with " +
               "device_rid=" + device_rid +
               "; api_path=" + api_path +
               "; payload=" + str(payload))
         data = {'data': str(e), 'status': 0}
 
-    print("In http_put #341, hue bridge response code: " + str(data["status"]))
+    logger.debug("In http_put #341, hue bridge response code: " + str(data["status"]))
     if data["status"] != 200:
         try:
             json_data = json.loads(data["data"])
             if "errors" in json_data:
                 for msg_error in json_data["errors"]:
-                    print("In http_put, " + get_val(msg_error, "description"))
+                    logger.error("In http_put, " + get_val(msg_error, "description"))
         except Exception as e:
-            print("In http_put:357, " + str(e))
+            logger.error("In http_put:357, " + str(e))
 
     if data["status"] == 207:
         data["status"] = 200

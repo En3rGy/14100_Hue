@@ -35,13 +35,13 @@ within the _HSL 2.0_ section.<br>
 | 5   | Scene ID             |       | ID of the scene to be called. Providing a valid scene ID on this input will switch on the device also.                                                           | 
 | 6   | Dynamic scene On/Off | 0     | True/False. Activates the scene of Input 5 as "dynamic scene"                                                                                                    |
 | 7   | Dyn. scene speed     | 0.7   | Speed of dynamic palette for the sceen given on input 5 and activated as "dynamic" on input 6 (0-1)                                                              |
-| 5   | On/Off (1/0)         | 0     | Switches on (1) / off (0) the Hue device.                                                                                                                        |
-| 6   | Brightness (%)       | 0     | Brightness in 0-100% <br/> Device will be switched on if value is set                                                                                            |
-| 7   | r                    | 0     | RGB red (0-100%)                                                                                                                                                 |
-| 8   | g                    | 0     | RGB green (0-100%)                                                                                                                                               |
-| 9   | b                    | 0     | RGB blue (0-100%)                                                                                                                                                |
-| 10  | KNX rel. Dimm        | 0     | Eingang für KNX-Dimm-Signal. Der zugh. Taster muss wie folgt parametrisiert werden:<br/>Relatives dimmen mit Stopp-Signal, ohne Telegramm-Wiederholung           |
-| 11  | KNX Dimm Ramp        | 0.5   | KNX Dimm Rampe [s]; Zeit in Sekunden, in der der Dimmschritt wiederholt wird, bis ein Stopp-Signal empfangen wird.                                               |
+| 8   | On/Off (1/0)         | 0     | Switches on (1) / off (0) the Hue device.                                                                                                                        |
+| 9   | Brightness (%)       | 0     | Brightness in 0-100% <br/> Device will be switched on if value is set                                                                                            |
+| 10  | r                    | 0     | RGB red (0-100%)                                                                                                                                                 |
+| 11  | g                    | 0     | RGB green (0-100%)                                                                                                                                               |
+| 12  | b                    | 0     | RGB blue (0-100%)                                                                                                                                                |
+| 13  | KNX rel. Dimm        | 0     | Eingang für KNX-Dimm-Signal. Der zugh. Taster muss wie folgt parametrisiert werden:<br/>Relatives dimmen mit Stopp-Signal, ohne Telegramm-Wiederholung           |
+| 14  | KNX Dimm Ramp        | 0.5   | KNX Dimm Rampe [s]; Zeit in Sekunden, in der der Dimmschritt wiederholt wird, bis ein Stopp-Signal empfangen wird.                                               |
 
 ## Outputs
 
@@ -70,7 +70,9 @@ within the _HSL 2.0_ section.<br>
 
 ### Change Log
 
-- v3.3: Detecting broken connections to Hue Bridge
+- v3.3:
+  - Detecting broken connections to Hue Bridge
+  - Corrected input IDs in docu
 - v3.2: Fixed Bug [#25](https://github.com/En3rGy/14100_Hue/issues/25)
 - v3.1: Update of documentation
 - v3.0: Refactoring & Hue API v2

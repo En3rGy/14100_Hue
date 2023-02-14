@@ -1,12 +1,20 @@
 # coding=utf-8
 import hue_lib.supp_fct as supp_fct
 import threading
+import logging
 
 
 class HueDevice:
 
-    def __init__(self):
+    def __init__(self, logger):
+        """
+        Initialize the device object and store a reference to the logger.
+
+        :param logger: The logger to use for logging messages.
+        :type logger: logging.Logger
+        """
         self.interval = 0  # type: int
+        self.logger = logger
         self.id = str()  # type: str
         self.name = str()  # type: str
         self.room_name = str()  # type: str
@@ -204,7 +212,7 @@ class HueDevice:
             self.stop = True
             # self.timer.cancel()
             self.timer = None
-            print("abort")
+            self.logger.debug("abort")
             return
 
         sgn_bte = int((val[-1] & 0x08) >> 3)

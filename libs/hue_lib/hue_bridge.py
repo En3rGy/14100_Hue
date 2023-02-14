@@ -4,6 +4,7 @@ import json
 import time
 import urlparse
 import select
+import logging
 
 import hue_lib.supp_fct as supp_fct
 import hue_lib.hue_item as hue_item
@@ -86,7 +87,7 @@ def discover_hue(host_ip):
     :param host_ip: IP of machine, hosting the logic module.
     :return: str, str
     """
-    supp_fct.log_debug("entering hue_bridge.discover_hue, host_ip = " + host_ip)
+    # supp_fct.log_debug("entering hue_bridge.discover_hue, host_ip = " + host_ip)
 
     err_msg = str()
 
@@ -161,7 +162,7 @@ def discover_hue(host_ip):
             for i in range(ar_count):
                 # get record type (= A) and extrakt ip
                 ar_type = add_records[ar_offset + 2:ar_offset + 4]
-                # print(":".join("{:02x}".format(ord(c)) for c in ar_type))
+                # self.logger.debug(":".join("{:02x}".format(ord(c)) for c in ar_type))
                 ar_length = add_records[ar_offset + 10: ar_offset + 12]
                 ar_length = supp_fct.hex2int(ar_length)
 
@@ -226,9 +227,16 @@ def connect_to_eventstream(conn, host_ip, key):
 class HueBridge:
 
     # methods
-    def __init__(self):
+    def __init__(self, logger):
+        """
+        Initialize the device object and store a reference to the logger.
+
+        :param logger: The logger to use for logging messages.
+        :type logger: logging.Logger
+        """
+        self.logger = logger
         self.rid = str()
-        self.device = hue_item.HueDevice()
+        self.device = hue_item.HueDevice(self.logger)
         global devices
         try:
             len(devices)
@@ -275,7 +283,7 @@ class HueBridge:
             item_id = supp_fct.get_val(item, "id")
 
             services = supp_fct.get_val(item, "services")
-            device = hue_item.HueDevice()
+            device = hue_item.HueDevice(self.logger)
             device.device_id = item_id
             metadata = supp_fct.get_val(item, "metadata")
             device.name = supp_fct.get_val(metadata, "name")
@@ -309,7 +317,7 @@ class HueBridge:
                         device.room_name = room_name
                         devices[device.device_id] = device
                     else:
-                        supp_fct.log_debug(
+                        self.logger.debug(
                             "In register_devices #414, device not registered as device but requested by "
                             "'room': '" + rid + "'")
 
@@ -397,12 +405,12 @@ class HueBridge:
         for item_type in item_types:
 
             # 1. get all text data from each item type from bridge
-            data_raw = supp_fct.get_data(get_bridge_ip(host_ip), key, item_type)  # type: str
+            data_raw = supp_fct.get_data(get_bridge_ip(host_ip), key, item_type, self.logger)  # type: str
 
             try:
                 data = json.loads(data_raw["data"])  # type: {}
             except Exception as e:
-                supp_fct.log_debug("In register_devices #377, " + str(e))
+                self.logger.error("In register_devices #377, " + str(e))
                 continue
 
             data = supp_fct.get_val(data, "data")
@@ -417,8 +425,6 @@ class HueBridge:
                 self.__register_scene_type(data)
             elif item_type == "grouped_light":
                 self.__register_grouped_light_type(data)
-
-        supp_fct.log_debug("In register_devices #466, registered " + str(len(devices)) + " devices")
 
         return len(devices)
 
@@ -450,7 +456,7 @@ class HueBridge:
                     break
 
         if self.device is None:
-            supp_fct.log_debug("Requested device not found")
+            self.logger.warning("Requested device not found")
 
         return self.device
 
