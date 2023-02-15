@@ -188,42 +188,6 @@ def discover_hue(host_ip):
     return err_msg, str()
 
 
-def connect_to_eventstream(conn, host_ip, key):
-    hue_bridge_ip = get_bridge_ip(host_ip)
-    api_path = 'https://' + hue_bridge_ip + '/eventstream/clip/v2'
-    url_parsed = urlparse.urlparse(api_path)
-
-    conn.bind(('', 0))
-    try:
-        conn.connect((hue_bridge_ip, 443))
-    except socket.error as e:
-        if e.errno == 10035:
-            pass
-        else:
-            raise
-
-    while True:
-        ready = select.select([], [conn], [], 5)
-        if ready[1]:
-            error = conn.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
-            if error == 0:
-                break
-            else:
-                raise socket.error(error, 'Connect error')
-        else:
-            raise socket.error('Timeout while connecting')
-
-    try:
-        conn.send("GET /eventstream/clip/v2 HTTP/1.1\r\n")
-        conn.send("Host: " + url_parsed.hostname + "\r\n")
-        conn.send("hue-application-key: " + key + "\r\n")
-        conn.send("Accept: text/event-stream\r\n\r\n")
-        return True
-    except socket.socket as e:
-        conn.close()
-        return False
-
-
 class HueBridge:
 
     # methods
@@ -459,6 +423,45 @@ class HueBridge:
             self.logger.warning("Requested device not found")
 
         return self.device
+
+    def connect_to_eventstream(self, conn, host_ip, key):
+        tracelog = supp_fct.TraceLog(self.logger)
+        hue_bridge_ip = get_bridge_ip(host_ip)
+        api_path = 'https://' + hue_bridge_ip + '/eventstream/clip/v2'
+        url_parsed = urlparse.urlparse(api_path)
+
+        conn.bind(('', 0))
+        try:
+            conn.connect((hue_bridge_ip, 443))
+        except socket.error as e:
+            if e.errno == 10035:
+                pass
+            else:
+                raise
+
+        while True:
+            ready = select.select([], [conn], [], 5)
+            if ready[1]:
+                error = conn.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+                if error == 0:
+                    break
+                else:
+                    raise socket.error(error, 'Connect error')
+            else:
+                raise socket.error('Timeout while connecting')
+
+        try:
+            conn.send("GET /eventstream/clip/v2 HTTP/1.1\r\n")
+            conn.send("Host: " + url_parsed.hostname + "\r\n")
+            conn.send("hue-application-key: " + key + "\r\n")
+            conn.send("Accept: text/event-stream\r\n\r\n")
+            self.logger.info("Connected to eventstream")
+            return True
+        except socket.socket as e:
+            conn.close()
+            self.logger.error("Error connecting  to eventstream.")
+            return False
+
 
 def get_css():
     css = '''/*** *********************** ***/

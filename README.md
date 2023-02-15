@@ -14,34 +14,50 @@ necessary, if the bridge IP chances!
 All outputs are configured as _send-by-change (sbc)_.
 
 ### Useage
-- [Hue API v2](https://developers.meethue.com/develop/hue-api-v2/) addresses each device using a non-readable ID.<br>
+#### Information Website and Set-up of logic module
+[Hue API v2](https://developers.meethue.com/develop/hue-api-v2/) addresses each device using a non-readable ID.<br>
 This ID must be provided to the logic module instance of the corresponding Hue device (1 Hue Device : 1 Logic Module 
  Instance).<br>
 In oder to identify the Hue ID of a specific device, one logic module creates a webpage showing the IDs and the 
-corresponding rooms and device names. The link to this page is shown on the debug page in the logic modules section 
-within the _HSL 2.0_ section.<br>
+corresponding rooms and device names (**Information Website**). The link to this page is shown on the debug page in the logic modules section 
+within the _HSL 2.0_ section and represents this scheme: `http://<HS-IP>:<Port>`<br>
 **Create at least one instance of the logic module and identify the Hue IDs of the devices you would like to control.**
-- Set up an instance of the logic module for each hue item you would like to control or monitor the status.<br>
+
+Set up an instance of the logic module for each hue item you would like to control or monitor the status.<br>
 **In general, use the `light` or `grouped light` ID.**
+
+#### Switch on of a Light
+- Identify the light ID on the info page
+- Put the ID on [input 4](#input_4) (usually constant, the idea is to have one logic module per light/room/zone)
+- Use [input 8](#input_8) to switch the light on or off
+
+*Note: If you want to switch on a room or a zone, use the rooms / zones ID on [input 4](#input_4)*
+
+#### Command a scene
+- Identify the scene  ID on the info page. Caution! Each light has its own scene.
+  - Identify the tabel row of the light / room
+  - Identify the ID of the desired scene
+- Write the scene ID on [input 5](#input_5) (this will switch on the light if it was off before)
+- Set [input 6](#input_6) to one if you want to activate the dynamic behaviour of the scene
 
 ## Inputs
 
-| Nr. | Name                 | Init. | Description                                                                                                                                                      |
-|-----|----------------------|-------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 1   | Get Status           |       | A value =1 reads (manually) the full status of the device from the bridge                                                                                        |
-| 2   | Key                  |       | Hue Bridge User Key                                                                                                                                              |
-| 3   | Port Info Page       | 0     | Port of Information Website: Website containing all Hue devices and the corresponding or associated Hue IDs. The web site is provided at `http://<HS-IP>:<Port>` |
-| 4   | Item Id              | 0     | ID of Hue device to be controlled. The device ID can be identified via the Information Website described in the description / Usage section                      |
-| 5   | Scene ID             |       | ID of the scene to be called. Providing a valid scene ID on this input will switch on the device also.                                                           | 
-| 6   | Dynamic scene On/Off | 0     | True/False. Activates the scene of Input 5 as "dynamic scene"                                                                                                    |
-| 7   | Dyn. scene speed     | 0.7   | Speed of dynamic palette for the sceen given on input 5 and activated as "dynamic" on input 6 (0-1)                                                              |
-| 8   | On/Off (1/0)         | 0     | Switches on (1) / off (0) the Hue device.                                                                                                                        |
-| 9   | Brightness (%)       | 0     | Brightness in 0-100% <br/> Device will be switched on if value is set                                                                                            |
-| 10  | r                    | 0     | RGB red (0-100%)                                                                                                                                                 |
-| 11  | g                    | 0     | RGB green (0-100%)                                                                                                                                               |
-| 12  | b                    | 0     | RGB blue (0-100%)                                                                                                                                                |
-| 13  | KNX rel. Dimm        | 0     | Eingang für KNX-Dimm-Signal. Der zugh. Taster muss wie folgt parametrisiert werden:<br/>Relatives dimmen mit Stopp-Signal, ohne Telegramm-Wiederholung           |
-| 14  | KNX Dimm Ramp        | 0.5   | KNX Dimm Rampe [s]; Zeit in Sekunden, in der der Dimmschritt wiederholt wird, bis ein Stopp-Signal empfangen wird.                                               |
+| Nr.                     | Name                 | Init. | Description                                                                                                                                                      |
+|-------------------------|----------------------|-------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| <a name="input_1"></a>1 | Get Status           |       | A value =1 reads (manually) the full status of the device from the bridge                                                                                        |
+| <a name="input_2"></a>2 | Key                  |       | Hue Bridge User Key                                                                                                                                              |
+| 3                       | Port Info Page       | 0     | Port of Information Website: Website containing all Hue devices and the corresponding or associated Hue IDs. The web site is provided at `http://<HS-IP>:<Port>` |
+| <a name="input_4"></a>4 | Item Id              | 0     | ID of Hue device to be controlled. The device ID can be identified via the Information Website described in the description / Usage section                      |
+| <a name="input_5"></a>5 | Scene ID             |       | ID of the scene to be called. Providing a valid scene ID on this input will switch on the device also.                                                           | 
+| <a name="input_6"></a>6 | Dynamic scene On/Off | 0     | True/False. Activates the scene of Input 5 as "dynamic scene"                                                                                                    |
+| 7                       | Dyn. scene speed     | 0.7   | Speed of dynamic palette for the sceen given on input 5 and activated as "dynamic" on input 6 (0-1)                                                              |
+| <a name="input_8"></a>8 | On/Off (1/0)         | 0     | Switches on (1) / off (0) the Hue device.                                                                                                                        |
+| 9                       | Brightness (%)       | 0     | Brightness in 0-100% <br/> Device will be switched on if value is set                                                                                            |
+| 10                      | r                    | 0     | RGB red (0-100%)                                                                                                                                                 |
+| 11                      | g                    | 0     | RGB green (0-100%)                                                                                                                                               |
+| 12                      | b                    | 0     | RGB blue (0-100%)                                                                                                                                                |
+| 13                      | KNX rel. Dimm        | 0     | Eingang für KNX-Dimm-Signal. Der zugh. Taster muss wie folgt parametrisiert werden:<br/>Relatives dimmen mit Stopp-Signal, ohne Telegramm-Wiederholung           |
+| 14                      | KNX Dimm Ramp        | 0.5   | KNX Dimm Rampe [s]; Zeit in Sekunden, in der der Dimmschritt wiederholt wird, bis ein Stopp-Signal empfangen wird.                                               |
 
 ## Outputs
 
@@ -63,8 +79,8 @@ within the _HSL 2.0_ section.<br>
 
 ## Other
 
-- Calculation on start: Nein
-- Module is remanent: nein
+- Calculation on start: No
+- Module is remanent: No
 - Internal number: 14100
 - Category: Datenaustausch
 

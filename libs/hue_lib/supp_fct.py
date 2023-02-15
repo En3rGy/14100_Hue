@@ -13,6 +13,12 @@ class TraceLog:
         self.logger = logger
         self.logger.trace("Entering {}".format(inspect.stack()[1][3]))
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return True
+
     def __del__(self):
         self.logger.trace("Leaving {}".format(inspect.stack()[1][3]))
 

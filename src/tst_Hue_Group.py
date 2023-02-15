@@ -148,6 +148,8 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.event_list = []
         self.msg_last = str()
         self.curr_bri = 0
+        self.g_out_sbc = {}  # type: {int, object}
+        self.debug = False  # type: bool
 
         # Create a custom logging level TRACE
         logging.addLevelName(TRACE, "TRACE")
@@ -158,8 +160,6 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         logging.Logger.trace = trace
         self.logger.setLevel(TRACE)
-
-
 
     global eventstream_is_connected  # type: bool
     sbc_data_lock = threading.Lock()
@@ -181,83 +181,84 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
     def set_output_value_sbc(self, pin, val):
         # type:  (int, any) -> None
-        self.sbc_data_lock.acquire()
-        if pin in self.g_out_sbc:
-            if self.g_out_sbc[pin] == val:
-                self.logger.info("SBC: pin " + str(pin) + " <- data not send / " + str(val).decode("utf-8"))
-                self.sbc_data_lock.release()
-                return
+        with supp_fct.TraceLog(self.logger):
+            self.sbc_data_lock.acquire()
+            if pin in self.g_out_sbc:
+                if self.g_out_sbc[pin] == val:
+                    self.logger.info("SBC: pin {} <- data not send / {}".format(str(pin), str(val).decode("utf-8")))
+                    self.sbc_data_lock.release()
+                    return
 
-        self._set_output_value(pin, val)
-        self.g_out_sbc[pin] = val
-        self.sbc_data_lock.release()
+            self._set_output_value(pin, val)
+            self.g_out_sbc[pin] = val
+            self.sbc_data_lock.release()
 
     def process_json(self, msg):
         # type: (json) -> bool
-        self.logger.debug("Entering process_json")
-        try:
-            out = json.dumps(msg)
-        except Exception as e:
-            self.logger.error("In process_json #620, " + str(e))
-            return False
+        with supp_fct.TraceLog(self.logger):
+            try:
+                out = json.dumps(msg)
+            except Exception as e:
+                self.logger.error("In process_json #620, " + str(e))
+                return False
 
-        if "status" in msg and "data" in msg:
-            msg = msg["data"]
+            if "status" in msg and "data" in msg:
+                msg = msg["data"]
 
-        if type(msg) == str:
-            msg = json.loads(msg)
+            if type(msg) == str:
+                msg = json.loads(msg)
 
-        if type(msg) == dict:
-            msg = [msg]
+            if type(msg) == dict:
+                msg = [msg]
 
-        try:
-            hue_device = self.bridge.get_own_device(self._get_input_value(self.PIN_I_ITM_IDX))
+            try:
+                hue_device = self.bridge.get_own_device(self._get_input_value(self.PIN_I_ITM_IDX))
 
-            for msg_entry in msg:
-                if "data" not in msg_entry:
-                    self.log_data("In process_json #183, no 'data' field", msg_entry)
-                    continue
+                for msg_entry in msg:
+                    if "data" not in msg_entry:
+                        self.log_data("In process_json #183, no 'data' field", msg_entry)
+                        continue
 
-                if type(msg_entry["data"]) == str:
-                    msg_entry["data"] = json.loads(msg_entry["data"])
+                    if type(msg_entry["data"]) == str:
+                        msg_entry["data"] = json.loads(msg_entry["data"])
 
-                for data in msg_entry["data"]:
-                    device_id = supp_fct.get_val(data, "id")
+                    for data in msg_entry["data"]:
+                        device_id = supp_fct.get_val(data, "id")
 
-                    if device_id not in hue_device.get_device_ids():
-                        pass
+                        if device_id not in hue_device.get_device_ids():
+                            pass
 
-                    else:
-                        if "on" in data:
-                            is_on = bool(data["on"]["on"])
-                            self.set_output_value_sbc(self.PIN_O_STATUS_ON_OFF, is_on)
+                        else:
+                            if "on" in data:
+                                is_on = bool(data["on"]["on"])
+                                self.set_output_value_sbc(self.PIN_O_STATUS_ON_OFF, is_on)
 
-                        bri = 0
-                        if "dimming" in data:
-                            dimming = data["dimming"]
-                            bri = dimming["brightness"]
-                            self.curr_bri = bri
-                            self.set_output_value_sbc(self.PIN_O_BRI, int(bri))
+                            bri = 0
+                            if "dimming" in data:
+                                dimming = data["dimming"]
+                                bri = dimming["brightness"]
+                                self.curr_bri = bri
+                                self.set_output_value_sbc(self.PIN_O_BRI, int(bri))
 
-                        if "color" in data:
-                            color = supp_fct.get_val(data, "color")
-                            xy = supp_fct.get_val(color, "xy")
-                            x = supp_fct.get_val(xy, "x")
-                            y = supp_fct.get_val(xy, "y")
-                            [r, g, b] = supp_fct.xy_bri_to_rgb(x, y, self.curr_bri)
-                            r = int(r / 255.0 * 100)
-                            g = int(g / 255.0 * 100)
-                            b = int(b / 255.0 * 100)
-                            self.set_output_value_sbc(self.PIN_O_R, r)
-                            self.set_output_value_sbc(self.PIN_O_G, g)
-                            self.set_output_value_sbc(self.PIN_O_B, b)
+                            if "color" in data:
+                                color = supp_fct.get_val(data, "color")
+                                xy = supp_fct.get_val(color, "xy")
+                                x = supp_fct.get_val(xy, "x")
+                                y = supp_fct.get_val(xy, "y")
+                                [r, g, b] = supp_fct.xy_bri_to_rgb(x, y, self.curr_bri)
+                                r = int(r / 255.0 * 100)
+                                g = int(g / 255.0 * 100)
+                                b = int(b / 255.0 * 100)
+                                self.set_output_value_sbc(self.PIN_O_R, r)
+                                self.set_output_value_sbc(self.PIN_O_G, g)
+                                self.set_output_value_sbc(self.PIN_O_B, b)
 
-                        if supp_fct.get_val(data, "type") == "zigbee_connectivity":
-                            if "status" in data:
-                                self.set_output_value_sbc(self.PIN_O_REACHABLE, data["status"] == "connected")
+                            if supp_fct.get_val(data, "type") == "zigbee_connectivity":
+                                if "status" in data:
+                                    self.set_output_value_sbc(self.PIN_O_REACHABLE, data["status"] == "connected")
 
-        except Exception as e:
-            self.log_data("Error in process_json #239", str(e) + " with\n\n" + str(out))
+            except Exception as e:
+                self.log_data("Error in process_json #239", "'{}' with:\n'{}'\n\n".format(str(e), str(out)))
 
     def eventstream_start(self, key):
         """
@@ -266,13 +267,12 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         :type key: str
         :param key:
         """
-        tracelog = supp_fct.TraceLog(self.logger)
-
-        if not get_eventstream_is_connected():
-            self.eventstream_keep_running.set()
-            self.eventstream_thread = threading.Thread(target=self.eventstream,
-                                                       args=(self.eventstream_keep_running, key,))
-            self.eventstream_thread.start()
+        with supp_fct.TraceLog(self.logger):
+            if not get_eventstream_is_connected():
+                self.eventstream_keep_running.set()
+                self.eventstream_thread = threading.Thread(target=self.eventstream,
+                                                           args=(self.eventstream_keep_running, key,))
+                self.eventstream_thread.start()
 
     def handle_connection(self, conn):
         """
@@ -283,25 +283,23 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         :return: A list of valid messages received from the connection.
         :rtype: list of str
         """
-        tracelog = supp_fct.TraceLog(self.logger)
+        with supp_fct.TraceLog(self.logger):
+            data = self.msg_last
+            while self.eventstream_keep_running.is_set() and get_eventstream_is_connected():
+                ready = select.select([conn], [], [])
+                if ready[0]:
+                    new_data = conn.recv(4096)  # read data @todo Blocking; using conn.setblocking(0) does not work
+                    if not new_data:  # Connection closed
+                        self.logger.warning("In handle_connection # 281, connection to bridge closed.")
+                        return []
 
-        MSG_SEP = "\n"
-        data = self.msg_last
-        while self.eventstream_keep_running.is_set() and get_eventstream_is_connected():
-            ready = select.select([conn], [], [])
-            if ready[0]:
-                new_data = conn.recv(4096)  # read data @todo Blocking; using conn.setblocking(0) does not work
-                if not new_data:  # Connection closed
-                    self.logger.warning("In handle_connection # 281, connection to bridge closed.")
-                    return []
+                    self.logger.debug("Received data from Hue bridge")
+                    data += new_data
+                    msgs = data.split(MSG_SEP)  # is ending with seperator, an empty element will be attached
+                    self.msg_last = msgs[-1]  # store last( incomplete or empty) msg for later usage
 
-                data += new_data
-
-                msgs = data.split(MSG_SEP)  # is ending with seperator, an empty element will be attached
-                self.msg_last = msgs[-1]  # store last( incomplete or empty) msg for later usage
-
-                valid_msgs = [msg[6:] for msg in msgs[:-1] if len(msg) > 6 and msg[:6] == "data: "]
-                return valid_msgs  # return all complete messages
+                    valid_msgs = [msg[6:] for msg in msgs[:-1] if len(msg) > 6 and msg[:6] == "data: "]
+                    return valid_msgs  # return all complete messages
 
     def process_eventstream_msgs(self, msgs):
         """
@@ -311,30 +309,30 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         :type msgs: list of str
         :return: None
         """
-        tracelog = supp_fct.TraceLog(self.logger)
-        if not msgs:
-            return
-        for msg in msgs:
-            try:
-                msg = json.loads(msg)
+        with supp_fct.TraceLog(self.logger):
+            if not msgs:
+                return
+            for msg in msgs:
+                try:
+                    msg = json.loads(msg)
 
-                # store received data / message
-                modules = singlet.get_module_register()
-                for module_id in modules:
-                    if module_id == self._get_module_id():
-                        continue
-                    module_instance = self.FRAMEWORK.get_instance_by_id(module_id)
-                    try:
-                        module_instance.process_json(msg)
-                    except Exception as e:
-                        self.logger.warning("In eventstream #336, calling remote modules, '" + str(e) + "'.")
+                    # store received data / message
+                    modules = singlet.get_module_register()
+                    for module_id in modules:
+                        if module_id == self._get_module_id():
+                            continue
+                        module_instance = self.FRAMEWORK.get_instance_by_id(module_id)
+                        try:
+                            module_instance.process_json(msg)
+                        except Exception as e:
+                            self.logger.warning("In eventstream #336, calling remote modules, '" + str(e) + "'.")
 
-                self.process_json(msg)
+                    self.process_json(msg)
 
-            except Exception as e:
-                self.logger.error("Eventstream #342, error with '" + e.message[:len(e.message)] + "'.")
-                self.log_data("Eventstream #342 error msg", str(e))
-                self.log_data("Eventstream #342 erroneous str", msg)
+                except Exception as e:
+                    self.logger.error("Eventstream #342, error with '" + e.message[:len(e.message)] + "'.")
+                    self.log_data("Eventstream #342 error msg", str(e))
+                    self.log_data("Eventstream #342 erroneous str", msg)
 
     def eventstream(self, running, key):
         """
@@ -345,42 +343,36 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         :type running: threading.Event
         :param running:
         """
-        tracelog = supp_fct.TraceLog(self.logger)
+        with supp_fct.TraceLog(self.logger):
 
-        if not self.eventstream_keep_running.is_set():
-            self.logger.debug("Tried to connect to eventstream but self.eventstream_keep_running not set.")
+            # get  connection loop
+            while self.eventstream_keep_running.is_set():
+                host_ip = self.FRAMEWORK.get_homeserver_private_ip()
 
-        # get  connection loop
-        while self.eventstream_keep_running.is_set():
-            host_ip = self.FRAMEWORK.get_homeserver_private_ip()
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock = ssl.wrap_socket(sock, cert_reqs=ssl.CERT_NONE)
 
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock = ssl.wrap_socket(sock, cert_reqs=ssl.CERT_NONE)
+                # connect to bridge
+                is_connected = self.bridge.connect_to_eventstream(sock, host_ip, key)
+                set_eventstream_is_connected(is_connected)
+                if not is_connected:
+                    continue
 
-            # connect to bridge
-            is_connected = hue_bridge.connect_to_eventstream(sock, host_ip, key)
-            set_eventstream_is_connected(is_connected)
-            if is_connected:
-                self.logger.info("Connected to eventstream")
-            else:
-                self.logger.error("Error connecting  to eventstream.")
-                continue
+                # receive data loop
+                while self.eventstream_keep_running.is_set() and get_eventstream_is_connected():
+                    try:
+                        msgs = self.handle_connection(sock)  # check if data is available to read
+                        self.process_eventstream_msgs(msgs)  # process received msg
+                    except socket.error as e:
+                        self.logger.error("In eventstream #291, socket error " + str(e.errno) + " '" + str(e) + "'")
+                        set_eventstream_is_connected(False)
+                        break
 
-            # receive data loop
-            while self.eventstream_keep_running.is_set() and get_eventstream_is_connected():
-                try:
-                    msgs = self.handle_connection(sock)  # check if data is available to read
-                    self.process_eventstream_msgs(msgs)  # process received msg
-                except socket.error as e:
-                    self.logger.error("In eventstream #291, socket error " + str(e.errno) + " '" + str(e) + "'")
-                    set_eventstream_is_connected(False)
-                    break
-
-            # gently disconnect and wait for re-connection
-            sock.close()
-            self.logger.warning("In eventstream #395, Disconnected from hue eventstream.")
-            time.sleep(4)
-            set_eventstream_is_connected(False)
+                # gently disconnect and wait for re-connection
+                sock.close()
+                self.logger.warning("In eventstream #395, Disconnected from hue eventstream.")
+                time.sleep(4)
+                set_eventstream_is_connected(False)
 
     def stop_eventstream(self):
         """
@@ -458,14 +450,11 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         # debug
         tracelog = supp_fct.TraceLog(self.logger)
         self.DEBUG = self.FRAMEWORK.create_debug_section()
-        self.g_out_sbc = {}  # type: {int, object}
-        self.debug = False  # type: bool
 
         handler = self.FunctionHandler(self.DEBUG, self._get_module_id())
         self.logger.addHandler(handler)
 
         self.do_init()
-        self.logger.debug("Leaving on_init")
 
     def on_input_value(self, index, value):
         # Process State
@@ -559,6 +548,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
 
 TRACE = 5
+MSG_SEP = "\n"
 
 
 def get_eventstream_is_connected():
