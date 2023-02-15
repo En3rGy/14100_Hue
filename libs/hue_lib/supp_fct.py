@@ -86,6 +86,7 @@ def get_val(json_data, key, do_xmlcharrefreplace=True):
 def get_data(ip, key, api_cmd, logger):
     """
     {'data': str(result), 'status': str(return code)}
+    :param logger:
     :param api_cmd:
     :type api_cmd: str
     :param key:
@@ -95,78 +96,82 @@ def get_data(ip, key, api_cmd, logger):
     :return: {'data': Data received, 'status': html return code}
     :rtype: {str, str}
     """
-    # log_debug("entering get_data")
-    api_path = 'https://' + ip + '/clip/v2/resource/' + api_cmd
-    url_parsed = urlparse.urlparse(api_path)
-    headers = {'Host': url_parsed.hostname, "hue-application-key": key}
+    with TraceLog(logger):
+        api_path = 'https://' + ip + '/clip/v2/resource/' + api_cmd
+        url_parsed = urlparse.urlparse(api_path)
+        headers = {'Host': url_parsed.hostname, "hue-application-key": key}
 
-    # Build a SSL Context to disable certificate verification.
-    ctx = ssl._create_unverified_context()
+        # Build a SSL Context to disable certificate verification.
+        ctx = ssl._create_unverified_context()
 
-    try:
-        # Build a http request and overwrite host header with the original hostname.
-        request = urllib2.Request(api_path, headers=headers)
-        # Open the URL and read the response.
-        response = urllib2.urlopen(request, data=None, timeout=5, context=ctx)
-        data = {'data': response.read(), 'status': str(response.getcode())}
+        try:
+            # Build a http request and overwrite host header with the original hostname.
+            request = urllib2.Request(api_path, headers=headers)
+            # Open the URL and read the response.
+            response = urllib2.urlopen(request, data=None, timeout=5, context=ctx)
+            data = {'data': response.read(), 'status': str(response.getcode())}
+            logger.debug("Received {} byte with return code {}".format(len(data.get("data")), data.get("status")))
 
-        if int(data["status"]) != 200:
-            logger.warning("In supp_dct.get_data #99, Hue bridge response code for '{cmd}' is {status}".format(cmd=api_cmd, status=data["status"]))
+            if int(data["status"]) != 200:
+                logger.warning("In supp_dct.get_data #99, Hue bridge response code for '{cmd}' is {status}".format(cmd=api_cmd, status=data["status"]))
 
-    except Exception as e:
-        data = {'data': str(e), 'status': str(0)}
-        logger.error("In get_data #291, {error}, data: {data}".format(error=e, data=data))
-    return data
+        except Exception as e:
+            data = {'data': str(e), 'status': str(0)}
+            logger.error("In get_data #291, {error}, data: {data}".format(error=e, data=data))
+        return data
 
 
 def http_put(ip, key, device_rid, api_path, payload, logger):
     # type: (str, str, str, str, str) -> {str, int}
+    with TraceLog(logger):
 
-    api_path = "https://" + ip + '/clip/v2/resource/' + api_path + "/" + device_rid
-    url_parsed = urlparse.urlparse(api_path)
-    headers = {"Host": url_parsed.hostname,
-               "Content-type": 'application/json',
-               "hue-application-key": str(key)}
+        api_path = "https://" + ip + '/clip/v2/resource/' + api_path + "/" + device_rid
+        url_parsed = urlparse.urlparse(api_path)
+        headers = {"Host": url_parsed.hostname,
+                   "Content-type": 'application/json',
+                   "hue-application-key": str(key)}
 
-    # Build a SSL Context to disable certificate verification.
-    ctx = ssl._create_unverified_context()
+        # Build a SSL Context to disable certificate verification.
+        ctx = ssl._create_unverified_context()
 
-    try:
-        # Build a http request and overwrite host header with the original hostname.
-        request = urllib2.Request(api_path, headers=headers)
-        request.get_method = lambda: 'PUT'
-        # Open the URL and read the response.
-        response = urllib2.urlopen(request, data=payload, timeout=5, context=ctx)
-        data = {'data': response.read(), 'status': response.getcode()}
-    except urllib2.HTTPError as e:
-        logger.error("In http_put #322, " + str(e) + " with " + "device_rid=" + device_rid +
-              "; api_path=" + api_path +
-              "; payload=" + str(payload))
-        data = {'data': str(e), 'status': 0}
-    except urllib2.URLError as e:
-        logger.error("In http_put #328, " + str(e) + " with " +
-              "device_rid=" + device_rid +
-              "; api_path=" + api_path +
-              "; payload=" + str(payload))
-        data = {'data': str(e), 'status': 0}
-    except Exception as e:
-        logger.error("In http_put #334, " + str(e) + " with " +
-              "device_rid=" + device_rid +
-              "; api_path=" + api_path +
-              "; payload=" + str(payload))
-        data = {'data': str(e), 'status': 0}
-
-    logger.debug("In http_put #341, hue bridge response code: " + str(data["status"]))
-    if data["status"] != 200:
         try:
-            json_data = json.loads(data["data"])
-            if "errors" in json_data:
-                for msg_error in json_data["errors"]:
-                    logger.error("In http_put, " + get_val(msg_error, "description"))
+            # Build a http request and overwrite host header with the original hostname.
+            request = urllib2.Request(api_path, headers=headers)
+            request.get_method = lambda: 'PUT'
+            # Open the URL and read the response.
+            response = urllib2.urlopen(request, data=payload, timeout=5, context=ctx)
+            data = {'data': response.read(), 'status': response.getcode()}
+            logger.debug("Received {} byte with return code {}".format(len(data.get("data")), data.get("status")))
+
+        except urllib2.HTTPError as e:
+            logger.error("In http_put #322, " + str(e) + " with " + "device_rid=" + device_rid +
+                  "; api_path=" + api_path +
+                  "; payload=" + str(payload))
+            data = {'data': str(e), 'status': 0}
+        except urllib2.URLError as e:
+            logger.error("In http_put #328, " + str(e) + " with " +
+                  "device_rid=" + device_rid +
+                  "; api_path=" + api_path +
+                  "; payload=" + str(payload))
+            data = {'data': str(e), 'status': 0}
         except Exception as e:
-            logger.error("In http_put:357, " + str(e))
+            logger.error("In http_put #334, " + str(e) + " with " +
+                  "device_rid=" + device_rid +
+                  "; api_path=" + api_path +
+                  "; payload=" + str(payload))
+            data = {'data': str(e), 'status': 0}
 
-    if data["status"] == 207:
-        data["status"] = 200
+        logger.debug("In http_put #341, hue bridge response code: " + str(data["status"]))
+        if data["status"] != 200:
+            try:
+                json_data = json.loads(data["data"])
+                if "errors" in json_data:
+                    for msg_error in json_data["errors"]:
+                        logger.error("In http_put, " + get_val(msg_error, "description"))
+            except Exception as e:
+                logger.error("In http_put:357, " + str(e))
 
-    return data
+        if data["status"] == 207:
+            data["status"] = 200
+
+        return data

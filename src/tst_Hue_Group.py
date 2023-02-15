@@ -159,7 +159,8 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 self._log(TRACE, message, args, **kws)
 
         logging.Logger.trace = trace
-        self.logger.setLevel(TRACE)
+        # self.logger.setLevel(TRACE)
+        self.logger.setLevel(logging.INFO)
 
     global eventstream_is_connected  # type: bool
     sbc_data_lock = threading.Lock()
@@ -293,13 +294,15 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                         self.logger.warning("In handle_connection # 281, connection to bridge closed.")
                         return []
 
-                    self.logger.debug("Received data from Hue bridge")
+                    self.logger.debug("Received {} byte from Hue bridge".format(len(new_data)))
                     data += new_data
                     msgs = data.split(MSG_SEP)  # is ending with seperator, an empty element will be attached
                     self.msg_last = msgs[-1]  # store last( incomplete or empty) msg for later usage
 
                     valid_msgs = [msg[6:] for msg in msgs[:-1] if len(msg) > 6 and msg[:6] == "data: "]
                     return valid_msgs  # return all complete messages
+                else:
+                    self.logger.debug("No data available on socket.")
 
     def process_eventstream_msgs(self, msgs):
         """
@@ -618,7 +621,6 @@ class UnitTests(unittest.TestCase):
 
         self.ip = self.cred["PIN_I_SHUEIP"]
         self.key = self.cred["PIN_I_SUSER"]
-        self.scene_dyn = self.cred["hue_dyn_scene_studio"]
 
     def tearDown(self):
         print("\n### tearDown")

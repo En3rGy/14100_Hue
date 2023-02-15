@@ -47,12 +47,13 @@ class HueDevice:
                 "</tr>\n")
 
     def get_device_ids(self):
-        ret = [self.device_id, self.light_id, self.zigbee_connectivity_id, self.room, self.zone]   # type: [str]
-        for scene in self.scenes:
-            ret.extend(scene["id"])
-        ret.extend(self.grouped_lights)
+        with supp_fct.TraceLog(self.logger):
+            ret = [self.device_id, self.light_id, self.zigbee_connectivity_id, self.room, self.zone]   # type: [str]
+            for scene in self.scenes:
+                ret.extend(scene["id"])
+            ret.extend(self.grouped_lights)
 
-        return ret
+            return ret
 
     def set_on(self, ip, key, set_on):
         """
@@ -67,19 +68,18 @@ class HueDevice:
         :rtype: bool
         :return:
         """
-        supp_fct.log_debug("entering set_on")
+        with supp_fct.TraceLog(self.logger):
+            if self.rtype == "room" or self.rtype == "zone":
+                supp_fct.log_debug("In set_on #744, on/off not available for rooms or zones")
+                return False
 
-        if self.rtype == "room" or self.rtype == "zone":
-            supp_fct.log_debug("In set_on #744, on/off not available for rooms or zones")
-            return False
+            if set_on:
+                payload = '{"on":{"on":true}}'
+            else:
+                payload = '{"on":{"on":false}}'
 
-        if set_on:
-            payload = '{"on":{"on":true}}'
-        else:
-            payload = '{"on":{"on":false}}'
-
-        ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload)
-        return ret["status"] == 200
+            ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload)
+            return ret["status"] == 200
 
     def set_bri(self, ip, key, brightness):
         """
@@ -94,12 +94,12 @@ class HueDevice:
         :return: True if successful, otherwise False
         :rtype: bool
         """
-        supp_fct.log_debug("entering set_bri")
+        with supp_fct.TraceLog(self.logger):
 
-        payload = '{"dimming":{"brightness":' + str(brightness) + '}}'
-        ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload)
-        self.curr_bri = brightness
-        return ret["status"] == 200
+            payload = '{"dimming":{"brightness":' + str(brightness) + '}}'
+            ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload)
+            self.curr_bri = brightness
+            return ret["status"] == 200
 
     def set_color_xy_bri(self, ip, key, x, y, bri):
         """
@@ -118,13 +118,12 @@ class HueDevice:
         :rtype: bool
         :return:
         """
-        supp_fct.log_debug("set_color_xy_bri")
+        with supp_fct.TraceLog(self.logger):
+            payload = '{"color":{"xy":{"x":' + str(x) + ', "y":' + str(y) + '}}}'
 
-        payload = '{"color":{"xy":{"x":' + str(x) + ', "y":' + str(y) + '}}}'
-
-        ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload)
-        supp_fct.log_debug("In set_color_xy_bri #780, return code is " + str(ret["status"]))
-        return ret["status"] == 200  # & self.set_bri(bri)
+            ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload)
+            supp_fct.log_debug("In set_color_xy_bri #780, return code is " + str(ret["status"]))
+            return ret["status"] == 200  # & self.set_bri(bri)
 
     def set_color_rgb(self, ip, key, r, g, b):
         """
@@ -142,14 +141,13 @@ class HueDevice:
         :rtype: bool
         :return:
         """
+        with supp_fct.TraceLog(self.logger):
+            r = int(r * 2.55)  # type: int
+            g = int(g * 2.55)  # type: int
+            b = int(b * 2.55)  # type: int
 
-        r = int(r * 2.55)  # type: int
-        g = int(g * 2.55)  # type: int
-        b = int(b * 2.55)  # type: int
-
-        supp_fct.log_debug("entering set_color")
-        [x, y, bri] = supp_fct.rgb_to_xy_bri(r, g, b)
-        return self.set_color_xy_bri(ip, key, x, y, bri)
+            [x, y, bri] = supp_fct.rgb_to_xy_bri(r, g, b)
+            return self.set_color_xy_bri(ip, key, x, y, bri)
 
     def set_scene(self, ip, key, scene_id):
         """
@@ -163,10 +161,10 @@ class HueDevice:
         :rtype: bool
         :return:
         """
-        supp_fct.log_debug("Entering set_scene")
-        payload = '{"recall":{"action": "active"}}'
-        ret = supp_fct.http_put(ip, key, scene_id, "scene", payload)
-        return ret["status"] == 200
+        with supp_fct.TraceLog(self.logger):
+            payload = '{"recall":{"action": "active"}}'
+            ret = supp_fct.http_put(ip, key, scene_id, "scene", payload)
+            return ret["status"] == 200
 
     def set_dynamic_scene(self, ip, key, scene_id, speed):
         """
@@ -182,10 +180,10 @@ class HueDevice:
         :rtype: bool
         :return:
         """
-        supp_fct.log_debug("Entering set_dynamic_scene")
-        payload = '{"recall": {"action": "dynamic_palette"}, "speed": ' + str(speed) + '}'
-        ret = supp_fct.http_put(ip, key, scene_id, "scene", payload)
-        return ret["status"] == 200
+        with supp_fct.TraceLog(self.logger):
+            payload = '{"recall": {"action": "dynamic_palette"}, "speed": ' + str(speed) + '}'
+            ret = supp_fct.http_put(ip, key, scene_id, "scene", payload)
+            return ret["status"] == 200
 
     def prep_dim(self, ip, key, val, dim_ramp):
         """
@@ -200,36 +198,35 @@ class HueDevice:
         :type val: int
         :return:
         """
+        with supp_fct.TraceLog(self.logger):
 
-        supp_fct.log_debug("Dim cmd, str(val)" + " " + str(type(val)))
+            if (type(val) is float) or (type(val) is int):
+                val = int(val)
+                val = chr(val)
+                val = bytearray(val)
 
-        if (type(val) is float) or (type(val) is int):
-            val = int(val)
-            val = chr(val)
-            val = bytearray(val)
+            if val[-1] == 0x00:
+                self.stop = True
+                # self.timer.cancel()
+                self.timer = None
+                self.logger.debug("abort")
+                return
 
-        if val[-1] == 0x00:
-            self.stop = True
-            # self.timer.cancel()
-            self.timer = None
-            self.logger.debug("abort")
-            return
+            sgn_bte = int((val[-1] & 0x08) >> 3)
+            val = int(val[-1] & 0x07)
 
-        sgn_bte = int((val[-1] & 0x08) >> 3)
-        val = int(val[-1] & 0x07)
+            self.interval = round(255.0 / pow(2, val - 1), 0)
 
-        self.interval = round(255.0 / pow(2, val - 1), 0)
+            if sgn_bte == 1:
+                pass
+            else:
+                self.interval = int(-1 * self.interval)
 
-        if sgn_bte == 1:
-            pass
-        else:
-            self.interval = int(-1 * self.interval)
-
-        self.stop = False
-        self.ip = ip
-        self.key = key
-        self.dim_ramp = dim_ramp
-        self.do_dim()
+            self.stop = False
+            self.ip = ip
+            self.key = key
+            self.dim_ramp = dim_ramp
+            self.do_dim()
 
     def do_dim(self):
         """
@@ -237,38 +234,40 @@ class HueDevice:
 
         :return: None
         """
-        if self.stop:
-            return
+        with supp_fct.TraceLog(self.logger):
+            if self.stop:
+                return
 
-        new_bri = int(self.curr_bri + self.interval)
-        if new_bri > 255:
-            new_bri = 255
-        elif new_bri < 1:
-            new_bri = 1
+            new_bri = int(self.curr_bri + self.interval)
+            if new_bri > 255:
+                new_bri = 255
+            elif new_bri < 1:
+                new_bri = 1
 
-        self.set_bri(self.ip, self.key, new_bri)
+            self.set_bri(self.ip, self.key, new_bri)
 
-        if new_bri == 255 or new_bri == 1:
-            return
+            if new_bri == 255 or new_bri == 1:
+                return
 
-        steps = 255 / abs(self.interval)
-        step = float(round(self.dim_ramp / steps, 4))
+            steps = 255 / abs(self.interval)
+            step = float(round(self.dim_ramp / steps, 4))
 
-        self.timer = threading.Timer(step, self.do_dim)
-        self.timer.start()
+            self.timer = threading.Timer(step, self.do_dim)
+            self.timer.start()
 
     def get_type_of_device(self):
-        if self.id in self.device_id:
-            self.rtype = "device"
-        elif self.id in self.room:
-            self.rtype = "room"
-        elif self.id in self.zone:
-            self.rtype = "zone"
-        elif self.id in self.scenes:
-            self.rtype = "scene"
-        elif self.id in self.grouped_lights:
-            self.rtype = "grouped_light"
-        elif self.id in self.light_id:
-            self.rtype = "light"
+        with supp_fct.TraceLog(self.logger):
+            if self.id in self.device_id:
+                self.rtype = "device"
+            elif self.id in self.room:
+                self.rtype = "room"
+            elif self.id in self.zone:
+                self.rtype = "zone"
+            elif self.id in self.scenes:
+                self.rtype = "scene"
+            elif self.id in self.grouped_lights:
+                self.rtype = "grouped_light"
+            elif self.id in self.light_id:
+                self.rtype = "light"
 
-        return self.rtype
+            return self.rtype

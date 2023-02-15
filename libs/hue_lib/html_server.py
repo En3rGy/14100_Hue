@@ -27,41 +27,43 @@ class HtmlServer:
         :rtype: None
         :return: No implemented
         """
-        self.logger.debug("entering run_server, ip = " + str(ip) + ", port = " + str(port))
-        server_address = (ip, port)
+        with supp_fct.TraceLog(self.logger):
+            self.logger.debug("IP = {}, Port = {}".format(ip, port))
+            server_address = (ip, port)
 
-        self.stop_server()
+            self.logger.debug("Stopping potential server instance (re-) starting it.")
+            self.stop_server()
 
-        try:
-            self.server = ThreadedTCPServer(server_address, self.http_request_handler, bind_and_activate=False)
-            self.server.allow_reuse_address = True
-            self.server.server_bind()
-            self.server.server_activate()
-        except Exception as e:
-            self.logger.error(str(e))
-            return
+            try:
+                self.server = ThreadedTCPServer(server_address, self.http_request_handler, bind_and_activate=False)
+                self.server.allow_reuse_address = True
+                self.server.server_bind()
+                self.server.server_activate()
+            except Exception as e:
+                self.logger.error(str(e))
+                return
 
-        ip, port = self.server.server_address
-        self.t = threading.Thread(target=self.server.serve_forever)
-        self.t.setDaemon(True)
-        self.t.start()
-        server_url = "http://" + str(ip) + ":" + str(port)
-        self.logger.info('Server running on <a href="' + server_url + '">' + server_url + '</a>')
+            ip, port = self.server.server_address
+            self.t = threading.Thread(target=self.server.serve_forever)
+            self.t.setDaemon(True)
+            self.t.start()
+            server_url = "http://" + str(ip) + ":" + str(port)
+            self.logger.info('Server running on <a href="' + server_url + '">' + server_url + '</a>')
 
     def stop_server(self):
         """
         Stop server which provides info page
         """
-        self.logger.debug("Entering html_server.HTMLServer.stop_server")
-        try:
-            self.server.shutdown()
-            self.server.server_close()
-        except AttributeError:
-            pass
-        except Exception as e:
-            self.logger.error("html_server.HTMLServer.stop_server: " + str(e))
-        finally:
-            pass
+        with supp_fct.TraceLog(self.logger):
+            try:
+                self.server.shutdown()
+                self.server.server_close()
+            except AttributeError:
+                pass
+            except Exception as e:
+                self.logger.error("html_server.HTMLServer.stop_server: " + str(e))
+            finally:
+                pass
 
     def set_html_content(self, content):
         """
@@ -69,9 +71,10 @@ class HtmlServer:
         :param content: str
         :return: None
         """
-        with self.http_request_handler.data_lock:
-            self.http_request_handler.response_content_type = "text"
-            self.http_request_handler.response_data = content
+        with supp_fct.TraceLog(self.logger):
+            with self.http_request_handler.data_lock:
+                self.http_request_handler.response_content_type = "text"
+                self.http_request_handler.response_data = content
 
 
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):

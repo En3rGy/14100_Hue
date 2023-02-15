@@ -215,10 +215,9 @@ class HueBridge:
         :return: str
         """
         info_data = "<html>\n"
-        info_data = info_data + "<style>"
-        info_data = info_data + get_css() + "</style>"
-        info_data = info_data + "<title>Hue devices and associated IDs</title>"
-        info_data = info_data + "<h1>Hue devices and associated IDs</h1>"
+        info_data += "<style>" + get_css() + "</style>"
+        info_data += "<title>Hue devices and associated IDs</title>"
+        info_data += "<h1>Hue devices and associated IDs</h1>"
         info_data = (info_data + '<table border="1">\n' +
                      "<tr>" +
                      "<th>Room Name</th>" +
@@ -235,9 +234,9 @@ class HueBridge:
         global devices
 
         for device in devices.values():
-            info_data = info_data + str(device)
+            info_data += str(device)
 
-        info_data = info_data + "</table>\n</html>\n"
+        info_data += "</table>\n</html>\n"
 
         return info_data
 
@@ -264,83 +263,95 @@ class HueBridge:
             devices[device.device_id] = device
 
     def __register_room_type(self, data):
-        global devices
-        for item in data:
-            item_id = supp_fct.get_val(item, "id")
-            children = supp_fct.get_val(item, "children")
-            metadata = supp_fct.get_val(item, "metadata")
-            room_name = supp_fct.get_val(metadata, "name")
-            for i in range(len(children)):
-                rid = supp_fct.get_val(children[i], "rid")
-                rtype = supp_fct.get_val(children[i], "rtype")
+        with supp_fct.TraceLog(self.logger):
+            global devices
+            for item in data:
+                item_id = supp_fct.get_val(item, "id")
+                children = supp_fct.get_val(item, "children")
+                metadata = supp_fct.get_val(item, "metadata")
+                room_name = supp_fct.get_val(metadata, "name")
+                for i in range(len(children)):
+                    rid = supp_fct.get_val(children[i], "rid")
+                    rtype = supp_fct.get_val(children[i], "rtype")
 
-                if rtype == "device":
-                    if rid in devices:
-                        device = devices[rid]
-                        device.room = item_id
-                        device.room_name = room_name
-                        devices[device.device_id] = device
-                    else:
-                        self.logger.debug(
-                            "In register_devices #414, device not registered as device but requested by "
-                            "'room': '" + rid + "'")
+                    if rtype == "device":
+                        if rid in devices:
+                            device = devices[rid]
+                            device.room = item_id
+                            device.room_name = room_name
+                            devices[device.device_id] = device
+                        else:
+                            self.logger.debug(
+                                "In register_devices #414, device not registered as device but requested by "
+                                "'room': '" + rid + "'")
 
     def __register_zone_type(self, data):
-        global devices
-        for item in data:
-            item_id = supp_fct.get_val(item, "id")
-            children = supp_fct.get_val(item, "children")
-            for i in range(len(children)):
-                rid = supp_fct.get_val(children[i], "rid")
-                rtype = supp_fct.get_val(children[i], "rtype")
+        """
+        Register a zone type for devices with the provided data.
 
-                if rtype == "light":
-                    for device in devices.values():
-                        if device.light_id == rid:
-                            device.zone = item_id
-                            devices[device.device_id] = device
+        :param data: A list of dictionaries representing zone and device information.
+        :type data: List[Dict[str, Any]]
+        :returns: None
+        :rtype: None
+        """
+        with supp_fct.TraceLog(self.logger):
+            global devices
+            for item in data:
+                item_id = supp_fct.get_val(item, "id")
+                children = supp_fct.get_val(item, "children")
+                for child in children:
+                    rid = supp_fct.get_val(child, "rid")
+                    rtype = supp_fct.get_val(child, "rtype")
+
+                    if rtype == "light":
+                        for device in devices.values():
+                            if device.light_id == rid:
+                                device.zone = item_id
+                                devices[device.device_id] = device
 
     def __register_scene_type(self, data):
-        global devices
-        for item in data:
-            item_id = supp_fct.get_val(item, "id")
-            group = supp_fct.get_val(item, "group")
-            rid = supp_fct.get_val(group, "rid")
-            rtype = supp_fct.get_val(group, "rtype")
-            metadata = supp_fct.get_val(item, "metadata")
-            scene_name = supp_fct.get_val(metadata, "name")
+        with supp_fct.TraceLog(self.logger):
+            global devices
+            for item in data:
+                item_id = supp_fct.get_val(item, "id")
+                group = supp_fct.get_val(item, "group")
+                rid = supp_fct.get_val(group, "rid")
+                rtype = supp_fct.get_val(group, "rtype")
+                metadata = supp_fct.get_val(item, "metadata")
+                scene_name = supp_fct.get_val(metadata, "name")
 
-            if rtype == "zone":
-                for device in devices.values():
-                    if device.zone == rid:
-                        scene_entry = {"name": scene_name, "id": item_id}
-                        device.scenes.append(scene_entry)
-                        devices[device.device_id] = device
+                if rtype == "zone":
+                    for device in devices.values():
+                        if device.zone == rid:
+                            scene_entry = {"name": scene_name, "id": item_id}
+                            device.scenes.append(scene_entry)
+                            devices[device.device_id] = device
 
-            elif rtype == "room":
-                for device in devices.values():
-                    if device.room == rid:
-                        scene_entry = {"name": scene_name, "id": item_id}
-                        device.scenes.append(scene_entry)
-                        devices[device.device_id] = device
+                elif rtype == "room":
+                    for device in devices.values():
+                        if device.room == rid:
+                            scene_entry = {"name": scene_name, "id": item_id}
+                            device.scenes.append(scene_entry)
+                            devices[device.device_id] = device
 
     def __register_grouped_light_type(self, data):
-        global devices
-        for item in data:
-            item_id = supp_fct.get_val(item, "id")
-            owner = supp_fct.get_val(item, "owner")
-            rid = supp_fct.get_val(owner, "rid")
-            rtype = supp_fct.get_val(owner, "rtype")
+        with supp_fct.TraceLog(self.logger):
+            global devices
+            for item in data:
+                item_id = supp_fct.get_val(item, "id")
+                owner = supp_fct.get_val(item, "owner")
+                rid = supp_fct.get_val(owner, "rid")
+                rtype = supp_fct.get_val(owner, "rtype")
 
-            for device in devices.values():
-                if rtype == "room":
-                    if device.room == rid:
-                        device.grouped_lights.append(item_id)
-                        devices[device.device_id] = device
-                elif rtype == "zone":
-                    if device.zone == rid:
-                        device.grouped_lights.append(item_id)
-                        devices[device.device_id] = device
+                for device in devices.values():
+                    if rtype == "room":
+                        if device.room == rid:
+                            device.grouped_lights.append(item_id)
+                            devices[device.device_id] = device
+                    elif rtype == "zone":
+                        if device.zone == rid:
+                            device.grouped_lights.append(item_id)
+                            devices[device.device_id] = device
 
     def register_devices(self, key, rid, host_ip):
         """
@@ -358,39 +369,39 @@ class HueBridge:
         :param rid: ID of Hue device managed by the logic module
         :return: int
         """
+        with supp_fct.TraceLog(self.logger):
+            item_types = ["device", "room", "zone", "scene", "grouped_light"]
 
-        item_types = ["device", "room", "zone", "scene", "grouped_light"]
+            # start to store info of devices
+            global devices
+            devices = {}
+            self.rid = rid  # type: str
 
-        # start to store info of devices
-        global devices
-        devices = {}
-        self.rid = rid  # type: str
+            for item_type in item_types:
 
-        for item_type in item_types:
+                # 1. get all text data from each item type from bridge
+                data_raw = supp_fct.get_data(get_bridge_ip(host_ip), key, item_type, self.logger)  # type: str
 
-            # 1. get all text data from each item type from bridge
-            data_raw = supp_fct.get_data(get_bridge_ip(host_ip), key, item_type, self.logger)  # type: str
+                try:
+                    data = json.loads(data_raw["data"])  # type: {}
+                except Exception as e:
+                    self.logger.error("In register_devices #377, " + str(e))
+                    continue
 
-            try:
-                data = json.loads(data_raw["data"])  # type: {}
-            except Exception as e:
-                self.logger.error("In register_devices #377, " + str(e))
-                continue
+                data = supp_fct.get_val(data, "data")
 
-            data = supp_fct.get_val(data, "data")
+                if item_type == "device":
+                    self.__register_device_type(data)
+                elif item_type == "room":
+                    self.__register_room_type(data)
+                elif item_type == "zone":
+                    self.__register_zone_type(data)
+                elif item_type == "scene":
+                    self.__register_scene_type(data)
+                elif item_type == "grouped_light":
+                    self.__register_grouped_light_type(data)
 
-            if item_type == "device":
-                self.__register_device_type(data)
-            elif item_type == "room":
-                self.__register_room_type(data)
-            elif item_type == "zone":
-                self.__register_zone_type(data)
-            elif item_type == "scene":
-                self.__register_scene_type(data)
-            elif item_type == "grouped_light":
-                self.__register_grouped_light_type(data)
-
-        return len(devices)
+            return len(devices)
 
     def get_own_device(self, rid):
         """
@@ -401,66 +412,67 @@ class HueBridge:
         :rtype: hue_item.HueDevice
         :return: Device
         """
-        global devices
+        with supp_fct.TraceLog(self.logger):
+            global devices
 
-        # check if identified before
-        if rid in self.device.get_device_ids():
-            if rid != self.device.id:
-                self.device.id = rid
-                self.device.get_type_of_device()
-            return self.device
-
-        # search and store own device if not identified before
-        else:
-            for device in devices.values():
-                if rid in device.get_device_ids():
-                    self.device = device
+            # check if identified before
+            if rid in self.device.get_device_ids():
+                if rid != self.device.id:
                     self.device.id = rid
                     self.device.get_type_of_device()
-                    break
+                return self.device
 
-        if self.device is None:
-            self.logger.warning("Requested device not found")
+            # search and store own device if not identified before
+            else:
+                for device in devices.values():
+                    if rid in device.get_device_ids():
+                        self.device = device
+                        self.device.id = rid
+                        self.device.get_type_of_device()
+                        break
 
-        return self.device
+            if self.device is None:
+                self.logger.warning("Requested device not found")
+
+            return self.device
 
     def connect_to_eventstream(self, conn, host_ip, key):
-        tracelog = supp_fct.TraceLog(self.logger)
-        hue_bridge_ip = get_bridge_ip(host_ip)
-        api_path = 'https://' + hue_bridge_ip + '/eventstream/clip/v2'
-        url_parsed = urlparse.urlparse(api_path)
+        with supp_fct.TraceLog(self.logger):
+            hue_bridge_ip = get_bridge_ip(host_ip)
+            api_path = 'https://' + hue_bridge_ip + '/eventstream/clip/v2'
+            url_parsed = urlparse.urlparse(api_path)
 
-        conn.bind(('', 0))
-        try:
-            conn.connect((hue_bridge_ip, 443))
-        except socket.error as e:
-            if e.errno == 10035:
-                pass
-            else:
-                raise
-
-        while True:
-            ready = select.select([], [conn], [], 5)
-            if ready[1]:
-                error = conn.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
-                if error == 0:
-                    break
+            conn.bind(('', 0))
+            try:
+                conn.connect((hue_bridge_ip, 443))
+            except socket.error as e:
+                if e.errno == 10035:
+                    pass
                 else:
-                    raise socket.error(error, 'Connect error')
-            else:
-                raise socket.error('Timeout while connecting')
+                    raise
 
-        try:
-            conn.send("GET /eventstream/clip/v2 HTTP/1.1\r\n")
-            conn.send("Host: " + url_parsed.hostname + "\r\n")
-            conn.send("hue-application-key: " + key + "\r\n")
-            conn.send("Accept: text/event-stream\r\n\r\n")
-            self.logger.info("Connected to eventstream")
-            return True
-        except socket.socket as e:
-            conn.close()
-            self.logger.error("Error connecting  to eventstream.")
-            return False
+            while True:
+                ready = select.select([], [conn], [], 5)
+                if ready[1]:
+                    error = conn.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+                    if error == 0:
+                        break
+                    else:
+                        raise socket.error(error, 'Connect error')
+                else:
+                    raise socket.error('Timeout while connecting')
+
+            try:
+                conn.send("GET /eventstream/clip/v2 HTTP/1.1\r\n")
+                conn.send("Host: " + url_parsed.hostname + "\r\n")
+                conn.send("hue-application-key: " + key + "\r\n")
+                conn.send("Accept: text/event-stream\r\n\r\n")
+                self.logger.info("Connected to eventstream")
+                return True
+            except socket.socket as e:
+                conn.close()
+                self.logger.error("Error connecting  to eventstream.")
+                return False
 
 
 def get_css():
