@@ -64,7 +64,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.debug = False  # type: bool
 
         # Create a custom logging level TRACE
-        logging.addLevelName(TRACE, "TRACE")
+        logging.addLevelName(logg, "TRACE")
 
         def trace(self, message, *args, **kws):
             if self.isEnabledFor(TRACE):
@@ -72,7 +72,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         logging.Logger.trace = trace
         # self.logger.setLevel(TRACE)
-        self.logger.setLevel(TRACE)
+        self.logger.setLevel(logging.DEBUG)
 
     global eventstream_is_connected  # type: bool
     sbc_data_lock = threading.Lock()
