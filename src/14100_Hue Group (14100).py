@@ -51,7 +51,6 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 #### Own written code can be placed after this commentblock . Do not change or delete commentblock! ####
 ###################################################################################################!!!##
 
-
         self.logger = logging.getLogger(__name__)
         self.bridge = hue_bridge.HueBridge(self.logger)
         self.server = html_server.HtmlServer(self.logger)
@@ -72,7 +71,8 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 self._log(TRACE, message, args, **kws)
 
         logging.Logger.trace = trace
-        self.logger.setLevel(logging.INFO)
+        # self.logger.setLevel(TRACE)
+        self.logger.setLevel(TRACE)
 
     global eventstream_is_connected  # type: bool
     sbc_data_lock = threading.Lock()
@@ -502,3 +502,4 @@ def set_eventstream_is_connected(is_connected):
     eventstream_is_connected = is_connected
     eventstream_is_connected_lock.release()
     return is_connected
+

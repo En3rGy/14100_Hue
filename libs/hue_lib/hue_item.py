@@ -70,7 +70,7 @@ class HueDevice:
         """
         with supp_fct.TraceLog(self.logger):
             if self.rtype == "room" or self.rtype == "zone":
-                supp_fct.log_debug("In set_on #744, on/off not available for rooms or zones")
+                self.logger.debug("In set_on #744, on/off not available for rooms or zones")
                 return False
 
             if set_on:
@@ -78,7 +78,7 @@ class HueDevice:
             else:
                 payload = '{"on":{"on":false}}'
 
-            ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload)
+            ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload, self.logger)
             return ret["status"] == 200
 
     def set_bri(self, ip, key, brightness):
@@ -97,7 +97,7 @@ class HueDevice:
         with supp_fct.TraceLog(self.logger):
 
             payload = '{"dimming":{"brightness":' + str(brightness) + '}}'
-            ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload)
+            ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload, self.logger)
             self.curr_bri = brightness
             return ret["status"] == 200
 
@@ -121,8 +121,8 @@ class HueDevice:
         with supp_fct.TraceLog(self.logger):
             payload = '{"color":{"xy":{"x":' + str(x) + ', "y":' + str(y) + '}}}'
 
-            ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload)
-            supp_fct.log_debug("In set_color_xy_bri #780, return code is " + str(ret["status"]))
+            ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload, self.logger)
+            self.logger.debug("In set_color_xy_bri #780, return code is " + str(ret["status"]))
             return ret["status"] == 200  # & self.set_bri(bri)
 
     def set_color_rgb(self, ip, key, r, g, b):
@@ -163,7 +163,7 @@ class HueDevice:
         """
         with supp_fct.TraceLog(self.logger):
             payload = '{"recall":{"action": "active"}}'
-            ret = supp_fct.http_put(ip, key, scene_id, "scene", payload)
+            ret = supp_fct.http_put(ip, key, scene_id, "scene", payload, self.logger)
             return ret["status"] == 200
 
     def set_dynamic_scene(self, ip, key, scene_id, speed):
@@ -182,7 +182,7 @@ class HueDevice:
         """
         with supp_fct.TraceLog(self.logger):
             payload = '{"recall": {"action": "dynamic_palette"}, "speed": ' + str(speed) + '}'
-            ret = supp_fct.http_put(ip, key, scene_id, "scene", payload)
+            ret = supp_fct.http_put(ip, key, scene_id, "scene", payload, self.logger)
             return ret["status"] == 200
 
     def prep_dim(self, ip, key, val, dim_ramp):

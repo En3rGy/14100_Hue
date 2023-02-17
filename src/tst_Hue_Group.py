@@ -160,7 +160,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         logging.Logger.trace = trace
         # self.logger.setLevel(TRACE)
-        self.logger.setLevel(logging.INFO)
+        self.logger.setLevel(TRACE)
 
     global eventstream_is_connected  # type: bool
     sbc_data_lock = threading.Lock()
