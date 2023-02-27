@@ -243,16 +243,19 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
                             if "color" in data:
                                 color = supp_fct.get_val(data, "color")
+                                gamut_type = supp_fct.get_val(color, "gamut_type")
+                                hue_device.gamut_type = gamut_type
                                 xy = supp_fct.get_val(color, "xy")
                                 x = supp_fct.get_val(xy, "x")
                                 y = supp_fct.get_val(xy, "y")
-                                [r, g, b] = supp_fct.xy_bri_to_rgb(x, y, self.curr_bri)
+                                [r, g, b] = supp_fct.xy_bri_to_rgb(x, y, self.curr_bri, hue_device.gamut_type)
                                 r = int(r / 255.0 * 100)
                                 g = int(g / 255.0 * 100)
                                 b = int(b / 255.0 * 100)
                                 self.set_output_value_sbc(self.PIN_O_R, r)
                                 self.set_output_value_sbc(self.PIN_O_G, g)
                                 self.set_output_value_sbc(self.PIN_O_B, b)
+
 
                             if supp_fct.get_val(data, "type") == "zigbee_connectivity":
                                 if "status" in data:
@@ -400,54 +403,54 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         :return: False if errors occur
         :rtype: bool
         """
-        tracelog = supp_fct.TraceLog(self.logger)
-        key = self._get_input_value(self.PIN_I_HUE_KEY)
-        device_id = self._get_input_value(self.PIN_I_ITM_IDX)
-        self.singleton = singlet.Singleton(self._get_module_id())
+        with supp_fct.TraceLog(self.logger):
+            key = self._get_input_value(self.PIN_I_HUE_KEY)
+            device_id = self._get_input_value(self.PIN_I_ITM_IDX)
+            self.singleton = singlet.Singleton(self._get_module_id())
 
-        # Connections
-        ip = hue_bridge.get_bridge_ip(self.FRAMEWORK.get_homeserver_private_ip())
+            # Connections
+            ip = hue_bridge.get_bridge_ip(self.FRAMEWORK.get_homeserver_private_ip())
 
-        if ip == str():
-            self.logger.error("No connection to bridge available.")
-            return False
+            if ip is str():
+                self.logger.error("No connection to bridge available.")
+                return False
 
-        if self.singleton.is_master():
-            self.logger.info("Hue bridge IP {}".format(ip))
-            amount = self.bridge.register_devices(key, device_id, self.FRAMEWORK.get_homeserver_private_ip())
-            self.logger.info("Found {} Hue devices.".format(amount))
+            if self.singleton.is_master():
+                self.logger.info("Hue bridge IP {}".format(ip))
+                amount = self.bridge.register_devices(key, device_id, self.FRAMEWORK.get_homeserver_private_ip())
+                self.logger.info("Found {} Hue devices.".format(amount))
 
-            # server
-            server_port = self._get_input_value(self.PIN_I_PORT)
-            self.server.run_server(self.FRAMEWORK.get_homeserver_private_ip(), server_port)
-            self.server.set_html_content(self.bridge.get_html_device_list())
-            link = self.FRAMEWORK.get_homeserver_private_ip() + ":" + str(server_port)
-            self.logger.info("Info-Server at http://{}".format(link))
+                # server
+                server_port = self._get_input_value(self.PIN_I_PORT)
+                self.server.run_server(self.FRAMEWORK.get_homeserver_private_ip(), server_port)
+                self.server.set_html_content(self.bridge.get_html_device_list())
+                link = self.FRAMEWORK.get_homeserver_private_ip() + ":" + str(server_port)
+                self.logger.info("Info-Server at http://{}".format(link))
 
-        # get own lamp data if already registered
-        device = self.bridge.get_own_device(device_id)
-        data = supp_fct.get_data(ip, key, "light/" + device.light_id, self.logger)
+            # get own lamp data if already registered
+            device = self.bridge.get_own_device(device_id)
+            data = supp_fct.get_data(ip, key, "light/" + device.light_id, self.logger)
 
-        if int(data["status"]) == 200:
-            self.process_json(data)
-        else:
-            self.logger.warning("Could not retrieve data for master light id in on_init")
+            if int(data["status"]) is 200:
+                self.process_json(data)
+            else:
+                self.logger.warning("Could not retrieve data for master light id in on_init")
 
-        data = supp_fct.get_data(ip, key, "zigbee_connectivity/" + device.zigbee_connectivity_id, self.logger)
-        if int(data["status"]) == 200:
-            self.process_json(data)
-        else:
-            self.logger.warning("Could not retrieve zigbee connectivity data for master light")
+            data = supp_fct.get_data(ip, key, "zigbee_connectivity/" + device.zigbee_connectivity_id, self.logger)
+            if int(data["status"]) is 200:
+                self.process_json(data)
+            else:
+                self.logger.warning("Could not retrieve zigbee connectivity data for master light")
 
-        if self.singleton.is_master():
-            # eventstream init & start
-            self.eventstream_thread = threading.Thread()  # type: threading.Thread
-            self.eventstream_keep_running = threading.Event()
-            self.event_list = []
-            self.eventstream_start(key)
+            if self.singleton.is_master():
+                # eventstream init & start
+                self.eventstream_thread = threading.Thread()  # type: threading.Thread
+                self.eventstream_keep_running = threading.Event()
+                self.event_list = []
+                self.eventstream_start(key)
 
-        self.log_data("Hue ID", device.id + "\n" + device.rtype)
-        return True
+            self.log_data("Hue ID", device.id + "\n" + device.rtype)
+            return True
 
     def on_init(self):
         # debug
@@ -605,7 +608,8 @@ class UnitTests(unittest.TestCase):
 
         self.dummy.debug_input_value[self.dummy.PIN_I_HUE_KEY] = self.cred["PIN_I_SUSER"]
         self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_light_id_studio"]
-        # self.dummy.debug_rid = self.cred["hue_light_id"]
+        # self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_light_id_esszimmer"]
+        self.dummy.debug_rid = self.cred["hue_light_id"]
 
         # self.dummy.on_init()
         self.dummy.DEBUG = self.dummy.FRAMEWORK.create_debug_section()
@@ -617,6 +621,7 @@ class UnitTests(unittest.TestCase):
 
         self.device = hue_item.HueDevice(self.dummy.logger)
         self.device.id = self.cred["hue_light_id_studio"]
+        # self.device.id = self.cred["hue_light_id_esszimmer"]
         self.device.rtype = "light"
 
         self.ip = self.cred["PIN_I_SHUEIP"]
@@ -636,6 +641,10 @@ class UnitTests(unittest.TestCase):
         finally:
             del self.dummy
             print("\n\nFinished.\n\n")
+
+    def test_00_init(self):  # 2022-11-16 OK
+        print("\n### ### test_00_init")
+        self.dummy.on_init()
 
     def test_08_print_devices(self):  # 2022-11-16 OK
         print("\n### ###test_08_print_devices")
@@ -843,13 +852,13 @@ class UnitTests(unittest.TestCase):
 
     def test_19_xy_to_rgb(self):
         print("\n### test_19_xy_to_rgb")
-        [r, g, b] = supp_fct.xy_bri_to_rgb(0.675, 0.322, 1)
+        [r, g, b] = supp_fct.xy_bri_to_rgb(0.675, 0.322, 1, "C")
         self.assertEqual([255, 0, 0], [r, g, b], "red")
 
-        [r, g, b] = supp_fct.xy_bri_to_rgb(0.4091, 0.518, 1)
+        [r, g, b] = supp_fct.xy_bri_to_rgb(0.4091, 0.518, 1, "C")
         self.assertEqual([0, 128, 0], [r, g, b], "red")
 
-        [r, g, b] = supp_fct.xy_bri_to_rgb(0.3495, 0.2545, 1)
+        [r, g, b] = supp_fct.xy_bri_to_rgb(0.3495, 0.2545, 1, "C")
         self.assertEqual([221, 160, 221], [r, g, b], "red")
 
     def test_19_rgb_to_xy(self):  # 2022-11-16 OK
@@ -857,16 +866,26 @@ class UnitTests(unittest.TestCase):
         # rgb(0,128,0) 	xy(0.4091,0.518)
         # rgb(221,160,221) 	xy(0.3495,0.2545)
         print("\n### test_19_rgb_to_xy")
-        [x, y, bri] = supp_fct.rgb_to_xy_bri(255, 0, 0)
+        [x, y, bri] = supp_fct.rgb_to_xy_bri(255, 0, 0, "C")
         self.assertEqual([0.675, 0.322, 1], [round(x, 4), round(y, 4), bri], "red")
-        [x, y, bri] = supp_fct.rgb_to_xy_bri(0, 128, 0)
+        [x, y, bri] = supp_fct.rgb_to_xy_bri(0, 128, 0, "C")
         self.assertEqual([0.4091, 0.518, 1], [round(x, 4), round(y, 4), bri], "lime")
-        [x, y, bri] = supp_fct.rgb_to_xy_bri(221, 160, 221)
+        [x, y, bri] = supp_fct.rgb_to_xy_bri(221, 160, 221, "C")
         self.assertEqual([0.3495, 0.2545, 1], [round(x, 4), round(y, 4), bri], "plum")
 
     def test_19_set_color(self):  # 2022-11-16 OK
         print("\n### test_19_set_color")
+        self.dummy.on_init()
+        print("-- red --")
         ret = self.device.set_color_rgb(self.ip, self.key, 100, 0, 0)
+        self.assertTrue(ret)
+        time.sleep(2)
+        print("-- green --")
+        ret = self.device.set_color_rgb(self.ip, self.key, 0, 100, 0)
+        self.assertTrue(ret)
+        time.sleep(2)
+        print("-- blue --")
+        ret = self.device.set_color_rgb(self.ip, self.key, 0, 0, 100)
         self.assertTrue(ret)
 
     def test_20_reachable(self):  # 2022-11-18 OK

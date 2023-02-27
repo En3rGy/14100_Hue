@@ -28,10 +28,11 @@ class HueDevice:
         self.rtype = str()  # type: str
         self.curr_bri = 0  # type: int
         self.stop = False  # type: bool
-        self.timer = None   # type: threading.Timer
+        self.timer = threading.Timer(10, self.do_dim)   # type: threading.Timer
         self.ip = str()  # type: str
         self.key = str()  # type: str
         self.dim_ramp = 0  # type: int
+        self.gamut_type = str()
 
     def __str__(self):
         return ("<tr>" +
@@ -146,7 +147,7 @@ class HueDevice:
             g = int(g * 2.55)  # type: int
             b = int(b * 2.55)  # type: int
 
-            [x, y, bri] = supp_fct.rgb_to_xy_bri(r, g, b)
+            [x, y, bri] = supp_fct.rgb_to_xy_bri(r, g, b, self.gamut_type)
             return self.set_color_xy_bri(ip, key, x, y, bri)
 
     def set_scene(self, ip, key, scene_id):

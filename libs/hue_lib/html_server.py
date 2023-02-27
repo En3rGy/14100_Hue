@@ -1,8 +1,6 @@
-import hue_lib.supp_fct as supp_fcn
 import threading
 import BaseHTTPServer
 import SocketServer
-import logging
 
 import supp_fct
 

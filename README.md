@@ -148,6 +148,9 @@ In addition:
 - The eventstream connection runs in a separate thread in a `while true` loop
 - If there is no network connection at initialisation time, signals on the device inputs will attempt to connect to the bridge. 
 
+Used libraries:
+- https://github.com/benknight/hue-python-rgb-converter for Hue color conversion from/to rgb.
+
 ## Validation & Verification
 - Unit tests are performed.
 
