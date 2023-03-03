@@ -45,8 +45,8 @@ class HtmlServer:
             self.t = threading.Thread(target=self.server.serve_forever)
             self.t.setDaemon(True)
             self.t.start()
-            server_url = "http://" + str(ip) + ":" + str(port)
-            self.logger.info('Server running on <a href="' + server_url + '">' + server_url + '</a>')
+            server_url = "http://{ip}:{port}".format(ip=ip, port=port)
+            self.logger.info('Server running on {}'.format(server_url))
 
     def stop_server(self):
         """

@@ -88,10 +88,6 @@ def hex2int(msg):
     return int(val)
 
 
-# def log_debug(msg):
-#     print(str(time.time()) + "\tDebug:\t" + str(msg))
-
-
 def get_val(json_data, key, do_xmlcharrefreplace=True):
     # type : (json, str, bool) -> Any
 
