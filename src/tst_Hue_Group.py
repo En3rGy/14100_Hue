@@ -604,30 +604,37 @@ def set_eventstream_is_connected(is_connected):
 
 class UnitTests(unittest.TestCase):
 
+    def load_data(self, module):
+        """
+
+        :param module:
+        :type module: HueGroup_14100_14100
+        """
+        module.debug_input_value[self.dummy.PIN_I_HUE_KEY] = self.cred["PIN_I_SUSER"]
+        module.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_light_id_studio"]
+        # self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_light_id_esszimmer"]
+        module.debug_rid = self.cred["hue_light_id"]
+
+        # self.dummy.on_init()
+        module.DEBUG = self.dummy.FRAMEWORK.create_debug_section()
+        module.g_out_sbc = {}
+        module.debug = False
+        # hue_bridge.set_bridge_ip(self.cred["PIN_I_SHUEIP"])
+
+        module.FRAMEWORK.my_ip = self.cred["my_ip2"]
+
     def setUp(self):
         print("\n### setUp")
 
         logging.basicConfig()
         self.logger = logging.getLogger("UnitTests")
         self.logger.setLevel(logging.DEBUG)
-
         with open("credentials.json") as f:
             self.cred = json.load(f)
 
         self.dummy = HueGroup_14100_14100(0)
 
-        self.dummy.debug_input_value[self.dummy.PIN_I_HUE_KEY] = self.cred["PIN_I_SUSER"]
-        self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_light_id_studio"]
-        # self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_light_id_esszimmer"]
-        self.dummy.debug_rid = self.cred["hue_light_id"]
-
-        # self.dummy.on_init()
-        self.dummy.DEBUG = self.dummy.FRAMEWORK.create_debug_section()
-        self.dummy.g_out_sbc = {}
-        self.dummy.debug = False
-        # hue_bridge.set_bridge_ip(self.cred["PIN_I_SHUEIP"])
-
-        self.dummy.FRAMEWORK.my_ip = self.cred["my_ip2"]
+        self.load_data(self.dummy)
 
         self.device = hue_item.HueDevice(self.dummy.logger)
         self.device.id = self.cred["hue_light_id_studio"]
@@ -723,21 +730,36 @@ class UnitTests(unittest.TestCase):
 
     def test_10_16_eventstream(self):  # 2022-11-16 OK
         self.logger.info("### test_10_eventstream")
+
         self.dummy.on_init()
+
+        module_1 = HueGroup_14100_14100(0)
+        self.load_data(module_1)
+        self.device = hue_item.HueDevice(module_1.logger)
+        self.device.id = self.cred["hue_light_id_studio"]
+        self.device.rtype = "light"
+        module_1.on_init()
+
+        print("--- Helper module ID {}".format(module_1.module_id))
+        print("--- Test Obj. ID {}".format(self.dummy.module_id))
+
         time.sleep(2)
 
-        self.device.set_on(self.ip, self.key, False)
+        module_1.on_input_value(module_1.PIN_I_ON_OFF, False)
         time.sleep(2)
         ret = self.dummy.debug_output_value[self.dummy.PIN_O_STATUS_ON_OFF]
         self.assertFalse(ret)
 
-        self.device.set_on(self.ip, self.key, True)
+        module_1.on_input_value(module_1.PIN_I_ON_OFF, True)
         time.sleep(2)
         ret = self.dummy.debug_output_value[self.dummy.PIN_O_STATUS_ON_OFF]
         self.assertTrue(ret)
 
-        print("\n\nTest on your own :)\n\n")
+        self.logger.info("\n\nTest on your own :)\n\n")
         time.sleep(20)
+
+        module_1.stop_eventstream()
+        self.dummy.stop_eventstream()
 
     def test_10_eventstream_reconnect(self):  # 2022-11-17 OK
         print("\n### test_10_eventstream_reconnect")
