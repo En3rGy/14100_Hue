@@ -97,12 +97,13 @@ class hsl20_4:
 
     class DebugHelper:
         def __init__(self):
+            pass
 
         def set_value(self, cap, text):
             print("{time}\t# SET VAL: {caption} -> {data}".format(time=time.time(), caption=cap, data=text))
 
         def add_message(self, msg):
-            print("{time}\t# ADD MSG: {msg}".format(count=self.count, time=time.time(), msg=msg))
+            print("{time}\t# ADD MSG: {msg}".format(time=time.time(), msg=msg))
 
     ############################################
 
@@ -186,7 +187,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             self.sbc_data_lock.acquire()
             if pin in self.g_out_sbc:
                 if self.g_out_sbc[pin] == val:
-                    self.logger.info("SBC: pin {} <- data not send / {}".format(str(pin), str(val).decode("utf-8")))
+                    self.logger.debug("SBC: Pin {} <- data not send ({})".format(str(pin), str(val).decode("utf-8")))
                     self.sbc_data_lock.release()
                     return
 
@@ -294,10 +295,10 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                     new_data = conn.recv(4096)  # read data
 
                     if not new_data:  # Connection closed
-                        self.logger.warning("In handle_connection # 281, connection to bridge closed.")
+                        self.logger.warning("Eventstream closed.")
                         return []
 
-                    self.logger.debug("Received {} byte from Hue bridge".format(len(new_data)))
+                    self.logger.debug("Received {} bytes via eventstream.".format(len(new_data)))
                     data += new_data
                     msgs = data.split(MSG_SEP)  # is ending with seperator, an empty element will be attached
                     self.msg_last = msgs[-1]  # store last( incomplete or empty) msg for later usage
@@ -305,7 +306,8 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                     valid_msgs = [msg[6:] for msg in msgs[:-1] if len(msg) > 6 and msg[:6] == "data: "]
                     return valid_msgs  # return all complete messages
                 else:
-                    self.logger.debug("No data available on socket.")
+                    pass
+                    # self.logger.debug("No data available on socket.")
 
     def process_eventstream_msgs(self, msgs):
         """
@@ -700,7 +702,6 @@ class UnitTests(unittest.TestCase):
         module_2.FRAMEWORK.my_ip = self.cred["my_ip2"]
         module_2.on_init()
 
-        # @todo check if connected only once
         self.assertTrue(module_1.eventstream_thread.is_alive())
         self.assertFalse(module_2.eventstream_thread.is_alive())
 
@@ -721,7 +722,7 @@ class UnitTests(unittest.TestCase):
         time.sleep(30)
 
     def test_10_16_eventstream(self):  # 2022-11-16 OK
-        print("\n### test_10_eventstream")
+        self.logger.info("### test_10_eventstream")
         self.dummy.on_init()
         time.sleep(2)
 
