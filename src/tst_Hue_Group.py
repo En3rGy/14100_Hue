@@ -97,13 +97,12 @@ class hsl20_4:
 
     class DebugHelper:
         def __init__(self):
-            pass
 
         def set_value(self, cap, text):
             print("{time}\t# SET VAL: {caption} -> {data}".format(time=time.time(), caption=cap, data=text))
 
         def add_message(self, msg):
-            print("{time}\t# ADD MSG: {msg}".format(time=time.time(), msg=msg))
+            print("{time}\t# ADD MSG: {msg}".format(count=self.count, time=time.time(), msg=msg))
 
     ############################################
 
@@ -139,7 +138,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         #### Own written code can be placed after this commentblock . Do not change or delete commentblock! ####
         ###################################################################################################!!!##
 
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger("{}".format(random.randint(0, 9999999)))
 
         # Create a custom logging level TRACE
         logging.addLevelName(TRACE, "TRACE")
@@ -456,11 +455,11 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.DEBUG = self.FRAMEWORK.create_debug_section()
 
         handler = self.FunctionHandler(self.DEBUG, self._get_module_id())
-        self.logger.addHandler(handler)  # @todo on multiple instances, log msgs are multiplied
+        self.logger.addHandler(handler)
         # self.logger.setLevel(TRACE)  # @todo Set loglevel Info for production
-        self.logger.setLevel(logging.DEBUG)
         self.logger.name = "Module {}".format(self._get_module_id())
-        self.logger.info("Ready to log with log level {}".format(self.logger.level))
+        self.logger.setLevel(logging.DEBUG)
+        self.logger.debug("Ready to log with log level {}".format(self.logger.level))
 
         self.do_init()
 
