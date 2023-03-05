@@ -51,8 +51,7 @@ class hsl20_4:
 
         def _set_output_value(self, pin, value):
             # type: (int, any) -> None
-            self.debug_output_value[int(pin)] = value
-            print (str(time.time()) + "\t# OUT: Pin " + str(pin) + " <- \t" + str(value))
+            pass
 
         def _set_input_value(self, pin, value):
             # type: (int, any) -> None
@@ -100,10 +99,12 @@ class hsl20_4:
             pass
 
         def set_value(self, cap, text):
-            print("{time}\t# SET VAL: {caption} -> {data}".format(time=time.time(), caption=cap, data=text))
+            curr_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+            print("{time}\t# SET VAL # {caption} -> {data}".format(time=curr_time, caption=cap, data=text))
 
         def add_message(self, msg):
-            print("{time}\t# ADD MSG: {msg}".format(time=time.time(), msg=msg))
+            curr_time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+            print("{time}\t# ADD MSG # {msg}".format(time=curr_time, msg=msg))
 
     ############################################
 
@@ -187,11 +188,12 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             self.sbc_data_lock.acquire()
             if pin in self.g_out_sbc:
                 if self.g_out_sbc[pin] == val:
-                    self.logger.debug("SBC: Pin {} <- data not send ({})".format(str(pin), str(val).decode("utf-8")))
+                    self.logger.debug("SBC: Pin {} <- data not send ({})".format(pin, str(val).decode("utf-8")))
                     self.sbc_data_lock.release()
                     return
 
             self._set_output_value(pin, val)
+            self.logger.debug("OUT: Pin {} <-\t{}".format(pin, val))
             self.g_out_sbc[pin] = val
             self.sbc_data_lock.release()
 
@@ -289,13 +291,22 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         """
         with supp_fct.TraceLog(self.logger):
             data = self.msg_last
+            start_time = time.time()  # todo: Gently disconnect for reconnection
             while self.eventstream_keep_running.is_set() and get_eventstream_is_connected():
+
+                if time.time() - start_time > EVENTSTREAM_RECONNECT_ELAPSE:
+                    self.logger.debug("Gently disconnecting from eventstream for a planned re-connect.")
+                    conn.close()
+                    set_eventstream_is_connected(False)
+                    return []
+
                 ready = select.select([conn], [], [], EVENTSTREAM_TIMEOUT)
                 if ready[0]:
                     new_data = conn.recv(4096)  # read data
 
                     if not new_data:  # Connection closed
                         self.logger.warning("Eventstream closed.")
+                        set_eventstream_is_connected(False)
                         return []
 
                     self.logger.debug("Received {} bytes via eventstream.".format(len(new_data)))
@@ -308,6 +319,9 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 else:
                     pass
                     # self.logger.debug("No data available on socket.")
+
+            set_eventstream_is_connected(False)
+
 
     def process_eventstream_msgs(self, msgs):
         """
@@ -361,23 +375,24 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 sock = ssl.wrap_socket(sock_unsecured, cert_reqs=ssl.CERT_NONE)
 
                 # connect to bridge
-                is_connected = self.bridge.connect_to_eventstream(sock, host_ip, key)
-                if not is_connected:
+                if self.bridge.connect_to_eventstream(sock, host_ip, key):
+                    set_eventstream_is_connected(True)
+                else:
+                    time.sleep(5)
                     continue
 
                 # receive data loop
-                while self.eventstream_keep_running.is_set():
+                while get_eventstream_is_connected():
                     try:
                         msgs = self.handle_connection(sock)  # check if data is available to read
                         self.process_eventstream_msgs(msgs)  # process received msg
                     except socket.error as e:
-                        self.logger.error("In eventstream #291, socket error {} '{}'".format(e.errno, e))
+                        self.logger.error("Eventstream disconnected due to socket error {} '{}'.".format(e.errno, e))
                         set_eventstream_is_connected(False)
-                        break
 
                 # gently disconnect and wait for re-connection
                 sock.close()
-                self.logger.warning("In eventstream #395, Disconnected from hue eventstream.")
+                self.logger.warning("Trying to reconnect to eventstream soon.")
                 time.sleep(4)
 
             set_eventstream_is_connected(False)
@@ -558,7 +573,8 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
 TRACE = 5
 MSG_SEP = "\n"
-EVENTSTREAM_TIMEOUT = 1  # @todo set for production to 300 s
+EVENTSTREAM_TIMEOUT = 300  # time to block the process waiting for data on the eventstream
+EVENTSTREAM_RECONNECT_ELAPSE = 60 * 60 * 25  # duration for a gentle disconnect for eventstream re-connection in sec
 
 
 def get_eventstream_is_connected():
@@ -622,6 +638,11 @@ class UnitTests(unittest.TestCase):
         # hue_bridge.set_bridge_ip(self.cred["PIN_I_SHUEIP"])
 
         module.FRAMEWORK.my_ip = self.cred["my_ip2"]
+
+        global EVENTSTREAM_TIMEOUT
+        EVENTSTREAM_TIMEOUT = 1
+        global EVENTSTREAM_RECONNECT_ELAPSE
+        EVENTSTREAM_RECONNECT_ELAPSE = 60
 
     def setUp(self):
         print("\n### setUp")
@@ -945,6 +966,40 @@ class UnitTests(unittest.TestCase):
         print("\n### test_dynamic_scene")
         ret = self.device.set_dynamic_scene(self.ip, self.key, self.scene_dyn, 0.7)
         self.assertTrue(ret)
+
+    def test_10_long_time_eventstream(self):  # 2022-11-16 OK
+        self.logger.info("### test_10_eventstream")
+
+        self.dummy.on_init()
+
+        module_1 = HueGroup_14100_14100(0)
+        self.load_data(module_1)
+        self.device = hue_item.HueDevice(module_1.logger)
+        self.device.id = self.cred["hue_light_id_studio"]
+        self.device.rtype = "light"
+        module_1.on_init()
+        module_1.logger.setLevel(logging.WARNING)
+
+        module_2 = HueGroup_14100_14100(0)
+        self.load_data(module_2)
+        self.device = hue_item.HueDevice(module_2.logger)
+        self.device.id = self.cred["hue_light_id_esszimmer"]
+        self.device.rtype = "light"
+        module_2.on_init()
+        module_2.logger.setLevel(logging.WARNING)
+
+        print("\n\n")
+        self.logger.info("Starting 24 h test")
+        self.logger.info("- Helper module 1 ID {}".format(module_1.module_id))
+        self.logger.info("- Helper module 2 ID {}".format(module_2.module_id))
+        self.logger.info("- Test Obj. ID {}".format(self.dummy.module_id))
+        print("\n\n")
+
+        time.sleep(60 * 60 * 24)
+
+        module_1.stop_eventstream()
+        module_2.stop_eventstream()
+        self.dummy.stop_eventstream()
 
     def test_inputs(self):
         print("\n### test_inputs")
