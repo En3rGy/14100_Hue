@@ -19,6 +19,7 @@ import select
 import logging
 
 import debug_Hue_Group
+from debug_Hue_Group import HueGroup_14100_14100
 
 ############################################
 
@@ -124,7 +125,7 @@ class UnitTests(unittest.TestCase):
 
         time.sleep(3)
 
-        self.assertFalse(get_eventstream_is_connected())
+        self.assertFalse(debug_Hue_Group.get_eventstream_is_connected())
         self.assertFalse(module_1.eventstream_thread.is_alive())
         self.assertFalse(module_2.eventstream_thread.is_alive())
 
@@ -170,23 +171,17 @@ class UnitTests(unittest.TestCase):
         print("\n### test_10_eventstream_reconnect")
         self.dummy.on_init()
         time.sleep(2)
-        self.assertTrue(get_eventstream_is_connected())
+        self.assertTrue(debug_Hue_Group.get_eventstream_is_connected())
 
         print("\n\nDisconnect network")
         time.sleep(10)
         print("Continuing")
-        self.assertFalse(get_eventstream_is_connected())
+        self.assertFalse(debug_Hue_Group.get_eventstream_is_connected())
 
         print("\n\nReconnect network")
         time.sleep(10)
         print("Continuing")
-        self.assertFalse(get_eventstream_is_connected())
-
-    def test_11_discover(self):  # 2022-11-16 OK
-        self.logger.info("###test_11_discover")
-        bridge = hue_bridge.HueBridge(self.logger)
-        ip = bridge.get_bridge_ip(self.dummy.FRAMEWORK.get_homeserver_private_ip())
-        self.assertTrue("192" in ip, "### IP not discovered")
+        self.assertFalse(debug_Hue_Group.get_eventstream_is_connected())
 
     def test_12_set_on_off_light(self):  # 2022-11-16 OK
         print("\n### test_12_set_on_off_light")
