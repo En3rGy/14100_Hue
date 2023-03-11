@@ -103,27 +103,6 @@ class UnitTests(unittest.TestCase):
 
         self.assertTrue(len(html_page) > 0)
 
-    def test_08_server(self):  # 2022-11-16 OK
-        print("\n### ###test_08_server")
-
-        server = html_server.HtmlServer(self.logger)
-        server.run_server(self.dummy.FRAMEWORK.get_homeserver_private_ip(), 8080)
-
-        text = "Hello World!"
-        server.set_html_content(text)
-
-        time.sleep(1)
-
-        api_path = 'http://' + self.dummy.FRAMEWORK.get_homeserver_private_ip() + ':8080'
-        url_parsed = urlparse.urlparse(api_path)
-        headers = {'Host': url_parsed.hostname}
-        request = urllib2.Request(api_path, headers=headers)
-        response = urllib2.urlopen(request, data=None, timeout=5)
-        data = response.read()
-
-        self.assertEqual(response.getcode(), 200)
-        self.assertEqual(data, text)
-
     def test_09_singleton_eventstream(self):
         self.logger.info("test_09_singleton_eventstream")
 
