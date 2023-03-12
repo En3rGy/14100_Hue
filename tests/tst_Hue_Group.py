@@ -90,20 +90,6 @@ class UnitTests(unittest.TestCase):
         print("\n### ### test_00_init")
         self.dummy.on_init()
 
-    def test_08_print_devices(self):  # 2022-11-16 OK
-        print("\n### ###test_08_print_devices")
-
-        bridge = hue_bridge.HueBridge(self.logger)
-        bridge.set_bridge_ip(self.ip)
-        amount = bridge.register_devices(self.key, self.device.id, self.dummy.FRAMEWORK.get_homeserver_private_ip())
-        self.assertTrue(amount > 0)
-
-        html_page = bridge.get_html_device_list()
-        with open("debug_server_return.html", 'w') as out_file:
-            out_file.write(html_page)
-
-        self.assertTrue(len(html_page) > 0)
-
     def test_09_singleton_eventstream(self):
         self.logger.info("test_09_singleton_eventstream")
 

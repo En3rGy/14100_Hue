@@ -35,7 +35,7 @@ class HueDevice:
         self.gamut_type = str()
 
     def __str__(self):
-        return ("<tr>" +
+        res = ("<tr>" +
                 "<td>" + self.room_name.encode("ascii", "xmlcharrefreplace") + "</td>" +
                 "<td>" + self.name.encode("ascii", "xmlcharrefreplace") + "</td>" +
                 "<td>" + self.device_id.encode("ascii", "xmlcharrefreplace") + "</td>" +
@@ -44,14 +44,24 @@ class HueDevice:
                 "<td>" + self.zigbee_connectivity_id.encode("ascii", "xmlcharrefreplace") + "</td>" +
                 "<td>" + self.room.encode("ascii", "xmlcharrefreplace") + "</td>" +
                 "<td>" + self.zone.encode("ascii", "xmlcharrefreplace") + "</td>" +
-                "<td>" + str(self.scenes).encode("ascii", "xmlcharrefreplace") + "</td>" +
-                "</tr>\n")
+                "<td>")
+
+        # table in table
+        res += "<table><tr><th>Name</th><th>Scene Id</th></tr>"
+        for scene in self.scenes:
+            sc_name = scene["name"].encode("ascii", "xmlcharrefreplace")
+            sc_id = scene["id"].encode("ascii", "xmlcharrefreplace")
+            res += "<tr><td>{name}</td><td>{id}</td></tr>".format(name=sc_name, id=sc_id)
+        res += "</table>"
+        res += "</td></tr>\n"
+
+        return res
 
     def get_device_ids(self):
         with supp_fct.TraceLog(self.logger):
             ret = [self.device_id, self.light_id, self.zigbee_connectivity_id, self.room, self.zone]   # type: [str]
             for scene in self.scenes:
-                ret.extend(scene["id"])
+                ret.append(scene["id"])  # tod: check if extend vs. append
             ret.extend(self.grouped_lights)
 
             return ret
@@ -71,7 +81,7 @@ class HueDevice:
         """
         with supp_fct.TraceLog(self.logger):
             if self.rtype == "room" or self.rtype == "zone":
-                self.logger.debug("In set_on #744, on/off not available for rooms or zones")
+                self.logger.warning("Trying to set a room or zone on/off. This is not allowed. Discarding.")
                 return False
 
             if set_on:

@@ -9,6 +9,13 @@ TRACE = 5
 
 
 class TestModuleRegistration(unittest.TestCase):
+    class FunctionHandler(logging.Handler):
+        def __init__(self):
+            super(TestModuleRegistration.FunctionHandler, self).__init__()
+
+        def emit(self, record):
+            print("{level}:{msg}".format(msg=record.getMessage(), level=record.levelname))
+
     def setUp(self):
         self.logger = logging.getLogger(__name__)
         logging.addLevelName(TRACE, "TRACE")
@@ -19,9 +26,17 @@ class TestModuleRegistration(unittest.TestCase):
 
         logging.Logger.trace = trace
 
+        handler = self.FunctionHandler()
+        self.logger.addHandler(handler)
+
+        self.logger.setLevel(logging.DEBUG)
+
         with open("credentials.json") as f:
             self.cred = json.load(f)
             self.ip = self.cred["my_ip2"]
+            self.bridge_ip = self.cred["PIN_I_SHUEIP"]
+            self.key = self.cred["PIN_I_SUSER"]
+            self.device_id = self.cred["hue_device_id"]
 
         self.bridge = hue_bridge.HueBridge(self.logger)
 
@@ -43,6 +58,18 @@ class TestModuleRegistration(unittest.TestCase):
         bridge2.set_bridge_ip("345")
         bridge_ip = self.bridge.get_bridge_ip(self.ip)
         self.assertTrue("345" is bridge_ip)
+
+    def test_get_html_device_list(self):
+        self.bridge.set_bridge_ip(self.bridge_ip)
+        amount = self.bridge.register_devices(self.key, self.device_id, self.ip)
+        self.assertTrue(amount > 0)
+
+        html_page = self.bridge.get_html_device_list()
+        with open("debug_server_return.html", 'w') as out_file:
+            out_file.write(html_page)
+
+        self.assertTrue(len(html_page) > 0)
+        self.assertTrue(self.device_id in html_page)
 
 
 if __name__ == '__main__':
