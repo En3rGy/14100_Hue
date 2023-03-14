@@ -1,8 +1,8 @@
+import time
 import unittest
 import logging
 import json
 
-import hue_item
 from hue_item import HueDevice
 
 
@@ -38,16 +38,17 @@ class TestModuleRegistration(unittest.TestCase):
             self.bridge_ip = self.cred["PIN_I_SHUEIP"]
             self.key = self.cred["PIN_I_SUSER"]
             self.device_id = self.cred["hue_device_id"]
+            self.light_id = self.cred["hue_light_id"]
 
         self.hue_device = HueDevice(self.logger)
 
         self.hue_device.interval = 0
         # self.hue_device.logger = self.logger
-        # self.hue_device.id = str()
+        self.hue_device.id = self.light_id
         self.hue_device.name = "name"
         self.hue_device.room_name = "room_name"
         self.hue_device.device_id = self.device_id
-        self.hue_device.light_id = "light_id"
+        self.hue_device.light_id = self.light_id
         self.hue_device.zigbee_connectivity_id = "zigbee_connectivity_id"
         self.hue_device.room = "room"
         self.hue_device.zone = "zone"
@@ -55,7 +56,7 @@ class TestModuleRegistration(unittest.TestCase):
                                   {"id": "scenes_id_2", "name": "name2"},
                                   {"id": "scenes_id_3", "name": "name3"}]
         self.hue_device.grouped_lights = ["grouped_light_1", "grouped_light_2", "grouped_light_3"]
-        # self.hue_device.rtype = str()
+        self.hue_device.rtype = "light"
         # self.hue_device.curr_bri = 0
         # self.hue_device.stop = False
         # self.hue_device.timer = threading.Timer(10, self.do_dim)
@@ -74,7 +75,86 @@ class TestModuleRegistration(unittest.TestCase):
     def test_get_device_ids(self):
         device_ids = self.hue_device.get_device_ids()
         self.logger.debug(device_ids)
-        self.assertTrue(len(device_ids) is 11)
+        self.assertEqual(len(device_ids), 11)
+
+        hue_device = HueDevice(self.logger)
+        device_ids = hue_device.get_device_ids()
+        self.logger.debug(device_ids)
+        self.assertEqual(len(device_ids), 0)
+
+    def test_set_on(self):
+        ret = self.hue_device.set_on(self.bridge_ip, self.key, True)
+        self.assertTrue(ret)
+        time.sleep(1)
+        ret = self.hue_device.set_on(self.bridge_ip, self.key, False)
+        self.assertTrue(ret)
+
+    def test_set_bri(self):
+        self.hue_device.set_on(self.bridge_ip, self.key, True)
+
+        ret = self.hue_device.set_bri(self.bridge_ip, self.key, 30)
+        self.assertTrue(ret)
+        time.sleep(1)
+        ret = self.hue_device.set_bri(self.bridge_ip, self.key, 80)
+        self.assertTrue(ret)
+
+        self.hue_device.set_on(self.bridge_ip, self.key, False)
+
+    def test_set_color_xy_bri(self):
+        self.hue_device.set_on(self.bridge_ip, self.key, True)
+
+        ret = self.hue_device.set_color_xy_bri(self.bridge_ip, self.key, 0, 1, 100)
+        self.assertTrue(ret)
+        time.sleep(1)
+        ret = self.hue_device.set_color_xy_bri(self.bridge_ip, self.key, 1, 0, 100)
+        self.assertTrue(ret)
+        time.sleep(1)
+        ret = self.hue_device.set_color_xy_bri(self.bridge_ip, self.key, 1, 1, 100)
+        self.assertTrue(ret)
+        time.sleep(1)
+        self.hue_device.set_on(self.bridge_ip, self.key, False)
+
+    def test_set_color_rgb(self):
+        self.hue_device.set_on(self.bridge_ip, self.key, True)
+
+        ret = self.hue_device.set_color_rgb(self.bridge_ip, self.key, 80, 0, 0)
+        self.assertTrue(ret)
+        time.sleep(1)
+        ret = self.hue_device.set_color_rgb(self.bridge_ip, self.key, 0, 80, 0)
+        self.assertTrue(ret)
+        time.sleep(1)
+        ret = self.hue_device.set_color_rgb(self.bridge_ip, self.key, 0, 0, 80)
+        self.assertTrue(ret)
+        time.sleep(1)
+        self.hue_device.set_on(self.bridge_ip, self.key, False)
+
+    def test_set_scene(self):
+        ret = self.hue_device.set_scene(self.bridge_ip, self.key, self.cred["hue_scene_id"])
+        self.assertTrue(ret)
+        time.sleep(1)
+        ret = self.hue_device.set_scene(self.bridge_ip, self.key, "No scene")
+        self.assertFalse(ret)
+        time.sleep(1)
+        ret = self.hue_device.set_scene(self.bridge_ip, self.key, "No_scene")
+        self.assertFalse(ret)
+        time.sleep(1)
+        self.hue_device.set_on(self.bridge_ip, self.key, False)
+
+    def test_set_dynamic_scene(self):
+        ret = self.hue_device.set_dynamic_scene(self.bridge_ip, self.key, self.cred["hue_scene_id"], 0.5)
+        self.assertTrue(ret)
+        time.sleep(1)
+        self.hue_device.set_on(self.bridge_ip, self.key, False)
+
+    def test_prep_dim(self):
+        self.assertTrue(False)
+
+    def test_do_dim(self):
+        self.assertTrue(False)
+
+    def test_get_type_of_device(self):
+        ret = self.hue_device.get_type_of_device()
+        self.assertEqual(ret, "light")
 
 
 if __name__ == '__main__':

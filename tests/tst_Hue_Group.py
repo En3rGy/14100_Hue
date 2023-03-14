@@ -169,24 +169,6 @@ class UnitTests(unittest.TestCase):
         print("Continuing")
         self.assertFalse(debug_Hue_Group.get_eventstream_is_connected())
 
-    def test_12_set_on_off_light(self):  # 2022-11-16 OK
-        print("\n### test_12_set_on_off_light")
-
-        ret = self.device.set_on(self.ip, self.key, False)
-        self.assertTrue(ret)
-        time.sleep(3)
-
-        ret = self.device.set_on(self.ip, self.key, True)
-        self.assertTrue(ret)
-        time.sleep(3)
-
-        ret = self.device.set_on(self.ip, self.key, False)
-        self.assertTrue(ret)
-        time.sleep(3)
-
-        ret = self.device.set_on(self.ip, "0", False)
-        self.assertFalse(ret)
-
     def test_on_off_grouped_light(self):
         print("\n### test_on_off_grouped_light")
 
@@ -300,21 +282,6 @@ class UnitTests(unittest.TestCase):
         self.assertEqual([0.4091, 0.518, 1], [round(x, 4), round(y, 4), bri], "lime")
         [x, y, bri] = supp_fct.rgb_to_xy_bri(221, 160, 221, "C")
         self.assertEqual([0.3495, 0.2545, 1], [round(x, 4), round(y, 4), bri], "plum")
-
-    def test_19_set_color(self):  # 2022-11-16 OK
-        print("\n### test_19_set_color")
-        self.dummy.on_init()
-        print("-- red --")
-        ret = self.device.set_color_rgb(self.ip, self.key, 100, 0, 0)
-        self.assertTrue(ret)
-        time.sleep(2)
-        print("-- green --")
-        ret = self.device.set_color_rgb(self.ip, self.key, 0, 100, 0)
-        self.assertTrue(ret)
-        time.sleep(2)
-        print("-- blue --")
-        ret = self.device.set_color_rgb(self.ip, self.key, 0, 0, 100)
-        self.assertTrue(ret)
 
     def test_20_reachable(self):  # 2022-11-18 OK
         print("\n### test_20_reacable")

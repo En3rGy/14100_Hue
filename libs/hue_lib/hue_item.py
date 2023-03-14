@@ -39,12 +39,15 @@ class HueDevice:
                 "<td>" + self.room_name.encode("ascii", "xmlcharrefreplace") + "</td>" +
                 "<td>" + self.name.encode("ascii", "xmlcharrefreplace") + "</td>" +
                 "<td>" + self.device_id.encode("ascii", "xmlcharrefreplace") + "</td>" +
-                "<td>" + self.light_id.encode("ascii", "xmlcharrefreplace") + "</td>" +
-                "<td>" + str(self.grouped_lights).encode("ascii", "xmlcharrefreplace") + "</td>" +
-                "<td>" + self.zigbee_connectivity_id.encode("ascii", "xmlcharrefreplace") + "</td>" +
-                "<td>" + self.room.encode("ascii", "xmlcharrefreplace") + "</td>" +
-                "<td>" + self.zone.encode("ascii", "xmlcharrefreplace") + "</td>" +
-                "<td>")
+                "<td>" + self.light_id.encode("ascii", "xmlcharrefreplace") + "</td>")
+        res += "<td><ul>"
+        for light_id in self.grouped_lights:
+            res += "<li>{}</li>\n".format(str(light_id).encode("ascii", "xmlcharrefreplace"))
+        res += "</ul></td>"
+        res += ( "<td>" + self.zigbee_connectivity_id.encode("ascii", "xmlcharrefreplace") + "</td>" +
+                 "<td>" + self.room.encode("ascii", "xmlcharrefreplace") + "</td>" +
+                 "<td>" + self.zone.encode("ascii", "xmlcharrefreplace") + "</td>" +
+                 "<td>")
 
         # table in table
         res += "<table><tr><th>Name</th><th>Scene Id</th></tr>"
@@ -63,6 +66,7 @@ class HueDevice:
             for scene in self.scenes:
                 ret.append(scene["id"])  # tod: check if extend vs. append
             ret.extend(self.grouped_lights)
+            ret = filter(lambda x: x != '', ret)  # remove empty elements
 
             return ret
 
@@ -77,7 +81,7 @@ class HueDevice:
         :param set_on: True / False
         :type set_on: bool
         :rtype: bool
-        :return:
+        :return: True if successful, false if otherwise
         """
         with supp_fct.TraceLog(self.logger):
             if self.rtype == "room" or self.rtype == "zone":
@@ -127,7 +131,7 @@ class HueDevice:
         :param bri: 0-100%
         :type bri: int
         :rtype: bool
-        :return:
+        :return: True if successful, false if not.
         """
         with supp_fct.TraceLog(self.logger):
             payload = '{"color":{"xy":{"x":' + str(x) + ', "y":' + str(y) + '}}}'
@@ -150,7 +154,7 @@ class HueDevice:
         :param g: 0-100 prct
         :param b: 0-100 prct
         :rtype: bool
-        :return:
+        :return: True if successful, false if not.
         """
         with supp_fct.TraceLog(self.logger):
             r = int(r * 2.55)  # type: int
@@ -170,7 +174,7 @@ class HueDevice:
         :param ip:
         :type ip: str
         :rtype: bool
-        :return:
+        :return: True if successful, false if not.
         """
         with supp_fct.TraceLog(self.logger):
             payload = '{"recall":{"action": "active"}}'
@@ -189,7 +193,7 @@ class HueDevice:
         :param ip:
         :type ip: str
         :rtype: bool
-        :return:
+        :return: True if successful, false if not.
         """
         with supp_fct.TraceLog(self.logger):
             payload = '{"recall": {"action": "dynamic_palette"}, "speed": ' + str(speed) + '}'
@@ -207,7 +211,7 @@ class HueDevice:
         :type key: str
         :type ip: str
         :type val: int
-        :return:
+        :return: None
         """
         with supp_fct.TraceLog(self.logger):
 
@@ -267,6 +271,11 @@ class HueDevice:
             self.timer.start()
 
     def get_type_of_device(self):
+        """
+
+        :return: Type of this Hue device (device, room, zone, scene, grouped_light, light)
+        :rtype: str
+        """
         with supp_fct.TraceLog(self.logger):
             if self.id in self.device_id:
                 self.rtype = "device"
