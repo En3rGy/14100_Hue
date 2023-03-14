@@ -183,17 +183,17 @@ def http_put(ip, key, device_rid, api_path, payload, logger):
                          "; payload=" + str(payload))
             data = {'data': str(e), 'status': 0}
 
-        logger.debug("In http_put #341, hue bridge response code: " + str(data["status"]))
+        logger.debug("In http_put #186, hue bridge response code: " + str(data["status"]))
         if data["status"] != 200:
             try:
                 json_data = json.loads(data["data"])
                 if "errors" in json_data:
                     for msg_error in json_data["errors"]:
-                        logger.error("In http_put, " + get_val(msg_error, "description"))
+                        logger.error("In http_put #192, " + get_val(msg_error, "description"))
             except Exception as e:
-                logger.error("In http_put:357, " + str(e))
+                logger.error("In http_put #194, " + str(e))
 
-        if data["status"] == 207:
+        if data["status"] == 207:  # todo check if other behaviour makes more sense
             data["status"] = 200
 
         return data

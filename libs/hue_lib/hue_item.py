@@ -93,7 +93,10 @@ class HueDevice:
             else:
                 payload = '{"on":{"on":false}}'
 
-            ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload, self.logger)
+            if self.id is self.device_id:  # use light id if only device id is given
+                ret = supp_fct.http_put(ip, key, self.light_id, self.rtype, payload, self.logger)
+            else:
+                ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload, self.logger)
             return ret["status"] == 200
 
     def set_bri(self, ip, key, brightness):
@@ -112,7 +115,10 @@ class HueDevice:
         with supp_fct.TraceLog(self.logger):
 
             payload = '{"dimming":{"brightness":' + str(brightness) + '}}'
-            ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload, self.logger)
+            if self.id is self.device_id:  # use light id if only device id is given
+                ret = supp_fct.http_put(ip, key, self.light_id, self.rtype, payload, self.logger)
+            else:
+                ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload, self.logger)
             self.curr_bri = brightness
             return ret["status"] == 200
 
@@ -136,7 +142,10 @@ class HueDevice:
         with supp_fct.TraceLog(self.logger):
             payload = '{"color":{"xy":{"x":' + str(x) + ', "y":' + str(y) + '}}}'
 
-            ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload, self.logger)
+            if self.id is self.device_id:  # use light id if only device id is given
+                ret = supp_fct.http_put(ip, key, self.light_id, self.rtype, payload, self.logger)
+            else:
+                ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload, self.logger)
             self.logger.debug("In set_color_xy_bri #780, return code is " + str(ret["status"]))
             return ret["status"] == 200  # & self.set_bri(bri)
 
@@ -214,7 +223,6 @@ class HueDevice:
         :return: None
         """
         with supp_fct.TraceLog(self.logger):
-
             if (type(val) is float) or (type(val) is int):
                 val = int(val)
                 val = chr(val)
@@ -254,17 +262,17 @@ class HueDevice:
                 return
 
             new_bri = int(self.curr_bri + self.interval)
-            if new_bri > 255:
-                new_bri = 255
+            if new_bri > 100:
+                new_bri = 100
             elif new_bri < 1:
                 new_bri = 1
 
             self.set_bri(self.ip, self.key, new_bri)
 
-            if new_bri == 255 or new_bri == 1:
+            if new_bri >= 100 or new_bri <= 1:
                 return
 
-            steps = 255 / abs(self.interval)
+            steps = 100 / abs(self.interval)
             step = float(round(self.dim_ramp / steps, 4))
 
             self.timer = threading.Timer(step, self.do_dim)
