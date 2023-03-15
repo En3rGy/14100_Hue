@@ -163,33 +163,27 @@ def http_put(ip, key, device_rid, api_path, payload, logger):
             # Open the URL and read the response.
             response = urllib2.urlopen(request, data=payload, timeout=5, context=ctx)
             data = {'data': response.read(), 'status': response.getcode()}
-            logger.debug("Received {} byte with return code {}".format(len(data.get("data")), data.get("status")))
+            logger.debug("Received code {code} for: {data}".format(data=data.get("data"), code=data.get("status")))
 
-        except urllib2.HTTPError as e:
-            logger.error("In http_put #322, " + str(e) + " with " + "device_rid=" + device_rid +
-                         "; api_path=" + api_path +
-                         "; payload=" + str(payload))
-            data = {'data': str(e), 'status': 0}
-        except urllib2.URLError as e:
-            logger.error("In http_put #328, " + str(e) + " with " +
-                         "device_rid=" + device_rid +
+        except (urllib2.HTTPError, urllib2.URLError) as e:
+            logger.error("In http_put #169, " + str(e) + " with " + "device_rid=" + device_rid +
                          "; api_path=" + api_path +
                          "; payload=" + str(payload))
             data = {'data': str(e), 'status': 0}
         except Exception as e:
-            logger.error("In http_put #334, " + str(e) + " with " +
-                         "device_rid=" + device_rid +
+            logger.error("In http_put #174, " + str(e) + " with " + "device_rid=" + device_rid +
                          "; api_path=" + api_path +
                          "; payload=" + str(payload))
             data = {'data': str(e), 'status': 0}
 
-        logger.debug("In http_put #186, hue bridge response code: " + str(data["status"]))
         if data["status"] != 200:
             try:
                 json_data = json.loads(data["data"])
                 if "errors" in json_data:
                     for msg_error in json_data["errors"]:
-                        logger.error("In http_put #192, " + get_val(msg_error, "description"))
+                        logger.error("In http_put #184, for {}, {} "
+                                     "(http code {})".format(device_rid, get_val(msg_error, "description"),
+                                                             data["status"]))
             except Exception as e:
                 logger.error("In http_put #194, " + str(e))
 

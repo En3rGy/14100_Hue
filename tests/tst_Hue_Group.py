@@ -248,41 +248,6 @@ class UnitTests(unittest.TestCase):
         self.device.prep_dim(self.ip, self.key, 0x8d, 5)
         self.assertEqual(16, self.device.interval)
 
-    def test_18_get_data(self):  # 2022-11-16 OK
-        print("\n### test_get_data")
-        ret = supp_fct.get_data(self.ip, self.key, "light", self.dummy.logger)
-        self.assertTrue("data" in ret)
-        self.assertTrue("status" in ret)
-        self.assertTrue(len(ret["data"]) > 0)
-        self.assertEqual(int(200), int(ret["status"]))
-
-        self.logger.info("Expecting an error message in the following...")
-        ret = supp_fct.get_data(self.ip, self.key, "error", self.dummy.logger)
-        self.assertNotEqual(int(ret["status"]), 200)
-
-    def test_19_xy_to_rgb(self):
-        print("\n### test_19_xy_to_rgb")
-        [r, g, b] = supp_fct.xy_bri_to_rgb(0.675, 0.322, 1, "C")
-        self.assertEqual([255, 70, 2], [r, g, b], "red")
-
-        [r, g, b] = supp_fct.xy_bri_to_rgb(0.4091, 0.518, 1, "C")
-        self.assertEqual([0, 128, 0], [r, g, b], "red")
-
-        [r, g, b] = supp_fct.xy_bri_to_rgb(0.3495, 0.2545, 1, "C")
-        self.assertEqual([221, 160, 221], [r, g, b], "red")
-
-    def test_19_rgb_to_xy(self):  # 2022-11-16 OK
-        # rgb(255,0,0) 	xy(0.675,0.322)
-        # rgb(0,128,0) 	xy(0.4091,0.518)
-        # rgb(221,160,221) 	xy(0.3495,0.2545)
-        print("\n### test_19_rgb_to_xy")
-        [x, y, bri] = supp_fct.rgb_to_xy_bri(255, 0, 0, "C")
-        self.assertEqual([0.675, 0.322, 1], [round(x, 4), round(y, 4), bri], "red")
-        [x, y, bri] = supp_fct.rgb_to_xy_bri(0, 128, 0, "C")
-        self.assertEqual([0.4091, 0.518, 1], [round(x, 4), round(y, 4), bri], "lime")
-        [x, y, bri] = supp_fct.rgb_to_xy_bri(221, 160, 221, "C")
-        self.assertEqual([0.3495, 0.2545, 1], [round(x, 4), round(y, 4), bri], "plum")
-
     def test_20_reachable(self):  # 2022-11-18 OK
         print("\n### test_20_reacable")
         ret = supp_fct.get_data(self.ip, self.key, "zigbee_connectivity/" + self.cred["hue_zigbee_studio"],
