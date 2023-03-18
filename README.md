@@ -26,7 +26,7 @@ within the _HSL 2.0_ section and represents this scheme: `http://<HS-IP>:<Port>`
 Set up an instance of the logic module for each hue item you would like to control or monitor the status.<br>
 **In general, use the `light` or `grouped light` ID.**
 
-#### Switch on of a Light
+#### Switch on/off a Light
 - Identify the light ID on the info page
 - Put the ID on [input 4](#input_4) (usually constant, the idea is to have one logic module per light/room/zone)
 - Use [input 8](#input_8) to switch the light on or off

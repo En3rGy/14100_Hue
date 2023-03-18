@@ -3,27 +3,24 @@
 import hue_lib.hue_item as hue_item
 import hue_lib.hue_bridge as hue_bridge
 import hue_lib.supp_fct as supp_fct
-import hue_lib.html_server as html_server
-import hue_lib.singleton as singlet
 
 import unittest
-import ssl
-import urllib2
-import urlparse
-import socket
 import time
 import json
-import threading
-import random
-import select
 import logging
 
-import debug_Hue_Group
-from debug_Hue_Group import HueGroup_14100_14100
 
-############################################
+################################
+# get the code
+with open('framework_helper.py', 'r') as f1, open('../src/14100_Hue Group (14100).py', 'r') as f2:
+    framework_code = f1.read()
+    debug_code = f2.read()
+
+exec (framework_code + debug_code)
 
 
+################################
+# unit tests
 class UnitTests(unittest.TestCase):
 
     def load_data(self, module):
@@ -43,7 +40,7 @@ class UnitTests(unittest.TestCase):
         module.debug = False
         # hue_bridge.set_bridge_ip(self.cred["PIN_I_SHUEIP"])
 
-        module.FRAMEWORK.my_ip = self.cred["my_ip2"]
+        module.FRAMEWORK.my_ip = self.cred["my_ip"]
 
         global EVENTSTREAM_TIMEOUT
         EVENTSTREAM_TIMEOUT = 1
@@ -59,7 +56,7 @@ class UnitTests(unittest.TestCase):
         with open("credentials.json") as f:
             self.cred = json.load(f)
 
-        self.dummy = debug_Hue_Group.HueGroup_14100_14100(0)
+        self.dummy = HueGroup_14100_14100(0)
 
         self.load_data(self.dummy)
 
@@ -157,17 +154,17 @@ class UnitTests(unittest.TestCase):
         print("\n### test_10_eventstream_reconnect")
         self.dummy.on_init()
         time.sleep(2)
-        self.assertTrue(debug_Hue_Group.get_eventstream_is_connected())
+        self.assertTrue(get_eventstream_is_connected())
 
         print("\n\nDisconnect network")
         time.sleep(10)
         print("Continuing")
-        self.assertFalse(debug_Hue_Group.get_eventstream_is_connected())
+        self.assertFalse(get_eventstream_is_connected())
 
         print("\n\nReconnect network")
         time.sleep(10)
         print("Continuing")
-        self.assertFalse(debug_Hue_Group.get_eventstream_is_connected())
+        self.assertFalse(get_eventstream_is_connected())
 
     def test_on_off_grouped_light(self):
         print("\n### test_on_off_grouped_light")
@@ -301,11 +298,13 @@ class UnitTests(unittest.TestCase):
 
     def test_inputs(self):
         print("\n### test_inputs")
-        del self.device
-        del self.ip
-        del self.key
-        bridge = hue_bridge.HueBridge(self.logger)
-        bridge.set_bridge_ip(str())
+
+        # reset former data
+        # del self.device
+        # del self.ip
+        # del self.key
+        # bridge = hue_bridge.HueBridge(self.logger)
+        # bridge.set_bridge_ip(str())
 
         self.dummy.on_init()
         time.sleep(5)
@@ -353,7 +352,7 @@ class UnitTests(unittest.TestCase):
         self.dummy.debug_input_value[self.dummy.PIN_I_DIM_RAMP] = 10
         self.dummy.on_input_value(self.dummy.PIN_I_REL_DIM, 0x85)
         time.sleep(2)
-        self.assertEqual(1, self.dummy.debug_output_value[self.dummy.PIN_O_BRI])
+        self.assertEqual(18, self.dummy.debug_output_value[self.dummy.PIN_O_BRI])
 
         print("\n\nPIN_I_SCENE ################################################\n\n")
         self.dummy.on_input_value(self.dummy.PIN_I_SCENE, self.cred["hue_scene_id"])

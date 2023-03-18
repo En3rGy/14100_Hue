@@ -78,6 +78,16 @@ def xy_bri_to_rgb(x, y, bri, gamut):
 
 
 def hex2int(msg):
+    """
+
+    :param msg: hex number (e.g. 0x11)
+    :type msg: str
+    :return: Int representation of hex value
+    :rtype: int
+    """
+    if not msg:
+        return 0
+
     msg = bytearray(msg)
     val = 0
     val = val | msg[0]
@@ -89,6 +99,16 @@ def hex2int(msg):
 
 
 def get_val(json_data, key, do_xmlcharrefreplace=True):
+    """
+
+    :param json_data:
+    :type json_data: dict
+    :param key:
+    :type key: str
+    :param do_xmlcharrefreplace: True to perform an XML character replacement
+    :type do_xmlcharrefreplace: bool
+    :return: Requested value, str() in case of error
+    """
     # type : (json, str, bool) -> Any
 
     val = str()
@@ -145,6 +165,17 @@ def get_data(ip, key, api_cmd, logger):
 
 
 def http_put(ip, key, device_rid, api_path, payload, logger):
+    """
+
+    :param ip:
+    :param key:
+    :param device_rid:
+    :param api_path:
+    :param payload:
+    :param logger:
+    :return:
+    :rtype: dict
+    """
     with TraceLog(logger):
 
         api_path = "https://" + ip + '/clip/v2/resource/' + api_path + "/" + device_rid

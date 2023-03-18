@@ -46,6 +46,7 @@ class TestModuleRegistration(unittest.TestCase):
     def test_get_bridge_ip(self):
         self.assertFalse(hue_bridge.BRIDGE_IP)
         bridge_ip = self.bridge.get_bridge_ip(self.ip)
+        self.assertTrue(bridge_ip)
         self.assertTrue("192." in bridge_ip, "Expected '192.' but got {}".format(bridge_ip))
         self.assertTrue("192." in hue_bridge.BRIDGE_IP, "Expected '192.' but got {}".format(bridge_ip))
         hue_bridge.BRIDGE_IP = "123"

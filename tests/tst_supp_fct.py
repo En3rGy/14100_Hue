@@ -64,10 +64,26 @@ class TestModuleRegistration(unittest.TestCase):
         self.assertEqual([221, 160, 221], [r, g, b], "red")
 
     def test_hex2int(self):
-        self.assertTrue(False)
+        ret = supp_fct.hex2int("\x01")
+        self.assertEqual(1, ret)
+        ret = supp_fct.hex2int("\x00")
+        self.assertEqual(0, ret)
+        ret = supp_fct.hex2int("\xA6")
+        self.assertEqual(166, ret)
+        ret = supp_fct.hex2int("\xA6\xFF\xC1\x00")
+        self.assertEqual(2801778944, ret)
+        ret = supp_fct.hex2int("")
+        self.assertEqual(0, ret)
 
     def test_get_val(self):
-        self.assertTrue(False)
+        ret = supp_fct.get_val({"test": "1", "test2": 2}, "test")
+        self.assertEqual(ret, "1")
+        ret = supp_fct.get_val({"test": "1", "test2": 2}, "test2")
+        self.assertEqual(ret, 2)
+        ret = supp_fct.get_val('{"test": "1", "test2": 2}', "test2")
+        self.assertEqual(ret, str())
+        ret = supp_fct.get_val({"test": "1", "test2": 2}, "test3")
+        self.assertEqual(ret, str())
 
     def test_get_data(self):
         print("\n### test_get_data")
