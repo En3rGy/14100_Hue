@@ -351,8 +351,6 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 server_port = self._get_input_value(self.PIN_I_PORT)
                 self.server.run_server(self.FRAMEWORK.get_homeserver_private_ip(), server_port)
                 self.server.set_html_content(self.bridge.get_html_device_list())
-                link = self.FRAMEWORK.get_homeserver_private_ip() + ":" + str(server_port)
-                self.logger.info("Info-Server at http://{}".format(link))
 
             # get own lamp data if already registered
             device = self.bridge.get_own_device(device_id)
@@ -386,7 +384,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         handler = self.FunctionHandler(self.DEBUG, self._get_module_id())
         self.logger.addHandler(handler)
         self.logger.name = "Module {}".format(self._get_module_id())
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(logging.INFO)
         self.logger.debug("Ready to log with log level {}".format(self.logger.level))
 
         self.do_init()

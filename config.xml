@@ -30,6 +30,7 @@
             </remanent_variables>
             <imports>
 				<import>libs/hue_lib</import>
+				<import>libs/hue_python-rgb-converter/rgbxy</import>
             </imports>			
         </module>			
     </modules>

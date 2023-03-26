@@ -45,11 +45,11 @@ class TestModuleRegistration(unittest.TestCase):
         # rgb(255,0,0) 	xy(0.675,0.322)
         # rgb(0,128,0) 	xy(0.4091,0.518)
         # rgb(221,160,221) 	xy(0.3495,0.2545)
-        [x, y, bri] = supp_fct.rgb_to_xy_bri(255, 0, 0, "C")
+        [x, y, bri] = supp_fct.rgb_to_xy(255, 0, 0, "C")
         self.assertEqual([0.675, 0.322, 1], [round(x, 4), round(y, 4), bri], "red")
-        [x, y, bri] = supp_fct.rgb_to_xy_bri(0, 128, 0, "C")
+        [x, y, bri] = supp_fct.rgb_to_xy(0, 128, 0, "C")
         self.assertEqual([0.4091, 0.518, 1], [round(x, 4), round(y, 4), bri], "lime")
-        [x, y, bri] = supp_fct.rgb_to_xy_bri(221, 160, 221, "C")
+        [x, y, bri] = supp_fct.rgb_to_xy(221, 160, 221, "C")
         self.assertEqual([0.3495, 0.2545, 1], [round(x, 4), round(y, 4), bri], "plum")
 
     def test_xy_bri_to_rgb(self):

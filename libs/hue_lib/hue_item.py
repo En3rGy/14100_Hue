@@ -122,7 +122,7 @@ class HueDevice:
             self.curr_bri = brightness
             return ret["status"] == 200
 
-    def set_color_xy_bri(self, ip, key, x, y, bri):
+    def set_color_xy_bri(self, ip, key, x, y):
         """
         CIE XY gamut position
 
@@ -134,8 +134,6 @@ class HueDevice:
         :type x: float
         :param y: number – minimum: 0 – maximum: 1
         :type y: float
-        :param bri: 0-100%
-        :type bri: int
         :rtype: bool
         :return: True if successful, false if not.
         """
@@ -170,8 +168,8 @@ class HueDevice:
             g = int(g * 2.55)  # type: int
             b = int(b * 2.55)  # type: int
 
-            [x, y, bri] = supp_fct.rgb_to_xy_bri(r, g, b, self.gamut_type)
-            return self.set_color_xy_bri(ip, key, x, y, bri)
+            [x, y, bri] = supp_fct.rgb_to_xy(r, g, b, self.gamut_type)
+            return self.set_color_xy_bri(ip, key, x, y)
 
     def set_scene(self, ip, key, scene_id):
         """

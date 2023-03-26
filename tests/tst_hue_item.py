@@ -3,6 +3,7 @@ import unittest
 import logging
 import json
 
+import supp_fct
 from hue_item import HueDevice
 
 
@@ -102,16 +103,26 @@ class TestModuleRegistration(unittest.TestCase):
 
     def test_set_color_xy_bri(self):
         self.hue_device.set_on(self.bridge_ip, self.key, True)
+        self.hue_device.set_bri(self.bridge_ip, self.key, 100)
 
-        ret = self.hue_device.set_color_xy_bri(self.bridge_ip, self.key, 0, 1, 100)
+        # green
+        ret = self.hue_device.set_color_xy_bri(self.bridge_ip, self.key, 0.3, 0.6)
+        [r, g, b] = supp_fct.xy_bri_to_rgb(0.3, 0.6, 1, self.hue_device.gamut_type)  # (235, 255, 67)
+        print(r, g, b)
         self.assertTrue(ret)
-        time.sleep(1)
-        ret = self.hue_device.set_color_xy_bri(self.bridge_ip, self.key, 1, 0, 100)
+        time.sleep(3)
+        ret = self.hue_device.set_color_rgb(self.bridge_ip, self.key, r, g, b)
+        # ret = self.hue_device.set_color_rgb(self.bridge_ip, self.key, 92, 100, 92)
         self.assertTrue(ret)
-        time.sleep(1)
-        ret = self.hue_device.set_color_xy_bri(self.bridge_ip, self.key, 1, 1, 100)
+        time.sleep(3)
+
+        # red
+        ret = self.hue_device.set_color_xy_bri(self.bridge_ip, self.key, 1, 0)
         self.assertTrue(ret)
-        time.sleep(1)
+        time.sleep(3)
+        ret = self.hue_device.set_color_xy_bri(self.bridge_ip, self.key, 1, 1)
+        self.assertTrue(ret)
+        time.sleep(3)
         self.hue_device.set_on(self.bridge_ip, self.key, False)
 
     def test_set_color_rgb(self):

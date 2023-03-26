@@ -40,7 +40,7 @@ class UnitTests(unittest.TestCase):
         module.debug = False
         # hue_bridge.set_bridge_ip(self.cred["PIN_I_SHUEIP"])
 
-        module.FRAMEWORK.my_ip = self.cred["my_ip"]
+        module.FRAMEWORK.my_ip = self.cred["my_ip2"]
 
         global EVENTSTREAM_TIMEOUT
         EVENTSTREAM_TIMEOUT = 1
@@ -295,6 +295,10 @@ class UnitTests(unittest.TestCase):
         module_1.stop_eventstream()
         module_2.stop_eventstream()
         self.dummy.stop_eventstream()
+
+    def test_init(self):
+        self.dummy.on_init()
+        time.sleep(30)
 
     def test_inputs(self):
         print("\n### test_inputs")

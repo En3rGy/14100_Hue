@@ -3,8 +3,8 @@ import urlparse
 import ssl
 import urllib2
 import json
-import hue_lib.colorconvert as colorconvert
 import inspect
+import rgbxy
 
 
 class TraceLog:
@@ -23,7 +23,7 @@ class TraceLog:
         self.logger.trace("Leaving {}".format(inspect.stack()[1][3]))
 
 
-def rgb_to_xy_bri(red, green, blue, gamut):
+def rgb_to_xy(red, green, blue, gamut):
     """
     Convert rgb to xy
 
@@ -36,15 +36,15 @@ def rgb_to_xy_bri(red, green, blue, gamut):
     """
 
     if gamut is "A":
-        gamut_type = colorconvert.GamutA
+        gamut_type = rgbxy.GamutA
     elif gamut is "B":
-        gamut_type = colorconvert.GamutB
+        gamut_type = rgbxy.GamutB
     elif gamut is "C":
-        gamut_type = colorconvert.GamutC
+        gamut_type = rgbxy.GamutC
     else:
-        gamut_type = colorconvert.GamutB
+        gamut_type = rgbxy.GamutB
 
-    color_conf = colorconvert.Converter(gamut=gamut_type)
+    color_conf = rgbxy.Converter(gamut=gamut_type)
     x, y = color_conf.rgb_to_xy(red, green, blue)
     return [x, y, 1]
 
@@ -65,15 +65,15 @@ def xy_bri_to_rgb(x, y, bri, gamut):
     """
 
     if gamut is "A":
-        gamut_type = colorconvert.GamutA
+        gamut_type = rgbxy.GamutA
     elif gamut is "B":
-        gamut_type = colorconvert.GamutB
+        gamut_type = rgbxy.GamutB
     elif gamut is "C":
-        gamut_type = colorconvert.GamutC
+        gamut_type = rgbxy.GamutC
     else:
-        gamut_type = colorconvert.GamutB
+        gamut_type = rgbxy.GamutB
 
-    color_conv = colorconvert.Converter(gamut=gamut_type)
+    color_conv = rgbxy.Converter(gamut=gamut_type)
     return color_conv.xy_to_rgb(x, y, bri)
 
 
