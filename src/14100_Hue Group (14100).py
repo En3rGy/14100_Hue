@@ -78,7 +78,8 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
     sbc_data_lock = threading.Lock()
 
     class FunctionHandler(logging.Handler):
-        def __init__(self, framework_debug, module_id):
+        def __init__(self, framework_debug, module_id, log_level):
+            logging.Handler.__init__(self, log_level)
             self.framework_debug = framework_debug
             self.module_id = module_id
             super(HueGroup_14100_14100.FunctionHandler, self).__init__()
@@ -208,7 +209,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             while self.eventstream_keep_running.is_set() and get_eventstream_is_connected():
 
                 if time.time() - start_time > EVENTSTREAM_RECONNECT_ELAPSE:
-                    self.logger.debug("Gently disconnecting from eventstream for a planned re-connect.")
+                    self.logger.info("Gently disconnecting from eventstream for a planned re-connect.")
                     conn.close()
                     set_eventstream_is_connected(False)
                     return []
@@ -381,11 +382,13 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         # debug
         self.DEBUG = self.FRAMEWORK.create_debug_section()
 
-        handler = self.FunctionHandler(self.DEBUG, self._get_module_id())
+        level = logging.INFO
+
+        handler = self.FunctionHandler(self.DEBUG, self._get_module_id(), level)
         self.logger.addHandler(handler)
         self.logger.name = "Module {}".format(self._get_module_id())
-        self.logger.setLevel(logging.INFO)
-        self.logger.debug("Ready to log with log level {}".format(self.logger.level))
+        self.logger.setLevel(level)
+        self.logger.info("Ready to log with log level {}".format(self.logger.level))
 
         self.do_init()
 
