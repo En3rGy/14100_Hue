@@ -2,6 +2,7 @@
 
 import time
 import random
+import socket
 
 class hsl20_4:
     LOGGING_NONE = 0
@@ -63,7 +64,8 @@ class hsl20_4:
 
     class Framework:
         def __init__(self):
-            self.my_ip = "127.0.0.1"
+            hostname = socket.gethostname()
+            self.my_ip = socket.gethostbyname(hostname)
 
         def _run_in_context_thread(self, a):
             pass

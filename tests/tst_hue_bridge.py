@@ -1,7 +1,7 @@
 import unittest
 import logging
 import json
-
+import socket
 import hue_bridge
 
 
@@ -33,11 +33,12 @@ class TestModuleRegistration(unittest.TestCase):
 
         with open("credentials.json") as f:
             self.cred = json.load(f)
-            self.ip = self.cred["my_ip2"]
             self.bridge_ip = self.cred["PIN_I_SHUEIP"]
             self.key = self.cred["PIN_I_SUSER"]
             self.device_id = self.cred["hue_device_id"]
 
+        hostname = socket.gethostname()
+        self.ip = socket.gethostbyname(hostname)
         self.bridge = hue_bridge.HueBridge(self.logger)
 
     def tearDown(self):

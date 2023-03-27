@@ -40,7 +40,7 @@ class UnitTests(unittest.TestCase):
         module.debug = False
         # hue_bridge.set_bridge_ip(self.cred["PIN_I_SHUEIP"])
 
-        module.FRAMEWORK.my_ip = self.cred["my_ip2"]
+        # module.FRAMEWORK.my_ip = self.cred["my_ip2"]
 
         global EVENTSTREAM_TIMEOUT
         EVENTSTREAM_TIMEOUT = 1
@@ -91,11 +91,11 @@ class UnitTests(unittest.TestCase):
         self.logger.info("test_09_singleton_eventstream")
 
         module_1 = HueGroup_14100_14100(0)
-        module_1.FRAMEWORK.my_ip = self.cred["my_ip2"]
+        # module_1.FRAMEWORK.my_ip = self.cred["my_ip2"]
         module_1.on_init()
 
         module_2 = HueGroup_14100_14100(0)
-        module_2.FRAMEWORK.my_ip = self.cred["my_ip2"]
+        # module_2.FRAMEWORK.my_ip = self.cred["my_ip2"]
         module_2.on_init()
 
         self.assertTrue(module_1.eventstream_thread.is_alive())
@@ -297,6 +297,8 @@ class UnitTests(unittest.TestCase):
         self.dummy.stop_eventstream()
 
     def test_init(self):
+        self.logger.debug("### test_init ###")
+        self.logger.setLevel(logging.CRITICAL + 1)
         self.dummy.on_init()
         time.sleep(30)
 

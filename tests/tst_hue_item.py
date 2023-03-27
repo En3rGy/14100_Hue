@@ -2,7 +2,9 @@ import time
 import unittest
 import logging
 import json
+import socket
 
+import rgbxy
 import supp_fct
 from hue_item import HueDevice
 
@@ -35,11 +37,13 @@ class TestModuleRegistration(unittest.TestCase):
 
         with open("credentials.json") as f:
             self.cred = json.load(f)
-            self.ip = self.cred["my_ip2"]
             self.bridge_ip = self.cred["PIN_I_SHUEIP"]
             self.key = self.cred["PIN_I_SUSER"]
             self.device_id = self.cred["hue_device_id"]
             self.light_id = self.cred["hue_light_id"]
+
+        hostname = socket.gethostname()
+        self.ip = socket.gethostbyname(hostname)
 
         self.hue_device = HueDevice(self.logger)
 
@@ -125,18 +129,37 @@ class TestModuleRegistration(unittest.TestCase):
         time.sleep(3)
         self.hue_device.set_on(self.bridge_ip, self.key, False)
 
+    def test_color(self):
+        converter = rgbxy.Converter()
+
+        res = converter.hex_to_xy('bada55')
+        print(res)
+        # self.assertEqual(res, [0.3991853917195425, 0.498424689144739])
+
+        res = converter.rgb_to_xy(255, 0, 0)
+        print(res)
+        # self.assertEqual(res, [0.6484272236872118, 0.330856101472778])
+
+        res = converter.get_random_xy_color()
+        print(res)
+        # self.assertEqual(res, [0.3706941388849757, 0.19786410488389355])
+
+        res = converter.xy_to_hex(0.3991853917195425, 0.498424689144739, bri=0.8)
+        print(res)
+        # self.assertEqual(res, 'e9e860')
+
     def test_set_color_rgb(self):
         self.hue_device.set_on(self.bridge_ip, self.key, True)
 
-        ret = self.hue_device.set_color_rgb(self.bridge_ip, self.key, 80, 0, 0)
+        ret = self.hue_device.set_color_rgb(self.bridge_ip, self.key, 255, 0, 0)
         self.assertTrue(ret)
-        time.sleep(1)
-        ret = self.hue_device.set_color_rgb(self.bridge_ip, self.key, 0, 80, 0)
+        time.sleep(3)
+        ret = self.hue_device.set_color_rgb(self.bridge_ip, self.key, 0, 255, 0)
         self.assertTrue(ret)
-        time.sleep(1)
-        ret = self.hue_device.set_color_rgb(self.bridge_ip, self.key, 0, 0, 80)
+        time.sleep(3)
+        ret = self.hue_device.set_color_rgb(self.bridge_ip, self.key, 0, 0, 255)
         self.assertTrue(ret)
-        time.sleep(1)
+        time.sleep(3)
         self.hue_device.set_on(self.bridge_ip, self.key, False)
 
     def test_set_scene(self):

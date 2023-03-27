@@ -86,6 +86,10 @@ Set up an instance of the logic module for each hue item you would like to contr
 
 ### Change Log
 
+- v3.5: 
+	- Work-around-fix of [0, 255, 0] results in yello -green: Removed check if color in in reach of lamp (https://github.com/En3rGy/14100_Hue/issues/27)
+- v3.4: 
+	- Refactoring
 - v3.3:
   - Detecting broken connections to Hue Bridge
   - Corrected input IDs in docu

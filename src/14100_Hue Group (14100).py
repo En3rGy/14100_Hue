@@ -85,9 +85,10 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             super(HueGroup_14100_14100.FunctionHandler, self).__init__()
 
         def emit(self, record):
-            self.framework_debug.add_message("{level}:Module {id}:{msg}".format(id=self.module_id,
-                                                                                msg=record.getMessage(),
-                                                                                level=record.levelname))
+            if record.levelno >= self.level:
+                self.framework_debug.add_message("{level}:Module {id}:{msg}".format(id=self.module_id,
+                                                                                    msg=record.getMessage(),
+                                                                                    level=record.levelname))
 
     def log_data(self, key, value):
         # type: (str, any) -> None
@@ -383,8 +384,8 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.DEBUG = self.FRAMEWORK.create_debug_section()
 
         level = logging.INFO
-
         handler = self.FunctionHandler(self.DEBUG, self._get_module_id(), level)
+        handler.setLevel(level)
         self.logger.addHandler(handler)
         self.logger.name = "Module {}".format(self._get_module_id())
         self.logger.setLevel(level)
