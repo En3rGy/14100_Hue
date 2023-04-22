@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <config>
     <modules>
-        <module category="Datenaustausch" context="14100_Hue" id="14100" name="Hue Group (14100)" version="3.5">
+        <module category="Datenaustausch" context="14100_Hue" id="14100" name="Hue Group (14100)" version="3.6">
             <inputs>
 				<input type="number" const_name="trigger" init_value="0">Get Status</input>
                 <input type="string" const_name="hue_key" init_value="">Key</input>
@@ -17,6 +17,7 @@
 				<input type="number" const_name="b" init_value="0">b</input>
 				<input type="number" const_name="rel_Dim" init_value="0">KNX rel. Dimm</input>
 				<input type="number" const_name="dim_ramp" init_value="0.5">KNX Dimm Rampe [s]</input>
+				<input type="string" const_name="bridge_ip" init_value="">Bridge IP (optional)</input>
             </inputs>
             <outputs>
 				<output type="number" const_name="status_on_off" init_value="0">RM On/Off (01)</output>

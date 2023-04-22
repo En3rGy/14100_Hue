@@ -41,6 +41,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.PIN_I_B=12
         self.PIN_I_REL_DIM=13
         self.PIN_I_DIM_RAMP=14
+        self.PIN_I_BRIDGE_IP=15
         self.PIN_O_STATUS_ON_OFF=1
         self.PIN_O_BRI=2
         self.PIN_O_R=3
@@ -340,6 +341,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             self.singleton = singlet.Singleton(self._get_module_id())
 
             # Connections
+            self.bridge.set_bridge_ip(self._get_input_value(self.PIN_I_BRIDGE_IP))
             ip = self.bridge.get_bridge_ip(self.FRAMEWORK.get_homeserver_private_ip())
 
             if not ip:
@@ -433,6 +435,9 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                 scene.id = value
                 scene.rtype = "scene"
                 scene.set_scene(ip, key, value)
+
+            elif self.PIN_I_BRIDGE_IP == index:
+                self.bridge.set_bridge_ip(str(value))
 
             elif index == self.PIN_I_DYN_SCENE and bool(value):
                 dynamic_scene = self._get_input_value(self.PIN_I_SCENE)  # type: str

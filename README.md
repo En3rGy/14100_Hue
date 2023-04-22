@@ -9,7 +9,8 @@ multiple instances of the logic module, just one will register for the _eventstr
 other ones.
 
 One module provides an auto discovery on the Hue bridge in order to receive the bridges IP address. A HS reboot is
-necessary, if the bridge IP chances!
+necessary, if the bridge IP chances! Alternatively, a manual IP can be provided. In that case, no auto discovery is 
+performed. The manual IP can be updated during runtime.
 
 All outputs are configured as _send-by-change (sbc)_.
 
@@ -58,6 +59,7 @@ Set up an instance of the logic module for each hue item you would like to contr
 | 12                      | b                    | 0     | RGB blue (0-100%)                                                                                                                                                                                                                                     |
 | 13                      | KNX rel. Dimm        | 0     | Eingang für KNX-Dimm-Signal. Der zugh. Taster muss wie folgt parametrisiert werden:<br/>Relatives dimmen mit Stopp-Signal, ohne Telegramm-Wiederholung                                                                                                |
 | 14                      | KNX Dimm Ramp        | 0.5   | KNX Dimm Rampe [s]; Zeit in Sekunden, in der der Dimmschritt wiederholt wird, bis ein Stopp-Signal empfangen wird.                                                                                                                                    |
+ | 15                      | Bridge IP (optional) |       | (Optional) IP der Hue Bridge. Wird dieser Wert gesetzt, wird keine auto-detection durchgeführt.                                                                                                                                                       |
 
 ## Outputs
 
