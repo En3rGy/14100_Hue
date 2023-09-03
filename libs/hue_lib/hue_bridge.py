@@ -187,8 +187,35 @@ class HueBridge:
 
             global devices
 
+            rooms = {}
+
             for device in devices.values():
                 info_data += str(device)
+
+                if device.room_name:
+                    if device.room_name not in rooms:
+                        rooms[device.room_name] = {}
+                        rooms[device.room_name]["group_id"] = device.grouped_lights
+                    else:
+                        existing_list = rooms[device.room_name]["group_id"]
+                        rooms[device.room_name]["group_id"] = list(set(existing_list) & set(device.grouped_lights))
+
+                    rooms[device.room_name]["room_id"] = device.room
+
+            for room_name in rooms.keys():
+                room = rooms[room_name]
+                group_id = room["group_id"][0]
+                info_data = (info_data + "<tr>" +
+                             "<td>{}</td>".format(room_name) +
+                             "<td>-</td>" +
+                             "<td>-</td>" +
+                             "<td>-</td>" +
+                             "<td>{}</td>".format(group_id) +
+                             "<td>-</td>" +
+                             "<td>{}</td>".format(room["room_id"]) +
+                             "<td>-</td>" +
+                             "<td>-</td>" +
+                             "</tr>\n")
 
             info_data += "</table>\n</html>\n"
 

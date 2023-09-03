@@ -88,10 +88,12 @@ Set up an instance of the logic module for each hue item you would like to contr
 
 ### Change Log
 
+- v3.7: Identified group id for rooms on info page addressing [#30](https://github.com/En3rGy/14100_Hue/issues/30)
+- v4.6: Improved unit tests
 - v3.5: 
-	- Work-around-fix of [0, 255, 0] results in yello -green: Removed check if color in in reach of lamp (https://github.com/En3rGy/14100_Hue/issues/27)
+    - Work-around-fix of [0, 255, 0] results in yellow-green: Removed check if color in in reach of lamp (https://github.com/En3rGy/14100_Hue/issues/27)
 - v3.4: 
-	- Refactoring
+    - Refactoring
 - v3.3:
   - Detecting broken connections to Hue Bridge
   - Corrected input IDs in docu
