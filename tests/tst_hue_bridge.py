@@ -70,7 +70,6 @@ class TestModuleRegistration(unittest.TestCase):
         res = self.bridge.get_bridge_ip(self.ip)
         self.assertEqual(ip, res)
 
-
     def test_get_html_device_list(self):
         self.bridge.set_bridge_ip(self.bridge_ip)
         amount = self.bridge.register_devices(self.key, self.device_id, self.ip)

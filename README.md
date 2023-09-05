@@ -88,6 +88,9 @@ Set up an instance of the logic module for each hue item you would like to contr
 
 ### Change Log
 
+- v3.8: 
+  - Impr.: Using a sticky table header for the info table
+  - Impr.: Sorting the info table alphabetically
 - v3.7: Identified group id for rooms on info page addressing [#30](https://github.com/En3rGy/14100_Hue/issues/30)
 - v4.6: Improved unit tests
 - v3.5: 

@@ -174,23 +174,24 @@ class HueBridge:
             info_data += "<h1>Hue devices and associated IDs</h1>"
             info_data = (info_data + '<table border="1">\n' +
                          "<tr>" +
-                         "<th>Room Name</th>" +
-                         "<th>Name</th>" +
-                         "<th>Device</th>" +
-                         "<th>Light</th>" +
-                         "<th>Grouped Lights</th>" +
-                         "<th>Zigbee Connectivity</th>" +
-                         "<th>Room</th>" +
-                         "<th>Zone</th>" +
-                         "<th>Scenes</th>" +
+                         '<th class="sticky-header">Room Name</th>' +
+                         '<th class="sticky-header">Name</th>' +
+                         '<th class="sticky-header">Device</th>' +
+                         '<th class="sticky-header">Light</th>' +
+                         '<th class="sticky-header">Grouped Lights</th>' +
+                         '<th class="sticky-header">Zigbee Connectivity</th>' +
+                         '<th class="sticky-header">Room</th>' +
+                         '<th class="sticky-header">Zone</th>' +
+                         '<th class="sticky-header">Scenes</th>' +
                          "</tr>\n")
 
             global devices
 
             rooms = {}
 
+            table_rows = str()
             for device in devices.values():
-                info_data += str(device)
+                table_rows += str(device)
 
                 if device.room_name:
                     if device.room_name not in rooms:
@@ -205,18 +206,22 @@ class HueBridge:
             for room_name in rooms.keys():
                 room = rooms[room_name]
                 group_id = room["group_id"][0]
-                info_data = (info_data + "<tr>" +
-                             "<td>{}</td>".format(room_name) +
-                             "<td>-</td>" +
-                             "<td>-</td>" +
-                             "<td>-</td>" +
-                             "<td>{}</td>".format(group_id) +
-                             "<td>-</td>" +
-                             "<td>{}</td>".format(room["room_id"]) +
-                             "<td>-</td>" +
-                             "<td>-</td>" +
-                             "</tr>\n")
+                table_rows = (table_rows + "<tr>" +
+                              "<td>{}</td>".format(room_name) +
+                              "<td>-</td>" +
+                              "<td>-</td>" +
+                              "<td>-</td>" +
+                              "<td>{}</td>".format(group_id) +
+                              "<td>-</td>" +
+                              "<td>{}</td>".format(room["room_id"]) +
+                              "<td>-</td>" +
+                              "<td>-</td>" +
+                              "</tr>\n")
 
+            sorted_rows = table_rows.split("</tr>\n")
+            sorted_rows = sorted(sorted_rows)
+            for row in sorted_rows:
+                info_data += row + "</tr>\n"
             info_data += "</table>\n</html>\n"
 
             return info_data
@@ -599,6 +604,13 @@ table              { border-spacing:0; border-collapse:collapse;
                      font-size:1.0em;
                      width:100%; max-width:950px; }
 table td, table th { border:1px solid #aaa; vertical-align:top; text-align:left; font-size:0.9em; padding:10px; }
+th.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  /*To not have transparent background.
+  background-color: white;*/
+}
 table th           { font-weight:bold;  background-color:#eee; font-size:0.9em; }
 /*** ********** Spezielle Tabellen-Formatierungen ********** ***/
 .table-no-border         { padding-bottom:0em; padding-top:0em; margin-bottom:0em; margin-top:0em; }
@@ -662,4 +674,3 @@ table th           { font-weight:bold;  background-color:#eee; font-size:0.9em; 
 .t-sf-grptit  { font-weight:bold; margin-top:1.5em; margin-bottom:0.3em; }
 .t-sf-grpitm  { font-size:0.9em; }
 '''
-
