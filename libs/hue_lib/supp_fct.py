@@ -137,6 +137,7 @@ def get_data(ip, key, api_cmd, logger):
     :rtype: {str, str}
     """
     with TraceLog(logger):
+        logger.debug("#### {} // {}".format(ip,key))
         api_path = 'https://' + ip + '/clip/v2/resource/' + api_cmd
         url_parsed = urlparse.urlparse(api_path)
         headers = {'Host': url_parsed.hostname, "hue-application-key": key}

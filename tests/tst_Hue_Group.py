@@ -40,7 +40,7 @@ class UnitTests(unittest.TestCase):
         module.debug = False
         # hue_bridge.set_bridge_ip(self.cred["PIN_I_SHUEIP"])
 
-        # module.FRAMEWORK.my_ip = self.cred["my_ip2"]
+        module.FRAMEWORK.my_ip = self.cred["my_ip"]
 
         global EVENTSTREAM_TIMEOUT
         EVENTSTREAM_TIMEOUT = 1
@@ -249,7 +249,7 @@ class UnitTests(unittest.TestCase):
         print("\n### test_20_reacable")
         ret = supp_fct.get_data(self.ip, self.key, "zigbee_connectivity/" + self.cred["hue_zigbee_studio"],
                                 self.dummy.logger)
-        self.assertTrue("data" in ret)
+        self.assertTrue("data" in ret, "####1")
         data = ret["data"]
         data = json.loads(data)
         data = data["data"][0]
@@ -312,10 +312,12 @@ class UnitTests(unittest.TestCase):
         # bridge = hue_bridge.HueBridge(self.logger)
         # bridge.set_bridge_ip(str())
 
+        print("###### on_init")
         self.dummy.on_init()
+        print("###### sleep 5")
         time.sleep(5)
-        print("\n\nPIN_I_ON_OFF ################################################\n\n")
 
+        print("###### off")
         self.dummy.on_input_value(self.dummy.PIN_I_ON_OFF, 0)
         self.dummy.on_input_value(self.dummy.PIN_I_ON_OFF, 1)
         time.sleep(2)

@@ -78,87 +78,85 @@ class HueBridge:
         :rtype: str, str
         :return: error message, ip
         """
-        with supp_fct.TraceLog(self.logger):
+        # best definition https://courses.cs.duke.edu/fall16/compsci356/DNS/DNS-primer.pdf
+        msg_id = '\x00\x01'
+        query = "\x01\x00"
+        questions = "\x00\x01"
+        answers = "\x00\x00"
+        authority = '\x00\x00'
+        additional = '\x00\x00'
+        search = '\x04_hue\x04_tcp\x05local\x00'
+        # query_type = '\x00\x01'  # A = a host address, https://www.rfc-editor.org/rfc/rfc1035
+        query_type = '\x00\xff'  # * = All data available
+        query_class = '\x00\x01'  # IN = the Internet, https://www.rfc-editor.org/rfc/rfc1035
+        query_header = msg_id + query + questions + answers + authority + additional
+        search = search + query_type + query_class
+        query_msg = query_header + search
 
-            # best definition https://courses.cs.duke.edu/fall16/compsci356/DNS/DNS-primer.pdf
-            msg_id = '\x00\x01'
-            query = "\x01\x00"
-            questions = "\x00\x01"
-            answers = "\x00\x00"
-            authority = '\x00\x00'
-            additional = '\x00\x00'
-            search = '\x04_hue\x04_tcp\x05local\x00'
-            # query_type = '\x00\x01'  # A = a host address, https://www.rfc-editor.org/rfc/rfc1035
-            query_type = '\x00\xff'  # * = All data available
-            query_class = '\x00\x01'  # IN = the Internet, https://www.rfc-editor.org/rfc/rfc1035
-            query_header = msg_id + query + questions + answers + authority + additional
-            search = search + query_type + query_class
-            query_msg = query_header + search
+        # configure socket
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 8)
+        sock.settimeout(8)
+        sock.bind((host_ip, 0))  # host_ip = self.FRAMEWORK.get_homeserver_private_ip()
 
-            # configure socket
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-            sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 8)
-            sock.settimeout(8)
-            sock.bind((host_ip, 0))  # host_ip = self.FRAMEWORK.get_homeserver_private_ip()
+        # send data
+        bytes_send = sock.sendto(query_msg, MCAST_GRP)
+        if bytes_send != len(query_msg):
+            self.logger.warning("Something wrong here, send bytes not equal provided bytes")
 
-            # send data
-            bytes_send = sock.sendto(query_msg, MCAST_GRP)
-            if bytes_send != len(query_msg):
-                self.logger.warning("Something wrong here, send bytes not equal provided bytes")
+        while True:
+            try:
+                data = sock.recv(1024)
 
-            while True:
-                try:
-                    data = sock.recv(1024)
+                # check reply for "additional records", Type A, class IN contains IP4 address
+                # header = data[:12]
+                # qd_count = hex2int(data[4:6])
+                # an_count = hex2int(data[6:8])
+                # ns_count = hex2int(data[8:10])
+                ar_count = supp_fct.hex2int(data[10:12])
 
-                    # check reply for "additional records", Type A, class IN contains IP4 address
-                    # header = data[:12]
-                    # qd_count = hex2int(data[4:6])
-                    # an_count = hex2int(data[6:8])
-                    # ns_count = hex2int(data[8:10])
-                    ar_count = supp_fct.hex2int(data[10:12])
+                ans_idx = 12 + len(search)
+                # ans_name = data[ans_idx:ans_idx + 2]
+                # ans_type = data[ans_idx + 2:ans_idx + 4]
+                # ans_class = data[ans_idx + 4:ans_idx + 6]
+                # ans_ttl = data[ans_idx + 6:ans_idx + 10]
+                ans_rd_length = supp_fct.hex2int(data[ans_idx + 10:ans_idx + 12])
+                # ans_r_dara = data[ans_idx + 12:ans_idx + 12 + ans_rd_length]
 
-                    ans_idx = 12 + len(search)
-                    # ans_name = data[ans_idx:ans_idx + 2]
-                    # ans_type = data[ans_idx + 2:ans_idx + 4]
-                    # ans_class = data[ans_idx + 4:ans_idx + 6]
-                    # ans_ttl = data[ans_idx + 6:ans_idx + 10]
-                    ans_rd_length = supp_fct.hex2int(data[ans_idx + 10:ans_idx + 12])
-                    # ans_r_dara = data[ans_idx + 12:ans_idx + 12 + ans_rd_length]
+                # answers = data[ans_idx:ans_idx + 12 + ans_rd_length]
 
-                    # answers = data[ans_idx:ans_idx + 12 + ans_rd_length]
+                add_records = data[ans_idx + 12 + ans_rd_length:]
 
-                    add_records = data[ans_idx + 12 + ans_rd_length:]
+                # process additional records
+                ar_offset = 0
+                for i in range(ar_count):
+                    # get record type (= A) and extrakt ip
+                    ar_type = add_records[ar_offset + 2:ar_offset + 4]
+                    # self.logger.debug(":".join("{:02x}".format(ord(c)) for c in ar_type))
+                    ar_length = add_records[ar_offset + 10: ar_offset + 12]
+                    ar_length = supp_fct.hex2int(ar_length)
 
-                    # process additional records
-                    ar_offset = 0
-                    for i in range(ar_count):
-                        # get record type (= A) and extrakt ip
-                        ar_type = add_records[ar_offset + 2:ar_offset + 4]
-                        # self.logger.debug(":".join("{:02x}".format(ord(c)) for c in ar_type))
-                        ar_length = add_records[ar_offset + 10: ar_offset + 12]
-                        ar_length = supp_fct.hex2int(ar_length)
+                    if ar_type == "\x00\x01":  # Type A, get IP & Port
+                        ar_ip = add_records[ar_offset + 12:ar_offset + 12 + ar_length]
+                        ip1 = supp_fct.hex2int(ar_ip[0])
+                        ip2 = supp_fct.hex2int(ar_ip[1])
+                        ip3 = supp_fct.hex2int(ar_ip[2])
+                        ip4 = supp_fct.hex2int(ar_ip[3])
+                        ip = str(ip1) + "." + str(ip2) + "." + str(ip3) + "." + str(ip4)
+                        ip = ".".join(str(supp_fct.hex2int(c)) for c in ar_ip)
+                        self.logger.info("Discovered bridge at {}".format(ip))
+                        self.set_bridge_ip(ip)
+                        sock.close()
+                        return ip
 
-                        if ar_type == "\x00\x01":  # Type A, get IP & Port
-                            ar_ip = add_records[ar_offset + 12:ar_offset + 12 + ar_length]
-                            ip1 = supp_fct.hex2int(ar_ip[0])
-                            ip2 = supp_fct.hex2int(ar_ip[1])
-                            ip3 = supp_fct.hex2int(ar_ip[2])
-                            ip4 = supp_fct.hex2int(ar_ip[3])
-                            ip = str(ip1) + "." + str(ip2) + "." + str(ip3) + "." + str(ip4)
-                            ip = ".".join(str(supp_fct.hex2int(c)) for c in ar_ip)
-                            self.logger.info("Discovered bridge at {}".format(ip))
-                            self.set_bridge_ip(ip)
-                            sock.close()
-                            return ip
+                    ar_offset = ar_offset + 12 + ar_length
 
-                        ar_offset = ar_offset + 12 + ar_length
+            except socket.timeout:
+                self.logger.error("No bridge discovered (timeout).")
+                break
 
-                except socket.timeout:
-                    self.logger.error("No bridge discovered (timeout).")
-                    break
-
-            sock.close()
-            return str()
+        sock.close()
+        return str()
 
     def get_html_device_list(self):
         """

@@ -22,31 +22,30 @@ class HtmlServer:
         :param ip: IP of machine hosting the server
         :type port: int
         :param port: Port used to provide the info page
-        :rtype: None
-        :return: No implemented
+        :rtype: str
+        :return: Server URL
         """
-        with supp_fct.TraceLog(self.logger):
-            self.logger.debug("IP = {}, Port = {}".format(ip, port))
-            server_address = (ip, port)
+        self.logger.debug("IP = {}, Port = {}".format(ip, port))
+        server_address = (ip, port)
 
-            self.logger.debug("Stopping potential server instance (re-) starting it.")
-            self.stop_server()
+        self.logger.debug("Stopping potential server instance (re-) starting it.")
+        self.stop_server()
 
-            try:
-                self.server = ThreadedTCPServer(server_address, self.http_request_handler, bind_and_activate=False)
-                self.server.allow_reuse_address = True
-                self.server.server_bind()
-                self.server.server_activate()
-            except Exception as e:
-                self.logger.error(str(e))
-                return
+        try:
+            self.server = ThreadedTCPServer(server_address, self.http_request_handler, bind_and_activate=False)
+            self.server.allow_reuse_address = True
+            self.server.server_bind()
+            self.server.server_activate()
+        except Exception as e:
+            self.logger.error(str(e))
+            return str(e)
 
-            ip, port = self.server.server_address
-            self.t = threading.Thread(target=self.server.serve_forever)
-            self.t.setDaemon(True)
-            self.t.start()
-            server_url = "http://{ip}:{port}".format(ip=ip, port=port)
-            self.logger.info('Server running on {}'.format(server_url))
+        ip, port = self.server.server_address
+        self.t = threading.Thread(target=self.server.serve_forever)
+        self.t.setDaemon(True)
+        self.t.start()
+        server_url = "http://{ip}:{port}".format(ip=ip, port=port)
+        return server_url
 
     def stop_server(self):
         """

@@ -29,19 +29,18 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.LOGGER = self._get_logger(hsl20_4.LOGGING_NONE,())
         self.PIN_I_TRIGGER=1
         self.PIN_I_HUE_KEY=2
-        self.PIN_I_PORT=3
-        self.PIN_I_ITM_IDX=4
-        self.PIN_I_SCENE=5
-        self.PIN_I_DYN_SCENE=6
-        self.PIN_I_DYN_SC_SPEED=7
-        self.PIN_I_ON_OFF=8
-        self.PIN_I_BRI=9
-        self.PIN_I_R=10
-        self.PIN_I_G=11
-        self.PIN_I_B=12
-        self.PIN_I_REL_DIM=13
-        self.PIN_I_DIM_RAMP=14
-        self.PIN_I_BRIDGE_IP=15
+        self.PIN_I_ITM_IDX=3
+        self.PIN_I_SCENE=4
+        self.PIN_I_DYN_SCENE=5
+        self.PIN_I_DYN_SC_SPEED=6
+        self.PIN_I_ON_OFF=7
+        self.PIN_I_BRI=8
+        self.PIN_I_R=9
+        self.PIN_I_G=10
+        self.PIN_I_B=11
+        self.PIN_I_REL_DIM=12
+        self.PIN_I_DIM_RAMP=13
+        self.PIN_I_BRIDGE_IP=14
         self.PIN_O_STATUS_ON_OFF=1
         self.PIN_O_BRI=2
         self.PIN_O_R=3
@@ -335,51 +334,57 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         :return: False if errors occur
         :rtype: bool
         """
-        with supp_fct.TraceLog(self.logger):
-            key = self._get_input_value(self.PIN_I_HUE_KEY)
-            device_id = self._get_input_value(self.PIN_I_ITM_IDX)
-            self.singleton = singlet.Singleton(self._get_module_id())
+        key = self._get_input_value(self.PIN_I_HUE_KEY)
+        device_id = self._get_input_value(self.PIN_I_ITM_IDX)
+        self.singleton = singlet.Singleton(self._get_module_id())
 
-            # Connections
-            self.bridge.set_bridge_ip(self._get_input_value(self.PIN_I_BRIDGE_IP))
-            ip = self.bridge.get_bridge_ip(self.FRAMEWORK.get_homeserver_private_ip())
+        if self.singleton.is_master():
+            self.DEBUG.set_value("Master ID ", str(self._get_module_id()))
+            self.logger.info("Singleton works if counter for this message is 1")
 
-            if not ip:
-                return False
+        self.DEBUG.set_value("Global shared variable works if following number is > 1",
+                             str(len(singlet.get_module_register())))
 
-            if self.singleton.is_master():
-                amount = self.bridge.register_devices(key, device_id, self.FRAMEWORK.get_homeserver_private_ip())
-                self.logger.info("Found {} Hue devices.".format(amount))
+        # Connections
+        self.bridge.set_bridge_ip(self._get_input_value(self.PIN_I_BRIDGE_IP))
+        ip = self.bridge.get_bridge_ip(self.FRAMEWORK.get_homeserver_private_ip())
 
-                # server
-                server_port = self._get_input_value(self.PIN_I_PORT)
-                self.server.run_server(self.FRAMEWORK.get_homeserver_private_ip(), server_port)
-                self.server.set_html_content(self.bridge.get_html_device_list())
+        if not ip:
+            return False
 
-            # get own lamp data if already registered
-            device = self.bridge.get_own_device(device_id)
-            data = supp_fct.get_data(ip, key, "light/" + device.light_id, self.logger)
+        if self.singleton.is_master():
+            amount = self.bridge.register_devices(key, device_id, self.FRAMEWORK.get_homeserver_private_ip())
+            self.logger.info("Found {} Hue devices.".format(amount))
 
-            if int(data["status"]) is 200:
-                self.process_json(data)
-            else:
-                self.logger.warning("Could not retrieve data for master light id in on_init")
+            # server
+            server_url = self.server.run_server(self.FRAMEWORK.get_homeserver_private_ip(), 0)
+            self.server.set_html_content(self.bridge.get_html_device_list())
+            self.DEBUG.set_value("Server URL", server_url)
 
-            data = supp_fct.get_data(ip, key, "zigbee_connectivity/" + device.zigbee_connectivity_id, self.logger)
-            if int(data["status"]) is 200:
-                self.process_json(data)
-            else:
-                self.logger.warning("Could not retrieve zigbee connectivity data for master light")
+        # get own lamp data if already registered
+        device = self.bridge.get_own_device(device_id)
+        data = supp_fct.get_data(ip, key, "light/" + device.light_id, self.logger)
 
-            if self.singleton.is_master():
-                # eventstream init & start
-                self.eventstream_thread = threading.Thread()  # type: threading.Thread
-                self.eventstream_keep_running = threading.Event()
-                self.event_list = []
-                self.eventstream_start(key)
+        if int(data["status"]) is 200:
+            self.process_json(data)
+        else:
+            self.logger.warning("Could not retrieve data for master light id in on_init")
 
-            self.log_data("Hue {} ID".format(device.rtype), device.id)
-            return True
+        data = supp_fct.get_data(ip, key, "zigbee_connectivity/" + device.zigbee_connectivity_id, self.logger)
+        if int(data["status"]) is 200:
+            self.process_json(data)
+        else:
+            self.logger.warning("Could not retrieve zigbee connectivity data for master light")
+
+        if self.singleton.is_master():
+            # eventstream init & start
+            self.eventstream_thread = threading.Thread()  # type: threading.Thread
+            self.eventstream_keep_running = threading.Event()
+            self.event_list = []
+            self.eventstream_start(key)
+
+        self.log_data("Hue {} ID".format(device.rtype), device.id)
+        return True
 
     def on_init(self):
         # debug
@@ -398,98 +403,97 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
     def on_input_value(self, index, value):
         # Process State
         # itm_idx = str(self._get_input_value(self.PIN_I_ITM_IDX))
-        with supp_fct.TraceLog(self.logger):
-            ip = self.bridge.get_bridge_ip(self.FRAMEWORK.get_homeserver_private_ip())
-            if ip == str():
-                if not self.do_init():
-                    self.logger.error("Received new input but could not establish connection to bridge.")
-                    return
-
-            device = self.bridge.get_own_device(self._get_input_value(self.PIN_I_ITM_IDX))
-            key = self._get_input_value(self.PIN_I_HUE_KEY)
-
-            if not key:
-                self.logger.error("Hue key not set. Abort processing updated input.")
+        ip = self.bridge.get_bridge_ip(self.FRAMEWORK.get_homeserver_private_ip())
+        if ip == str():
+            if not self.do_init():
+                self.logger.error("Received new input but could not establish connection to bridge.")
                 return
 
-            if not get_eventstream_is_connected():
-                self.eventstream_start(key)
+        device = self.bridge.get_own_device(self._get_input_value(self.PIN_I_ITM_IDX))
+        key = self._get_input_value(self.PIN_I_HUE_KEY)
 
-            # If trigger == 1, get data via web request
-            if (self.PIN_I_TRIGGER == index) and (bool(value)):
-                self.logger.debug("Received Trigger input.")
-                item_types = {"device", "light", "room", "scene", "zone", "grouped_light"}
+        if not key:
+            self.logger.error("Hue key not set. Abort processing updated input.")
+            return
 
-                for item_type in item_types:
-                    data = supp_fct.get_data(ip, key, item_type, self.logger)
-                    self.process_json(data)
+        if not get_eventstream_is_connected():
+            self.eventstream_start(key)
 
-            # Process set commands
-            if self.PIN_I_ON_OFF == index:
-                self.logger.debug("Received on/off command.")
-                device.set_on(ip, key, bool(value))
+        # If trigger == 1, get data via web request
+        if (self.PIN_I_TRIGGER == index) and (bool(value)):
+            self.logger.debug("Received Trigger input.")
+            item_types = {"device", "light", "room", "scene", "zone", "grouped_light"}
 
-            elif self.PIN_I_SCENE == index:
-                self.logger.debug("Received scene input.")
-                scene = hue_item.HueDevice(self.logger)
-                scene.id = value
-                scene.rtype = "scene"
-                scene.set_scene(ip, key, value)
+            for item_type in item_types:
+                data = supp_fct.get_data(ip, key, item_type, self.logger)
+                self.process_json(data)
 
-            elif self.PIN_I_BRIDGE_IP == index:
-                self.bridge.set_bridge_ip(str(value))
+        # Process set commands
+        if self.PIN_I_ON_OFF == index:
+            self.logger.debug("Received on/off command.")
+            device.set_on(ip, key, bool(value))
 
-            elif index == self.PIN_I_DYN_SCENE and bool(value):
-                dynamic_scene = self._get_input_value(self.PIN_I_SCENE)  # type: str
-                speed = self._get_input_value(self.PIN_I_DYN_SC_SPEED)
-                if not dynamic_scene:
-                    self.logger.error("No scene given on Pin {}. Aborting.".format(self.PIN_I_SCENE))
-                    return
+        elif self.PIN_I_SCENE == index:
+            self.logger.debug("Received scene input.")
+            scene = hue_item.HueDevice(self.logger)
+            scene.id = value
+            scene.rtype = "scene"
+            scene.set_scene(ip, key, value)
 
-                if speed <= 0 or speed > 1:
-                    self.logger.error("Dynamic Scene Speed on Pin {} not within "
-                                      "allowed range of [0,1[. Aborting.".format(self.PIN_I_DYN_SC_SPEED))
-                    return
+        elif self.PIN_I_BRIDGE_IP == index:
+            self.bridge.set_bridge_ip(str(value))
 
-                device.set_dynamic_scene(ip, key, dynamic_scene, speed)
+        elif index == self.PIN_I_DYN_SCENE and bool(value):
+            dynamic_scene = self._get_input_value(self.PIN_I_SCENE)  # type: str
+            speed = self._get_input_value(self.PIN_I_DYN_SC_SPEED)
+            if not dynamic_scene:
+                self.logger.error("No scene given on Pin {}. Aborting.".format(self.PIN_I_SCENE))
+                return
 
-            elif self.PIN_I_BRI == index:
-                self.logger.debug("Received Bri input.")
-                if int(value) > 0:
-                    device.set_on(ip, key, True)
-                device.set_bri(ip, key, int(value))
+            if speed <= 0 or speed > 1:
+                self.logger.error("Dynamic Scene Speed on Pin {} not within "
+                                  "allowed range of [0,1[. Aborting.".format(self.PIN_I_DYN_SC_SPEED))
+                return
 
-            elif self.PIN_I_ITM_IDX == index:
-                self.logger.debug("Received Item Index input.")
-                self.bridge.register_devices(key, value, self.FRAMEWORK.get_homeserver_private_ip())
-                device = self.bridge.get_own_device(value)
+            device.set_dynamic_scene(ip, key, dynamic_scene, speed)
 
-                # get own lamp data if registered
-                data = supp_fct.get_data(ip, key, "light/" + device.light_id, self.logger)
-
-                if data["status"] == 200:
-                    self.process_json(data)
-                else:
-                    self.logger.warning("Could not retrieve data for master light id in on_init")
-
-            elif ((self.PIN_I_R == index) or
-                  (self.PIN_I_G == index) or
-                  (self.PIN_I_B == index)):
-                self.logger.debug("Received r/g/b input.")
-
-                r = int(int(self._get_input_value(self.PIN_I_R)))
-                g = int(int(self._get_input_value(self.PIN_I_G)))
-                b = int(int(self._get_input_value(self.PIN_I_B)))
-
-                if r == 0 and g == 0 and b == 0:
-                    device.set_on(ip, key, False)
-                    return
-
+        elif self.PIN_I_BRI == index:
+            self.logger.debug("Received Bri input.")
+            if int(value) > 0:
                 device.set_on(ip, key, True)
-                device.set_color_rgb(ip, key, r, g, b)
+            device.set_bri(ip, key, int(value))
 
-            elif self.PIN_I_REL_DIM == index:
-                device.prep_dim(ip, key, value, self._get_input_value(self.PIN_I_DIM_RAMP))
+        elif self.PIN_I_ITM_IDX == index:
+            self.logger.debug("Received Item Index input.")
+            self.bridge.register_devices(key, value, self.FRAMEWORK.get_homeserver_private_ip())
+            device = self.bridge.get_own_device(value)
+
+            # get own lamp data if registered
+            data = supp_fct.get_data(ip, key, "light/" + device.light_id, self.logger)
+
+            if data["status"] == 200:
+                self.process_json(data)
+            else:
+                self.logger.warning("Could not retrieve data for master light id in on_init")
+
+        elif ((self.PIN_I_R == index) or
+              (self.PIN_I_G == index) or
+              (self.PIN_I_B == index)):
+            self.logger.debug("Received r/g/b input.")
+
+            r = int(int(self._get_input_value(self.PIN_I_R)))
+            g = int(int(self._get_input_value(self.PIN_I_G)))
+            b = int(int(self._get_input_value(self.PIN_I_B)))
+
+            if r == 0 and g == 0 and b == 0:
+                device.set_on(ip, key, False)
+                return
+
+            device.set_on(ip, key, True)
+            device.set_color_rgb(ip, key, r, g, b)
+
+        elif self.PIN_I_REL_DIM == index:
+            device.prep_dim(ip, key, value, self._get_input_value(self.PIN_I_DIM_RAMP))
 
 
 TRACE = 5

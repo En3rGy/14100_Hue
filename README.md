@@ -14,6 +14,20 @@ performed. The manual IP can be updated during runtime.
 
 All outputs are configured as _send-by-change (sbc)_.
 
+### Quick Start
+#### Create a HUE API User
+Follow the instruction to [create a HUE bridge API user key](https://developers.meethue.com/develop/get-started-2/).
+
+#### Set-Up the Logic Module
+- Install module into HS and create a logic sheet using this help file
+- Store the obtained API user key on the corresponding input of the logic module
+- Upload the project
+- Check the HS debug page, go to _HSL 2.0_ section, find the _14100_Hue_ heading and get the _Server URL_ 
+- Open the obtained server URL, e.g. `http://<IP-Homeserver>:<port>`
+- Identify the ID of the Hue device / group / room / etc. you want to control
+- Copy the ID to the logic module
+- Re-upload the project and restart the HS
+
 ### Useage
 #### Information Website and Set-up of logic module
 [Hue API v2](https://developers.meethue.com/develop/hue-api-v2/) addresses each device using a non-readable ID.<br>
@@ -46,7 +60,7 @@ Set up an instance of the logic module for each hue item you would like to contr
 | Nr.                     | Name                 | Init. | Description                                                                                                                                                                                                                                           |
 |-------------------------|----------------------|-------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | <a name="input_1"></a>1 | Get Status           |       | A value =1 reads (manually) the full status of the device from the bridge                                                                                                                                                                             |
-| <a name="input_2"></a>2 | Key                  |       | Hue Bridge User Key                                                                                                                                                                                                                                   |
+| <a name="input_2"></a>2 | Key                  |       | Hue Bridge User Key, see [Create HUE Bridge API User](https://developers.meethue.com/develop/get-started-2/)                                                                                                                                          |
 | 3                       | Port Info Page       | 0     | Port of Information Website: Website containing all Hue devices and the corresponding or associated Hue IDs. The web site is provided at `http://<HS-IP>:<Port>`                                                                                      |
 | <a name="input_4"></a>4 | Item Id              | 0     | ID of Hue device to be controlled. The ID can be identified via the Information Website described in the description / Usage section<br>Use the specific ID, e.g. the *Light ID* or *Grouped light Id*.**Use the light id to control a power socket** |
 | <a name="input_5"></a>5 | Scene ID             |       | ID of the scene to be called. Providing a valid scene ID on this input will switch on the device also.                                                                                                                                                | 

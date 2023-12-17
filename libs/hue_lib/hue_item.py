@@ -88,7 +88,7 @@ class HueDevice:
                 self.logger.warning("Trying to set a room or zone on/off. This is not allowed. Discarding.")
                 return False
 
-            if set_on:
+            if bool(set_on):
                 payload = '{"on":{"on":true}}'
             else:
                 payload = '{"on":{"on":false}}'

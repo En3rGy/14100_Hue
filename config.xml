@@ -5,7 +5,6 @@
             <inputs>
 				<input type="number" const_name="trigger" init_value="0">Get Status</input>
                 <input type="string" const_name="hue_key" init_value="">Key</input>
-				<input type="number" const_name="port" init_value="8080">Port info page</input>
 				<input type="string" const_name="itm_idx" init_value="">Item Id</input>
 				<input type="string" const_name="scene" init_value="">Scene Id</input>
 				<input type="number" const_name="dyn_scene" init_value="0">Dynamic Scene (1/0)</input>
