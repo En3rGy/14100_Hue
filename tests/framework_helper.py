@@ -33,17 +33,17 @@ class hsl20_4:
         def _set_remanent(self, key, val):
             # type: (str, any) -> None
             self.debug_set_remanent[key] = val
-            print "# REMANENT: Pin " + str(key) + " -> \t" + str(val)
+            print "# Module #{} REMANENT: Pin {} -> \t{}".format(self._get_module_id(), key, val)
 
         def _set_output_value(self, pin, value):
             # type: (int, any) -> None
             self.debug_output_value[pin] = value
-            print "# OUT: Pin " + str(pin) + " -> \t" + str(value)
+            print "# Module #{} OUT: Pin {} -> \t{}".format(self._get_module_id(), pin, value)
 
         def _set_input_value(self, pin, value):
             # type: (int, any) -> None
             self.debug_input_value[int(pin)] = value
-            print "# IN: Pin " + str(pin) + " -> \t" + str(value)
+            print "# Module #{} IN: Pin {} -> \t{}".format(self._get_module_id(), pin, value)
 
         def _get_input_value(self, pin):
             # type: (int) -> any

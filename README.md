@@ -102,6 +102,8 @@ Set up an instance of the logic module for each hue item you would like to contr
 
 ### Change Log
 
+- v3.9:
+  - Fix for https://github.com/En3rGy/14100_Hue/issues/29
 - v3.8: 
   - Impr.: Using a sticky table header for the info table
   - Impr.: Sorting the info table alphabetically
@@ -181,7 +183,7 @@ Used libraries:
 
 ## Licence
 
-Copyright 2022 T. Paul
+Copyright 2023 T. Paul
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 

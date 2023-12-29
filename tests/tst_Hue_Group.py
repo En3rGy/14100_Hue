@@ -23,16 +23,22 @@ exec (framework_code + debug_code)
 # unit tests
 class UnitTests(unittest.TestCase):
 
-    def load_data(self, module):
+    def load_data(self, module, itm_id=None):
         """
 
         :param module:
+        :param itm_id:
         :type module: HueGroup_14100_14100
         """
         module.debug_input_value[self.dummy.PIN_I_HUE_KEY] = self.cred["PIN_I_SUSER"]
-        module.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_light_id_studio"]
+
         # self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_light_id_esszimmer"]
-        module.debug_rid = self.cred["hue_light_id"]
+        if not itm_id:
+            module.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_light_id_studio"]
+            # module.debug_rid = self.cred["hue_light_id"]
+        else:
+            module.debug_input_value[self.dummy.PIN_I_ITM_IDX] = itm_id
+            # module.debug_rid = itm_id
 
         # self.dummy.on_init()
         module.DEBUG = self.dummy.FRAMEWORK.create_debug_section()
@@ -263,37 +269,33 @@ class UnitTests(unittest.TestCase):
         self.assertTrue(ret)
 
     def test_10_long_time_eventstream(self):  # 2022-11-16 OK
+        logging.basicConfig()
         self.logger.info("### test_10_eventstream")
 
+        self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_light_id_wz"]
+        self.dummy.logger.setLevel(logging.DEBUG)
         self.dummy.on_init()
+        self.dummy.logger.setLevel(logging.DEBUG)
 
-        module_1 = HueGroup_14100_14100(0)
-        self.load_data(module_1)
-        self.device = hue_item.HueDevice(module_1.logger)
-        self.device.id = self.cred["hue_light_id_studio"]
-        self.device.rtype = "light"
-        module_1.on_init()
-        module_1.logger.setLevel(logging.WARNING)
-
-        module_2 = HueGroup_14100_14100(0)
-        self.load_data(module_2)
-        self.device = hue_item.HueDevice(module_2.logger)
-        self.device.id = self.cred["hue_light_id_esszimmer"]
-        self.device.rtype = "light"
-        module_2.on_init()
-        module_2.logger.setLevel(logging.WARNING)
+        # module_2 = HueGroup_14100_14100(0)
+        # self.load_data(module_2, self.cred["hue_light_id_esszimmer"])
+        # self.device = hue_item.HueDevice(module_2.logger)
+        # self.device.id = self.cred["hue_light_id_esszimmer"]
+        # self.device.rtype = "light"
+        # module_2.on_init()
+        # module_2.logger.setLevel(logging.DEBUG)
 
         print("\n\n")
         self.logger.info("Starting 24 h test")
-        self.logger.info("- Helper module 1 ID {}".format(module_1.module_id))
-        self.logger.info("- Helper module 2 ID {}".format(module_2.module_id))
+        # self.logger.info("- Helper module 1 ID {}".format(module_1.module_id))
+        # self.logger.info("- Helper module 2 ID {}".format(module_2.module_id))
         self.logger.info("- Test Obj. ID {}".format(self.dummy.module_id))
         print("\n\n")
 
         time.sleep(60 * 60 * 24)
 
-        module_1.stop_eventstream()
-        module_2.stop_eventstream()
+        # module_1.stop_eventstream()
+        # module_2.stop_eventstream()
         self.dummy.stop_eventstream()
 
     def test_init(self):

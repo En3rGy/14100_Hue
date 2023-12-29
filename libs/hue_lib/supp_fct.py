@@ -161,7 +161,9 @@ def get_data(ip, key, api_cmd, logger):
 
         except Exception as e:
             data = {'data': str(e), 'status': str(0)}
-            logger.error("In get_data #291, {error}, data: {data}".format(error=e, data=data))
+            logger.error("In get_data #291, for request '{cmd}' received '{error}', data: {data}".format(cmd=api_cmd,
+                                                                                                         error=e,
+                                                                                                         data=data))
         return data
 
 

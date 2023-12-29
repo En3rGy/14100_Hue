@@ -143,7 +143,11 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                     for data in msg_entry["data"]:
                         device_id = supp_fct.get_val(data, "id")
 
-                        if device_id not in hue_device.get_device_ids():
+                        corresponding_device_ids = hue_device.get_device_ids()
+                        print("###########{} in {}? {}".format(device_id,
+                                                               corresponding_device_ids,
+                                                               device_id in corresponding_device_ids))
+                        if device_id not in corresponding_device_ids:
                             pass
 
                         else:

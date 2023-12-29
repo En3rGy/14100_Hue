@@ -65,7 +65,7 @@ class HueDevice:
             ret = [self.device_id, self.light_id, self.zigbee_connectivity_id, self.room, self.zone]   # type: [str]
             for scene in self.scenes:
                 ret.append(scene["id"])  # tod: check if extend vs. append
-            ret.extend(self.grouped_lights)
+            # ret.extend(self.grouped_lights) # Fix for https://github.com/En3rGy/14100_Hue/issues/29
             ret = filter(lambda x: x != '', ret)  # remove empty elements
 
             return ret
