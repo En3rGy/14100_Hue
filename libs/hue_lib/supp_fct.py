@@ -136,35 +136,35 @@ def get_data(ip, key, api_cmd, logger):
     :return: {'data': Data received, 'status': html return code}
     :rtype: {str, str}
     """
-    with TraceLog(logger):
-        logger.debug("#### {} // {}".format(ip,key))
-        api_path = 'https://' + ip + '/clip/v2/resource/' + api_cmd
-        url_parsed = urlparse.urlparse(api_path)
-        headers = {'Host': url_parsed.hostname, "hue-application-key": key}
+    logger.debug("supp_fct.py | get_data | ip= '{}', key= '{}', api_cmd= '{}'".format(ip, key, api_cmd))
+    api_path = 'https://{}/clip/v2/resource/{}'.format(ip, api_cmd)
+    url_parsed = urlparse.urlparse(api_path)
+    headers = {'Host': url_parsed.hostname, "hue-application-key": key}
 
-        # Build a SSL Context to disable certificate verification.
-        ctx = ssl._create_unverified_context()
+    # Build a SSL Context to disable certificate verification.
+    ctx = ssl._create_unverified_context()
 
-        try:
-            # Build a http request and overwrite host header with the original hostname.
-            request = urllib2.Request(api_path, headers=headers)
-            # Open the URL and read the response.
-            response = urllib2.urlopen(request, data=None, timeout=5, context=ctx)
-            data = {'data': response.read(), 'status': str(response.getcode())}
-            logger.debug("Received {} byte with return code {}".format(len(data.get("data")), data.get("status")))
+    try:
+        # Build a http request and overwrite host header with the original hostname.
+        request = urllib2.Request(api_path, headers=headers)
+        # Open the URL and read the response.
+        response = urllib2.urlopen(request, data=None, timeout=5, context=ctx)
+        data = {'data': response.read(), 'status': str(response.getcode())}
+        logger.debug("supp_dct.py | get_data | Received {} byte with return code {}".format(len(data.get("data")),
+                                                                                            data.get("status")))
 
-            if int(data["status"]) != 200:
-                logger.warning(
-                    "In supp_dct.get_data #99, Hue bridge response code for '{cmd}' is {status}".format(cmd=api_cmd,
-                                                                                                        status=data[
-                                                                                                            "status"]))
+        if int(data["status"]) != 200:
+            logger.warning(
+                "supp_dct.py | get_data | Hue bridge response code for '{cmd}' is {status}".format(cmd=api_cmd,
+                                                                                                    status=data[
+                                                                                                        "status"]))
 
-        except Exception as e:
-            data = {'data': str(e), 'status': str(0)}
-            logger.error("In get_data #291, for request '{cmd}' received '{error}', data: {data}".format(cmd=api_cmd,
-                                                                                                         error=e,
-                                                                                                         data=data))
-        return data
+    except Exception as e:
+        data = {'data': str(e), 'status': str(0)}
+        logger.error("supp_dct.py | get_data | For request '{cmd}' received '{error}', data: {data}".format(cmd=api_cmd,
+                                                                                                     error=e,
+                                                                                                     data=data))
+    return data
 
 
 def http_put(ip, key, device_rid, api_path, payload, logger):

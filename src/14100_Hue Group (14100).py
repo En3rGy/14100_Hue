@@ -144,9 +144,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                         device_id = supp_fct.get_val(data, "id")
 
                         corresponding_device_ids = hue_device.get_device_ids()
-                        print("###########{} in {}? {}".format(device_id,
-                                                               corresponding_device_ids,
-                                                               device_id in corresponding_device_ids))
+
                         if device_id not in corresponding_device_ids:
                             pass
 
@@ -265,14 +263,16 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                         try:
                             module_instance.process_json(msg)
                         except Exception as e:
-                            self.logger.warning("In eventstream #336, calling remote modules, '" + str(e) + "'.")
+                            self.logger.warning("14100_Hue Group (14100).py | process_eventstream_msgs(...) | "
+                                                "Calling remote modules, '{}'".format(e))
 
                     self.process_json(msg)
 
                 except Exception as e:
-                    self.logger.error("Eventstream #342, error with '" + e.message[:len(e.message)] + "'.")
-                    self.log_data("Eventstream #342 error msg", str(e))
-                    self.log_data("Eventstream #342 erroneous str", msg)
+                    self.logger.error("14100_Hue Group (14100).py | "
+                                      "process_eventstream_msgs(...) | {}".format(e.message))
+                    self.log_data("14100_Hue Group (14100).py | process_eventstream_msgs(...) | Exception",
+                                  "{}:\n---Start---\n{}\n---End---".format(e, msg))
 
     def eventstream(self, running, key):
         """
@@ -367,18 +367,25 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         # get own lamp data if already registered
         device = self.bridge.get_own_device(device_id)
-        data = supp_fct.get_data(ip, key, "light/" + device.light_id, self.logger)
+        self.logger.debug("14100_Hue Group (14100).py | do_init | Printing Device:"
+                          "---Start of device---\n{}\n---End of device---".format(device))
 
-        if int(data["status"]) is 200:
-            self.process_json(data)
-        else:
-            self.logger.warning("Could not retrieve data for master light id in on_init")
+        # if e.g. grouped_light, there is no light_id available
+        if device.light_id:
+            data = supp_fct.get_data(ip, key, "light/{}".format(device.light_id), self.logger)
 
-        data = supp_fct.get_data(ip, key, "zigbee_connectivity/" + device.zigbee_connectivity_id, self.logger)
-        if int(data["status"]) is 200:
-            self.process_json(data)
-        else:
-            self.logger.warning("Could not retrieve zigbee connectivity data for master light")
+            if int(data["status"]) is 200:
+                self.process_json(data)
+            else:
+                self.logger.warning("Could not retrieve data for master light id in on_init")
+
+        # if e.g. grouped_light, there is no light_id available
+        if device.zigbee_connectivity_id:
+            data = supp_fct.get_data(ip, key, "zigbee_connectivity/" + device.zigbee_connectivity_id, self.logger)
+            if int(data["status"]) is 200:
+                self.process_json(data)
+            else:
+                self.logger.warning("Could not retrieve zigbee connectivity data for master light")
 
         if self.singleton.is_master():
             # eventstream init & start
@@ -471,14 +478,15 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             self.logger.debug("Received Item Index input.")
             self.bridge.register_devices(key, value, self.FRAMEWORK.get_homeserver_private_ip())
             device = self.bridge.get_own_device(value)
+            device.get_type_of_device()
 
             # get own lamp data if registered
-            data = supp_fct.get_data(ip, key, "light/" + device.light_id, self.logger)
+            data = supp_fct.get_data(ip, key, "light/{}".format(device.light_id), self.logger)
 
             if data["status"] == 200:
                 self.process_json(data)
             else:
-                self.logger.warning("Could not retrieve data for master light id in on_init")
+                self.logger.warning("X | on_input_value | Could not retrieve data for master light id")
 
         elif ((self.PIN_I_R == index) or
               (self.PIN_I_G == index) or

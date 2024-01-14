@@ -225,27 +225,26 @@ class HueBridge:
             return info_data
 
     def __register_device_type(self, data):
-        with supp_fct.TraceLog(self.logger):
-            global devices
-            for item in data:
-                item_id = supp_fct.get_val(item, "id")
+        global devices
+        for item in data:
+            item_id = supp_fct.get_val(item, "id")
 
-                services = supp_fct.get_val(item, "services")
-                device = hue_item.HueDevice(self.logger)
-                device.device_id = item_id
-                metadata = supp_fct.get_val(item, "metadata")
-                device.name = supp_fct.get_val(metadata, "name")
+            services = supp_fct.get_val(item, "services")
+            device = hue_item.HueDevice(self.logger)
+            device.device_id = item_id
+            metadata = supp_fct.get_val(item, "metadata")
+            device.name = supp_fct.get_val(metadata, "name")
 
-                for service in services:
-                    rid = supp_fct.get_val(service, "rid")
+            for service in services:
+                rid = supp_fct.get_val(service, "rid")
 
-                    rtype = supp_fct.get_val(service, "rtype")
-                    if rtype == "light":
-                        device.light_id = rid
-                    elif rtype == "zigbee_connectivity":
-                        device.zigbee_connectivity_id = rid
+                rtype = supp_fct.get_val(service, "rtype")
+                if rtype == "light":
+                    device.light_id = rid
+                elif rtype == "zigbee_connectivity":
+                    device.zigbee_connectivity_id = rid
 
-                devices[device.device_id] = device
+            devices[device.device_id] = device
 
     def __register_room_type(self, data):
         with supp_fct.TraceLog(self.logger):
@@ -320,23 +319,22 @@ class HueBridge:
                             devices[device.device_id] = device
 
     def __register_grouped_light_type(self, data):
-        with supp_fct.TraceLog(self.logger):
-            global devices
-            for item in data:
-                item_id = supp_fct.get_val(item, "id")
-                owner = supp_fct.get_val(item, "owner")
-                rid = supp_fct.get_val(owner, "rid")
-                rtype = supp_fct.get_val(owner, "rtype")
+        global devices
+        for item in data:
+            item_id = supp_fct.get_val(item, "id")
+            owner = supp_fct.get_val(item, "owner")
+            rid = supp_fct.get_val(owner, "rid")
+            rtype = supp_fct.get_val(owner, "rtype")
 
-                for device in devices.values():
-                    if rtype == "room":
-                        if device.room == rid:
-                            device.grouped_lights.append(item_id)
-                            devices[device.device_id] = device
-                    elif rtype == "zone":
-                        if device.zone == rid:
-                            device.grouped_lights.append(item_id)
-                            devices[device.device_id] = device
+            for device in devices.values():
+                if rtype == "room":
+                    if device.room == rid:
+                        device.grouped_lights.append(item_id)
+                        devices[device.device_id] = device
+                elif rtype == "zone":
+                    if device.zone == rid:
+                        device.grouped_lights.append(item_id)
+                        devices[device.device_id] = device
 
     def register_devices(self, key, rid, host_ip):
         """
@@ -370,7 +368,8 @@ class HueBridge:
                 try:
                     data = json.loads(data_raw["data"])  # type: dict
                 except Exception as e:
-                    self.logger.error("In register_devices #377, " + str(e))
+                    self.logger.error("hue_bridge.py | register_devices({key}, {rid}, {host}) | "
+                                      "Caught exception '{msg}'".format(key=key, rid=rid, host=host_ip, msg=e))
                     continue
 
                 data = supp_fct.get_val(data, "data")
@@ -397,29 +396,32 @@ class HueBridge:
         :rtype: hue_item.HueDevice
         :return: Device
         """
-        with supp_fct.TraceLog(self.logger):
-            global devices
+        global devices
 
-            # check if identified before
-            if rid in self.device.get_device_ids():
-                if rid != self.device.id:
+        # check if identified before
+        if rid in self.device.get_device_ids(True):
+            if rid != self.device.id:
+                self.logger.debug("hue_bridge.py | get_own_device({}) | Restorig device".format(rid))
+                self.device.id = rid
+                self.device.get_type_of_device()
+            return self.device
+
+        # search and store own device if not identified before
+        else:
+            for device in devices.values():
+                if rid in device.get_device_ids(True):
+                    self.logger.debug("hue_bridge.py | get_own_device({}) | Registering device".format(rid))
+                    self.device = device
                     self.device.id = rid
                     self.device.get_type_of_device()
-                return self.device
+                    break
 
-            # search and store own device if not identified before
-            else:
-                for device in devices.values():
-                    if rid in device.get_device_ids():
-                        self.device = device
-                        self.device.id = rid
-                        self.device.get_type_of_device()
-                        break
+        if not self.device.id:
+            error_msg = ("hue_bridge.py | get_own_device('{rid}') | Requested device not found!".format(rid=rid))
+            self.logger.error(error_msg)
+            assert error_msg
 
-            if self.device is None:
-                self.logger.warning("Requested device not found")
-
-            return self.device
+        return self.device
 
     def connect_to_eventstream(self, conn, host_ip, key):
         with supp_fct.TraceLog(self.logger):

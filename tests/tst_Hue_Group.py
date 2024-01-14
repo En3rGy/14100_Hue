@@ -46,7 +46,7 @@ class UnitTests(unittest.TestCase):
         module.debug = False
         # hue_bridge.set_bridge_ip(self.cred["PIN_I_SHUEIP"])
 
-        module.FRAMEWORK.my_ip = self.cred["my_ip"]
+        module.FRAMEWORK.my_ip = self.cred["my_ip_wlan"]
 
         global EVENTSTREAM_TIMEOUT
         EVENTSTREAM_TIMEOUT = 1
@@ -88,6 +88,28 @@ class UnitTests(unittest.TestCase):
         finally:
             del self.dummy
             print("\n\nFinished.\n\n")
+
+    def helper_light_test_device(self, itm_idx, rtype):
+        self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = itm_idx
+        self.device = hue_item.HueDevice(self.dummy.logger)
+        self.device.id = itm_idx
+        self.device.rtype = rtype
+        ret = self.device.set_on(self.ip, self.key, False)
+        self.assertTrue(ret)
+        time.sleep(3)
+        ret = self.device.set_on(self.ip, self.key, True)
+        self.assertTrue(ret)
+        time.sleep(3)
+
+    def helper_light_test_full(self, itm_idx):
+        self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = itm_idx
+        self.dummy.on_init()
+        self.dummy.on_input_value(self.dummy.PIN_I_ON_OFF, False)
+        time.sleep(3)
+        # self.assertFalse(self.dummy.debug_output_value[self.dummy.PIN_O_STATUS_ON_OFF])
+        self.dummy.on_input_value(self.dummy.PIN_I_ON_OFF, True)
+        time.sleep(3)
+        # self.assertTrue(self.dummy.debug_output_value[self.dummy.PIN_O_STATUS_ON_OFF])
 
     def test_00_init(self):  # 2022-11-16 OK
         print("\n### ### test_00_init")
@@ -172,34 +194,28 @@ class UnitTests(unittest.TestCase):
         print("Continuing")
         self.assertFalse(get_eventstream_is_connected())
 
-    def test_on_off_grouped_light(self):
-        print("\n### test_on_off_grouped_light")
+    def test_on_off_light_w_device(self):
+        print("\n### test_on_off_light_w_device")
+        rid = self.cred["hue_light_id"]
+        self.helper_light_test_device(rid, "light")
 
+    def test_on_off_light_full(self):
+        print("\n### test_on_off_light_full")
+        rid = self.cred["hue_light_id"]
+        self.helper_light_test_full(rid)
+
+    def test_on_off_grouped_light_w_device(self):
+        print("\n### test_on_off_gouped_light_w_device")
         rid = self.cred["hue_grouped_light"]
+        self.helper_light_test_device(rid, "grouped_light")
 
-        self.device = hue_item.HueDevice(self.dummy.logger)
-        self.device.id = rid
-        self.device.rtype = "grouped_light"
-
-        self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = rid
-
-        ret = self.device.set_on(self.ip, self.key, False)
-        self.assertTrue(ret)
-        time.sleep(3)
-
-        ret = self.device.set_on(self.ip, self.key, True)
-        self.assertTrue(ret)
-        time.sleep(3)
-
-        ret = self.device.set_on(self.ip, "0", False)
-        self.assertFalse(ret)
-        time.sleep(3)
-
-        ret = self.device.set_on(self.ip, self.key, True)
-        self.assertTrue(ret)
+    def test_on_off_grouped_light_full(self):
+        print("\n### test_on_off_gouped_light_full")
+        rid = self.cred["hue_grouped_light"]
+        self.helper_light_test_full(rid)
 
     def test_14_on_off_zone(self):
-        # on / off not available for zones, so just chek that nothing happens
+        # on / off not available for zones, so just check that nothing happens
         print("\n### test_14_on_off_zone")
         rid = self.cred["hue_zone_id"]
 
