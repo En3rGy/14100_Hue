@@ -108,6 +108,8 @@ class HueBridge:
             try:
                 data = sock.recv(1024)
 
+                self.logger.info("Discover result msg:\n{}".format(data.encode("ascii", "xmlcharrefreplace")))
+
                 # check reply for "additional records", Type A, class IN contains IP4 address
                 # header = data[:12]
                 # qd_count = hex2int(data[4:6])

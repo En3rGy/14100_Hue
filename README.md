@@ -102,6 +102,7 @@ Set up an instance of the logic module for each hue item you would like to contr
 
 ### Change Log
 
+- v3.11: Debug output of bridge discovery reply 
 - v3.9:
   - Fix for https://github.com/En3rGy/14100_Hue/issues/29
 - v3.8: 
