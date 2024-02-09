@@ -10,11 +10,12 @@ def get_module_register():
 
 class Singleton:
 
-    def __init__(self, module_id):
+    def __init__(self, module_id, bridge_ip):
         """
 
         :param module_id:
         :type module_id: int
+        :type bridge_ip: str
         """
         if not isinstance(module_id, int):
             raise TypeError("Expected an integer value")
@@ -24,25 +25,32 @@ class Singleton:
 
         global module_register
         if 'module_register' not in globals():
-            module_register = []
+            module_register = {}
 
         # already registered?
-        if module_id in module_register:
-            self.own_modul_id = module_id
-        else:
-            global module_count  # type: int
-            if 'module_count' in globals():
-                module_count = module_count + 1
-            else:
-                module_count = 1
+        if bridge_ip in module_register:
+            ip_mod_register = module_register[bridge_ip]
 
-            self.index = module_count
-            self.__register_id(module_id)
+            if module_id in ip_mod_register:
+                self.own_modul_id = module_id
+            else:
+                global module_count  # type: []
+                if 'module_count' in globals():
+                    if bridge_ip in module_count:
+                        module_count[bridge_ip] = module_count[bridge_ip] + 1
+                    else:
+                        module_count[bridge_ip] = 1
+                else:
+                    module_count = []
+                    module_count[bridge_ip] = 1
+
+                self.index = module_count[bridge_ip]
+                self.__register_id(module_id, bridge_ip)
 
     def is_master(self):
         return self.index == 1
 
-    def __register_id(self, modul_id):
+    def __register_id(self, modul_id, bridge_ip):
         global module_register
         if isinstance(module_register, list):
             if self.own_modul_id in module_register:

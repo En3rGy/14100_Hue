@@ -63,7 +63,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         logging.Logger.trace = trace
 
-        self.bridge = hue_bridge.HueBridge(self.logger)
+        self.bridge = None
         self.server = html_server.HtmlServer(self.logger)
         self.singleton = None
         self.eventstream_thread = threading.Thread()  # type: threading.Thread
@@ -338,9 +338,16 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         :return: False if errors occur
         :rtype: bool
         """
-        key = self._get_input_value(self.PIN_I_HUE_KEY)
+        # Connections
+        self.bridge = hue_bridge.HueBridge(self.logger,
+                                           self.FRAMEWORK.get_homeserver_private_ip(),
+                                           self._get_input_value(self.PIN_I_BRIDGE_IP))
+
+        if not self.bridge.bridge_ip:
+            return False
+
         device_id = self._get_input_value(self.PIN_I_ITM_IDX)
-        self.singleton = singlet.Singleton(self._get_module_id())
+        self.singleton = singlet.Singleton(self._get_module_id(), self.bridge.bridge_ip)
 
         if self.singleton.is_master():
             self.DEBUG.set_value("Master ID ", str(self._get_module_id()))
@@ -349,12 +356,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.DEBUG.set_value("Global shared variable works if following number is > 1",
                              str(len(singlet.get_module_register())))
 
-        # Connections
-        self.bridge.set_bridge_ip(self._get_input_value(self.PIN_I_BRIDGE_IP))
-        ip = self.bridge.get_bridge_ip(self.FRAMEWORK.get_homeserver_private_ip())
-
-        if not ip:
-            return False
+        key = self._get_input_value(self.PIN_I_HUE_KEY)
 
         if self.singleton.is_master():
             amount = self.bridge.register_devices(key, device_id, self.FRAMEWORK.get_homeserver_private_ip())
@@ -363,7 +365,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             # server
             server_url = self.server.run_server(self.FRAMEWORK.get_homeserver_private_ip(), 0)
             self.server.set_html_content(self.bridge.get_html_device_list())
-            self.DEBUG.set_value("Server URL", server_url)
+            self.DEBUG.set_value("Server URL for bridge {}".format(ip), server_url)
 
         # get own lamp data if already registered
         device = self.bridge.get_own_device(device_id)
@@ -372,7 +374,7 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         # if e.g. grouped_light, there is no light_id available
         if device.light_id:
-            data = supp_fct.get_data(ip, key, "light/{}".format(device.light_id), self.logger)
+            data = supp_fct.get_data(self.bridge.bridge_ip, key, "light/{}".format(device.light_id), self.logger)
 
             if int(data["status"]) is 200:
                 self.process_json(data)
@@ -381,7 +383,8 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         # if e.g. grouped_light, there is no light_id available
         if device.zigbee_connectivity_id:
-            data = supp_fct.get_data(ip, key, "zigbee_connectivity/" + device.zigbee_connectivity_id, self.logger)
+            data = supp_fct.get_data(self.bridge.bridge_ip, key,
+                                     "zigbee_connectivity/" + device.zigbee_connectivity_id, self.logger)
             if int(data["status"]) is 200:
                 self.process_json(data)
             else:
@@ -452,7 +455,9 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             scene.set_scene(ip, key, value)
 
         elif self.PIN_I_BRIDGE_IP == index:
-            self.bridge.set_bridge_ip(str(value))
+            self.bridge = hue_bridge.HueBridge(self.logger,
+                                               self.FRAMEWORK.get_homeserver_private_ip(),
+                                               self._get_input_value(self.PIN_I_BRIDGE_IP))
 
         elif index == self.PIN_I_DYN_SCENE and bool(value):
             dynamic_scene = self._get_input_value(self.PIN_I_SCENE)  # type: str

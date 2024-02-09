@@ -49,17 +49,16 @@ class TestModuleRegistration(unittest.TestCase):
         bridge_ip = self.bridge.get_bridge_ip(self.ip)
         self.assertTrue(bridge_ip)
         self.assertTrue("192." in bridge_ip, "Expected '192.' but got {}".format(bridge_ip))
-        self.assertTrue("192." in hue_bridge.BRIDGE_IP, "Expected '192.' but got {}".format(bridge_ip))
         hue_bridge.BRIDGE_IP = "123"
 
         # check singleton characteristics
         bridge2 = hue_bridge.HueBridge(self.logger)
+        bridge2.set_bridge_ip("123")
         bridge_ip = bridge2.get_bridge_ip(self.ip)
         self.assertTrue("123" is bridge_ip)
 
-        bridge2.set_bridge_ip("345")
         bridge_ip = self.bridge.get_bridge_ip(self.ip)
-        self.assertTrue("345" is bridge_ip)
+        self.assertNotEqual("123", bridge_ip)
 
     def test_set_bridge_ip(self):
         ip = "no ip here"

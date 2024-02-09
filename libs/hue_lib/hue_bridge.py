@@ -4,6 +4,7 @@ import json
 import urlparse
 import select
 import logging
+import hue_lib.singleton as singlet
 
 import hue_lib.supp_fct as supp_fct
 import hue_lib.hue_item as hue_item
@@ -17,7 +18,7 @@ MCAST_GRP = ('224.0.0.251', MCAST_PORT)
 class HueBridge:
 
     # methods
-    def __init__(self, logger):
+    def __init__(self, logger, host_ip, ip=""):
         """
         Initialize the device object and store a reference to the logger.
 
@@ -27,33 +28,20 @@ class HueBridge:
         self.logger = logger
         self.rid = str()
         self.device = hue_item.HueDevice(self.logger)
+        self.bridge_ip = ""
+
+        if not ip:
+            ip = self.__discover_hue(host_ip)
+
+        self.__set_bridge_ip(ip)
+
         global devices
         try:
             len(devices)
         except NameError:
             devices = {}  # type: {str, hue_item.HueDevice}
 
-    def get_bridge_ip(self, host_ip):
-        """
-        Function to return the globally stored Hue bridge IP. Thread save.
-        Triggers a discovery for the bridge, if IP not set before.
-
-        :type host_ip: str
-        :return: ip
-        :rtype: str
-        """
-        with supp_fct.TraceLog(self.logger):
-            global BRIDGE_IP
-            global BRIDGE_IP_LOCK
-
-            if not BRIDGE_IP:
-                ip = self.__discover_hue(host_ip)
-                with BRIDGE_IP_LOCK:
-                    BRIDGE_IP = ip
-
-            return BRIDGE_IP
-
-    def set_bridge_ip(self, ip):
+    def __set_bridge_ip(self, ip):
         """
         Function to manually set the Hue bridge IP globally.
         Thread safe.
@@ -61,12 +49,15 @@ class HueBridge:
         :type ip: str
         :rtype: None
         """
-        with supp_fct.TraceLog(self.logger):
-            global BRIDGE_IP
-            global BRIDGE_IP_LOCK
+        self.bridge_ip = ip
+        global BRIDGE_IP
+        global BRIDGE_IP_LOCK
 
-            with BRIDGE_IP_LOCK:
-                BRIDGE_IP = ip
+        with BRIDGE_IP_LOCK:
+            if not BRIDGE_IP:
+                BRIDGE_IP = []
+            if ip not in BRIDGE_IP:
+                BRIDGE_IP.append(ip)
 
     def __discover_hue(self, host_ip):
         """
@@ -145,7 +136,6 @@ class HueBridge:
                         ip = str(ip1) + "." + str(ip2) + "." + str(ip3) + "." + str(ip4)
                         ip = ".".join(str(supp_fct.hex2int(c)) for c in ar_ip)
                         self.logger.info("Discovered bridge at {}".format(ip))
-                        self.set_bridge_ip(ip)
                         sock.close()
                         return ip
 
@@ -168,7 +158,7 @@ class HueBridge:
         with supp_fct.TraceLog(self.logger):
             info_data = "<html>\n"
             info_data += "<style>" + CSS_STYLE + "</style>"
-            info_data += "<title>Hue devices and associated IDs</title>"
+            info_data += "<title>Hue devices and associated IDs of bridge {}</title>".format(self.bridge_ip)
             info_data += "<h1>Hue devices and associated IDs</h1>"
             info_data = (info_data + '<table border="1">\n' +
                          "<tr>" +
@@ -244,7 +234,7 @@ class HueBridge:
                 elif rtype == "zigbee_connectivity":
                     device.zigbee_connectivity_id = rid
 
-            devices[device.device_id] = device
+            devices[self.bridge_ip][device.device_id] = device
 
     def __register_room_type(self, data):
         with supp_fct.TraceLog(self.logger):
@@ -259,11 +249,11 @@ class HueBridge:
                     rtype = supp_fct.get_val(children[i], "rtype")
 
                     if rtype == "device":
-                        if rid in devices:
-                            device = devices[rid]
+                        if rid in devices[self.bridge_ip]:
+                            device = devices[self.bridge_ip][rid]
                             device.room = item_id
                             device.room_name = room_name
-                            devices[device.device_id] = device
+                            devices[self.bridge_ip][device.device_id] = device
                         else:
                             self.logger.debug(
                                 "In register_devices #414, device not registered as device but requested by "
@@ -288,10 +278,10 @@ class HueBridge:
                     rtype = supp_fct.get_val(child, "rtype")
 
                     if rtype == "light":
-                        for device in devices.values():
+                        for device in devices[self.bridge_ip].values():
                             if device.light_id == rid:
                                 device.zone = item_id
-                                devices[device.device_id] = device
+                                devices[self.bridge_ip][device.device_id] = device
 
     def __register_scene_type(self, data):
         with supp_fct.TraceLog(self.logger):
@@ -305,18 +295,18 @@ class HueBridge:
                 scene_name = supp_fct.get_val(metadata, "name")
 
                 if rtype == "zone":
-                    for device in devices.values():
+                    for device in devices[self.bridge_ip].values():
                         if device.zone == rid:
                             scene_entry = {"name": scene_name, "id": item_id}
                             device.scenes.append(scene_entry)
-                            devices[device.device_id] = device
+                            devices[self.bridge_ip][device.device_id] = device
 
                 elif rtype == "room":
-                    for device in devices.values():
+                    for device in devices[self.bridge_ip].values():
                         if device.room == rid:
                             scene_entry = {"name": scene_name, "id": item_id}
                             device.scenes.append(scene_entry)
-                            devices[device.device_id] = device
+                            devices[self.bridge_ip][device.device_id] = device
 
     def __register_grouped_light_type(self, data):
         global devices
@@ -326,15 +316,15 @@ class HueBridge:
             rid = supp_fct.get_val(owner, "rid")
             rtype = supp_fct.get_val(owner, "rtype")
 
-            for device in devices.values():
+            for device in devices[self.bridge_ip].values():
                 if rtype == "room":
                     if device.room == rid:
                         device.grouped_lights.append(item_id)
-                        devices[device.device_id] = device
+                        devices[self.bridge_ip][device.device_id] = device
                 elif rtype == "zone":
                     if device.zone == rid:
                         device.grouped_lights.append(item_id)
-                        devices[device.device_id] = device
+                        devices[self.bridge_ip][device.device_id] = device
 
     def register_devices(self, key, rid, host_ip):
         """
@@ -357,7 +347,9 @@ class HueBridge:
 
             # start to store info of devices
             global devices
-            devices = {}
+            if not self.bridge_ip:
+                raise "heu_bridge.py | register_devices | Bridge IP not set."
+            devices = {self.bridge_ip: {}}
             self.rid = rid  # type: str
 
             for item_type in item_types:
@@ -385,7 +377,7 @@ class HueBridge:
                 elif item_type == "grouped_light":
                     self.__register_grouped_light_type(data)
 
-            return len(devices)
+            return len(devices[self.bridge_ip])
 
     def get_own_device(self, rid):
         """
