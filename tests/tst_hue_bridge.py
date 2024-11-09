@@ -18,6 +18,7 @@ class TestModuleRegistration(unittest.TestCase):
 
     def setUp(self):
         self.logger = logging.getLogger(__name__)
+        logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
         logging.addLevelName(TRACE, "TRACE")
 
         def trace(self, message, *args, **kws):
@@ -45,21 +46,21 @@ class TestModuleRegistration(unittest.TestCase):
         pass
 
     def test_get_bridge_ip(self):
-        self.assertFalse(hue_bridge.BRIDGE_IP)
+        self.assertFalse(hue_bridge.BRIDGE_IP, "#1")
         bridge_ip = self.bridge.get_bridge_ip(self.ip)
-        self.assertTrue(bridge_ip)
-        self.assertTrue("192." in bridge_ip, "Expected '192.' but got {}".format(bridge_ip))
-        self.assertTrue("192." in hue_bridge.BRIDGE_IP, "Expected '192.' but got {}".format(bridge_ip))
+        self.assertTrue(bridge_ip, "#2")
+        self.assertTrue("192." in bridge_ip, "#3 Expected '192.' but got {}".format(bridge_ip))
+        self.assertTrue("192." in hue_bridge.BRIDGE_IP, "#4 Expected '192.' but got {}".format(bridge_ip))
         hue_bridge.BRIDGE_IP = "123"
 
         # check singleton characteristics
         bridge2 = hue_bridge.HueBridge(self.logger)
         bridge_ip = bridge2.get_bridge_ip(self.ip)
-        self.assertTrue("123" is bridge_ip)
+        self.assertTrue("123" is bridge_ip, "#5")
 
         bridge2.set_bridge_ip("345")
         bridge_ip = self.bridge.get_bridge_ip(self.ip)
-        self.assertTrue("345" is bridge_ip)
+        self.assertTrue("345" is bridge_ip, "#6")
 
     def test_set_bridge_ip(self):
         ip = "no ip here"

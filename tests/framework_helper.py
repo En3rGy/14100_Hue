@@ -66,6 +66,7 @@ class hsl20_4:
         def __init__(self):
             hostname = socket.gethostname()
             self.my_ip = socket.gethostbyname(hostname)
+            print("my ip: {}".format(self.my_ip))
 
         def _run_in_context_thread(self, a):
             pass

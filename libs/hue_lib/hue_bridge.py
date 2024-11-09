@@ -42,16 +42,15 @@ class HueBridge:
         :return: ip
         :rtype: str
         """
-        with supp_fct.TraceLog(self.logger):
-            global BRIDGE_IP
-            global BRIDGE_IP_LOCK
+        global BRIDGE_IP
+        global BRIDGE_IP_LOCK
 
-            if not BRIDGE_IP:
-                ip = self.__discover_hue(host_ip)
-                with BRIDGE_IP_LOCK:
-                    BRIDGE_IP = ip
+        if not BRIDGE_IP:
+            ip = self.__discover_hue(host_ip)
+            with BRIDGE_IP_LOCK:
+                BRIDGE_IP = ip
 
-            return BRIDGE_IP
+        return BRIDGE_IP
 
     def set_bridge_ip(self, ip):
         """
@@ -78,6 +77,7 @@ class HueBridge:
         :rtype: str, str
         :return: error message, ip
         """
+        print("Entering __discover_hue({})".format(host_ip))
         # best definition https://courses.cs.duke.edu/fall16/compsci356/DNS/DNS-primer.pdf
         msg_id = '\x00\x01'
         query = "\x01\x00"
@@ -107,8 +107,6 @@ class HueBridge:
         while True:
             try:
                 data = sock.recv(1024)
-
-                self.logger.info("Discover result msg:\n{}".format(data.encode("ascii", "xmlcharrefreplace")))
 
                 # check reply for "additional records", Type A, class IN contains IP4 address
                 # header = data[:12]

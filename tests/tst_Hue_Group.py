@@ -46,7 +46,7 @@ class UnitTests(unittest.TestCase):
         module.debug = False
         # hue_bridge.set_bridge_ip(self.cred["PIN_I_SHUEIP"])
 
-        module.FRAMEWORK.my_ip = self.cred["my_ip_wlan"]
+        # module.FRAMEWORK.my_ip = self.cred["my_ip_wlan"]
 
         global EVENTSTREAM_TIMEOUT
         EVENTSTREAM_TIMEOUT = 1
@@ -67,8 +67,8 @@ class UnitTests(unittest.TestCase):
         self.load_data(self.dummy)
 
         self.device = hue_item.HueDevice(self.dummy.logger)
-        self.device.id = self.cred["hue_light_id_studio"]
-        # self.device.id = self.cred["hue_light_id_esszimmer"]
+        # self.device.id = self.cred["hue_light_id_studio"]
+        self.device.id = self.cred["hue_light_id_esszimmer"]
         self.device.rtype = "light"
 
         self.ip = self.cred["PIN_I_SHUEIP"]
@@ -136,7 +136,7 @@ class UnitTests(unittest.TestCase):
 
         time.sleep(3)
 
-        self.assertFalse(debug_Hue_Group.get_eventstream_is_connected())
+        self.assertFalse(get_eventstream_is_connected())
         self.assertFalse(module_1.eventstream_thread.is_alive())
         self.assertFalse(module_2.eventstream_thread.is_alive())
 
