@@ -63,28 +63,31 @@ Set up an instance of the logic module for each hue item you would like to contr
 | <a name="input_2"></a>2 | Key                  |       | Hue Bridge User Key, see [Create HUE Bridge API User](https://developers.meethue.com/develop/get-started-2/)                                                                                                                                          |
 | 3                       | Port Info Page       | 0     | Port of Information Website: Website containing all Hue devices and the corresponding or associated Hue IDs. The web site is provided at `http://<HS-IP>:<Port>`                                                                                      |
 | <a name="input_4"></a>4 | Item Id              | 0     | ID of Hue device to be controlled. The ID can be identified via the Information Website described in the description / Usage section<br>Use the specific ID, e.g. the *Light ID* or *Grouped light Id*.**Use the light id to control a power socket** |
-| <a name="input_5"></a>5 | Scene ID             |       | ID of the scene to be called. Providing a valid scene ID on this input will switch on the device also.                                                                                                                                                | 
-| <a name="input_6"></a>6 | Dynamic scene On/Off | 0     | True/False. Activates the scene of Input 5 as "dynamic scene"                                                                                                                                                                                         |
-| 7                       | Dyn. scene speed     | 0.7   | Speed of dynamic palette for the sceen given on input 5 and activated as "dynamic" on input 6 (0-1)                                                                                                                                                   |
-| <a name="input_8"></a>8 | On/Off (1/0)         | 0     | Switches on (1) / off (0) the Hue device.                                                                                                                                                                                                             |
-| 9                       | Brightness (%)       | 0     | Brightness in 0-100% <br/> Device will be switched on if value is set                                                                                                                                                                                 |
-| 10                      | r                    | 0     | RGB red (0-100%)                                                                                                                                                                                                                                      |
-| 11                      | g                    | 0     | RGB green (0-100%)                                                                                                                                                                                                                                    |
-| 12                      | b                    | 0     | RGB blue (0-100%)                                                                                                                                                                                                                                     |
-| 13                      | KNX rel. Dimm        | 0     | Eingang für KNX-Dimm-Signal. Der zugh. Taster muss wie folgt parametrisiert werden:<br/>Relatives dimmen mit Stopp-Signal, ohne Telegramm-Wiederholung                                                                                                |
-| 14                      | KNX Dimm Ramp        | 0.5   | KNX Dimm Rampe [s]; Zeit in Sekunden, in der der Dimmschritt wiederholt wird, bis ein Stopp-Signal empfangen wird.                                                                                                                                    |
- | 15                      | Bridge IP (optional) |       | (Optional) IP der Hue Bridge. Wird dieser Wert gesetzt, wird keine auto-detection durchgeführt.                                                                                                                                                       |
+| 5                       | Alarm                | 0     | Activates Alarm setting, switching between white and red wth 1 Hz; settin 0 turns the light to steady white again.                                                                                                                                    |
+| <a name="input_5"></a>6 | Scene ID             |       | ID of the scene to be called. Providing a valid scene ID on this input will switch on the device also.                                                                                                                                                | 
+| <a name="input_6"></a>7 | Dynamic scene On/Off | 0     | True/False. Activates the scene of Input 5 as "dynamic scene"                                                                                                                                                                                         |
+| 8                       | Dyn. scene speed     | 0.7   | Speed of dynamic palette for the sceen given on input 5 and activated as "dynamic" on input 6 (0-1)                                                                                                                                                   |
+| <a name="input_8"></a>9 | On/Off (1/0)         | 0     | Switches on (1) / off (0) the Hue device.                                                                                                                                                                                                             |
+| 10                      | Temperature (Mirek)  | 0     | Color temperature in mirek or null when the light color is not in the ct spectrum; mirek: (integer – minimum: 153 – maximum: 500)                                                                                                                     |
+| 11                      | Brightness (%)       | 0     | Brightness in 0-100% <br/> Device will be switched on if value is set                                                                                                                                                                                 |
+| 12                      | r                    | 0     | RGB red (0-100%)                                                                                                                                                                                                                                      |
+| 13                      | g                    | 0     | RGB green (0-100%)                                                                                                                                                                                                                                    |
+| 14                      | b                    | 0     | RGB blue (0-100%)                                                                                                                                                                                                                                     |
+| 15                      | KNX rel. Dimm        | 0     | Eingang für KNX-Dimm-Signal. Der zugh. Taster muss wie folgt parametrisiert werden:<br/>Relatives dimmen mit Stopp-Signal, ohne Telegramm-Wiederholung                                                                                                |
+| 16                      | KNX Dimm Ramp        | 0.5   | KNX Dimm Rampe [s]; Zeit in Sekunden, in der der Dimmschritt wiederholt wird, bis ein Stopp-Signal empfangen wird.                                                                                                                                    |
+| 17                      | Bridge IP (optional) |       | (Optional) IP der Hue Bridge. Wird dieser Wert gesetzt, wird keine auto-detection durchgeführt.                                                                                                                                                       |
 
 ## Outputs
 
-| Nr. | Name            | Init. | Description                                                  |
-|-----|-----------------|-------|--------------------------------------------------------------|
-| 1   | RM On/Off       | 0     | On/Off Status (1/0)                                          |
-| 2   | RM Brightness   | 0     | Current Brightness 0-100%                                    | 
-| 3   | r               | 0     | RGB red 0-100%                                               |
-| 4   | g               | 0     | RGB green 0-100%                                             |
-| 5   | b               | 0     | RGB blue 0-100%                                              |
-| 6   | Light Reachable | 0     | Status is light is connected<br>0=not reachable, 1=reachable |
+| Nr. | Name                   | Init. | Description                                                                                                                       |
+|-----|------------------------|-------|-----------------------------------------------------------------------------------------------------------------------------------|
+| 1   | RM On/Off              | 0     | On/Off Status (1/0)                                                                                                               |
+| 2   | RM Brightness          | 0     | Current Brightness 0-100%                                                                                                         | 
+| 3   | RM Temperature (Mirek) | 0     | Color temperature in mirek or null when the light color is not in the ct spectrum; mirek: (integer – minimum: 153 – maximum: 500) |
+| 3   | r                      | 0     | RGB red 0-100%                                                                                                                    |
+| 4   | g                      | 0     | RGB green 0-100%                                                                                                                  |
+| 5   | b                      | 0     | RGB blue 0-100%                                                                                                                   |
+| 6   | Light Reachable        | 0     | Status is light is connected<br>0=not reachable, 1=reachable                                                                      |
 
 ## Examples
 
@@ -102,24 +105,7 @@ Set up an instance of the logic module for each hue item you would like to contr
 
 ### Change Log
 
-- v3.11: Debug output of bridge discovery reply 
-- v3.9:
-  - Fix for https://github.com/En3rGy/14100_Hue/issues/29
-- v3.8: 
-  - Impr.: Using a sticky table header for the info table
-  - Impr.: Sorting the info table alphabetically
-- v3.7: Identified group id for rooms on info page addressing [#30](https://github.com/En3rGy/14100_Hue/issues/30)
-- v4.6: Improved unit tests
-- v3.5: 
-    - Work-around-fix of [0, 255, 0] results in yellow-green: Removed check if color in in reach of lamp (https://github.com/En3rGy/14100_Hue/issues/27)
-- v3.4: 
-    - Refactoring
-- v3.3:
-  - Detecting broken connections to Hue Bridge
-  - Corrected input IDs in docu
-- v3.2: Fixed Bug [#25](https://github.com/En3rGy/14100_Hue/issues/25)
-- v3.1: Update of documentation
-- v3.0: Refactoring & Hue API v2
+see [GitHub release notes](https://github.com/En3rGy/14100_Hue/releases).
 
 ### Open Issues / Know Bugs
 

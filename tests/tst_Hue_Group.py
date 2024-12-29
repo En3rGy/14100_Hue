@@ -34,7 +34,7 @@ class UnitTests(unittest.TestCase):
 
         # self.dummy.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_light_id_esszimmer"]
         if not itm_id:
-            module.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_light_id_studio"]
+            module.debug_input_value[self.dummy.PIN_I_ITM_IDX] = self.cred["hue_light_id"]
             # module.debug_rid = self.cred["hue_light_id"]
         else:
             module.debug_input_value[self.dummy.PIN_I_ITM_IDX] = itm_id
