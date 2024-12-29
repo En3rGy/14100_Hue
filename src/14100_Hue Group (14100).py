@@ -30,23 +30,26 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
         self.PIN_I_TRIGGER=1
         self.PIN_I_HUE_KEY=2
         self.PIN_I_ITM_IDX=3
-        self.PIN_I_SCENE=4
-        self.PIN_I_DYN_SCENE=5
-        self.PIN_I_DYN_SC_SPEED=6
-        self.PIN_I_ON_OFF=7
-        self.PIN_I_BRI=8
-        self.PIN_I_R=9
-        self.PIN_I_G=10
-        self.PIN_I_B=11
-        self.PIN_I_REL_DIM=12
-        self.PIN_I_DIM_RAMP=13
-        self.PIN_I_BRIDGE_IP=14
+        self.PIN_I_ALARM=4
+        self.PIN_I_SCENE=5
+        self.PIN_I_DYN_SCENE=6
+        self.PIN_I_DYN_SC_SPEED=7
+        self.PIN_I_ON_OFF=8
+        self.PIN_I_TEMP=9
+        self.PIN_I_BRI=10
+        self.PIN_I_R=11
+        self.PIN_I_G=12
+        self.PIN_I_B=13
+        self.PIN_I_REL_DIM=14
+        self.PIN_I_DIM_RAMP=15
+        self.PIN_I_BRIDGE_IP=16
         self.PIN_O_STATUS_ON_OFF=1
         self.PIN_O_BRI=2
-        self.PIN_O_R=3
-        self.PIN_O_G=4
-        self.PIN_O_B=5
-        self.PIN_O_REACHABLE=6
+        self.PIN_O_TMP=3
+        self.PIN_O_R=4
+        self.PIN_O_G=5
+        self.PIN_O_B=6
+        self.PIN_O_REACHABLE=7
 
 ########################################################################################################
 #### Own written code can be placed after this commentblock . Do not change or delete commentblock! ####
@@ -175,6 +178,12 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                                     self.set_output_value_sbc(self.PIN_O_R, r)
                                     self.set_output_value_sbc(self.PIN_O_G, g)
                                     self.set_output_value_sbc(self.PIN_O_B, b)
+
+                            if "color_temperature" in data:
+                                temp = supp_fct.get_val(data, "color_temperature")
+                                if temp:
+                                    mirek = supp_fct.get_val(temp, "mirek")
+                                    self.set_output_value_sbc(self.PIN_O_TMP, int(mirek))
 
                             if supp_fct.get_val(data, "type") == "zigbee_connectivity":
                                 if "status" in data:
@@ -473,6 +482,14 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
             if int(value) > 0:
                 device.set_on(ip, key, True)
             device.set_bri(ip, key, int(value))
+
+        elif self.PIN_I_TEMP == index:
+            self.logger.debug("Received Temp input.")
+            device.set_temp(ip, key, value)
+
+        elif self.PIN_I_ALARM == index:
+            self.logger.debug("Received Alarm input.")
+            device.set_alarm(ip, key, value)
 
         elif self.PIN_I_ITM_IDX == index:
             self.logger.debug("Received Item Index input.")

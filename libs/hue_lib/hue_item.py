@@ -105,6 +105,43 @@ class HueDevice:
                 ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload, self.logger)
             return ret["status"] == 200
 
+    def set_temp(self, ip, key, temperature):
+        with supp_fct.TraceLog(self.logger):
+            if self.rtype == "room" or self.rtype == "zone":
+                self.logger.warning("Trying to set a room or zone on/off. This is not allowed. Discarding.")
+                return False
+
+            if not (153 <= temperature <= 500):
+                raise Exception("hue_item.py | set_temp | Provided temp is out of range.")
+
+            payload = '{"color_temperature":{"mirek": ' + str(temperature) + '}}'
+
+            if self.id is self.device_id:  # use light id if only device id is given
+                ret = supp_fct.http_put(ip, key, self.light_id, self.rtype, payload, self.logger)
+            else:
+                ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload, self.logger)
+            return ret["status"] == 200
+
+    def set_alarm(self, ip, key, alarm):
+        with supp_fct.TraceLog(self.logger):
+            if self.rtype == "room" or self.rtype == "zone":
+                self.logger.warning("Trying to set a room or zone on/off. This is not allowed. Discarding.")
+                return False
+
+            if bool(alarm):
+                white = '{"xy": {"x": 0.3127, "y": 0.3290}}'
+                red = '{"xy": {"x": 0.6400, "y": 0.3300}}'
+                payload = '{"signaling":{"signal":"alternating", "duration": 65534000, '
+                payload = payload + '"colors": [' + white + ', ' + red + ']}}'
+            else:
+                payload = '{"signaling":{"signal":"no_signal", "duration": 0}}'
+
+            if self.id is self.device_id:  # use light id if only device id is given
+                ret = supp_fct.http_put(ip, key, self.light_id, self.rtype, payload, self.logger)
+            else:
+                ret = supp_fct.http_put(ip, key, self.id, self.rtype, payload, self.logger)
+            return ret["status"] == 200
+
     def set_bri(self, ip, key, brightness):
         """
         Brightness percentage. value cannot be 0, writing 0 changes it to the lowest possible brightness

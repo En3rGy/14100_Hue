@@ -94,6 +94,26 @@ class TestModuleRegistration(unittest.TestCase):
         ret = self.hue_device.set_on(self.bridge_ip, self.key, False)
         self.assertTrue(ret)
 
+    def test_alert(self):
+        ret = self.hue_device.set_on(self.bridge_ip, self.key, True)
+        self.assertTrue(ret)
+        time.sleep(1)
+        ret = self.hue_device.set_alarm(self.bridge_ip, self.key, True)
+        time.sleep(10)
+        ret = self.hue_device.set_alarm(self.bridge_ip, self.key, False)
+        time.sleep(3)
+        self.assertTrue(ret)
+
+    def test_temp(self):
+        ret = self.hue_device.set_temp(self.bridge_ip, self.key, 153)
+        time.sleep(3)
+        ret = self.hue_device.set_temp(self.bridge_ip, self.key, 300)
+        time.sleep(3)
+        ret = self.hue_device.set_temp(self.bridge_ip, self.key, 500)
+        time.sleep(3)
+
+        self.assertTrue(ret)
+
     def test_set_bri(self):
         self.hue_device.set_on(self.bridge_ip, self.key, True)
 
