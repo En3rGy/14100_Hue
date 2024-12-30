@@ -145,6 +145,19 @@ class UnitTests(unittest.TestCase):
         self.dummy.on_init()
         time.sleep(30)
 
+    def test_temp(self):
+        print("###### on_init")
+        self.dummy.on_init()
+        print("###### sleep 5")
+        time.sleep(5)
+
+        print("###### off")
+        self.dummy.on_input_value(self.dummy.PIN_I_TEMP, 500)
+        time.sleep(2)
+        self.dummy.on_input_value(self.dummy.PIN_I_TEMP, 200)
+        time.sleep(2)
+        self.assertEqual(True, self.dummy.debug_output_value[self.dummy.PIN_O_STATUS_ON_OFF])
+
     def test_10_16_eventstream(self):  # 2022-11-16 OK
         self.logger.info("### test_10_eventstream")
 
