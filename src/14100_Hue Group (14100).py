@@ -485,7 +485,11 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
 
         elif self.PIN_I_TEMP == index:
             self.logger.debug("Received Temp input.")
-            device.set_temp(ip, key, value)
+            mirek = int(value)
+            if 153 <= mirek <= 500:
+                device.set_temp(ip, key, mirek)
+            else:
+                self.logger.error("Requested Color Temperature out of range. Shall 150 <= x <= 500 but was {}".format(mirek))
 
         elif self.PIN_I_ALARM == index:
             self.logger.debug("Received Alarm input.")
