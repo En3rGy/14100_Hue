@@ -32,7 +32,7 @@ class TestModuleRegistration(unittest.TestCase):
 
         with open("credentials.json") as f:
             self.cred = json.load(f)
-            self.ip = self.cred["my_ip2"]
+            # self.ip = self.cred["my_ip2"]
             self.bridge_ip = self.cred["PIN_I_SHUEIP"]
             self.key = self.cred["PIN_I_SUSER"]
             self.device_id = self.cred["hue_device_id"]
@@ -84,6 +84,11 @@ class TestModuleRegistration(unittest.TestCase):
         self.assertEqual(ret, str())
         ret = supp_fct.get_val({"test": "1", "test2": 2}, "test3")
         self.assertEqual(ret, str())
+
+        tst_json = json.loads('{"mirek": null, "mirek_valid": false}')
+        ret = supp_fct.get_val(tst_json, "mirek")
+        print ret
+
 
     def test_get_data(self):
         print("\n### test_get_data")
