@@ -183,14 +183,16 @@ class HueGroup_14100_14100(hsl20_4.BaseModule):
                                 temp = supp_fct.get_val(data, "color_temperature")
                                 if temp:
                                     mirek = supp_fct.get_val(temp, "mirek")
-                                    self.set_output_value_sbc(self.PIN_O_TMP, int(mirek))
+                                    if mirek:
+                                        self.set_output_value_sbc(self.PIN_O_TMP, int(mirek))
 
                             if supp_fct.get_val(data, "type") == "zigbee_connectivity":
                                 if "status" in data:
                                     self.set_output_value_sbc(self.PIN_O_REACHABLE, data["status"] == "connected")
 
             except Exception as e:
-                self.log_data("Error in process_json #239", "'{}' with:\n'{}'\n\n".format(str(e), str(out)))
+                self.log_data("Error in process_json #194", "'{}' with:\n'{}'\n\n".format(str(e), str(out)))
+                self.logger.error("process_json | {}".format(str(e)))
 
     def eventstream_start(self, key):
         """
