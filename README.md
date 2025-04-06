@@ -1,4 +1,4 @@
-# Deprecated
+[![No Maintenance Intended](http://unmaintained.tech/badge.svg)](http://unmaintained.tech/)
 
 # 14100 Hue Group
 
